@@ -1,0 +1,465 @@
+{
+  "errors": [],
+  "runs": [
+    {
+      "variant": "before",
+      "hash": "8bcdd9617e94077a32eeeb2bd0c783e9924c2c1487a6ad01fa5d2809acee2e6c",
+      "events": [
+        {
+          "label": "idle",
+          "ms": 49,
+          "state": {
+            "pos": [
+              -1,
+              18
+            ],
+            "y": 0.11589328807394306,
+            "fps": 57.74850388320921,
+            "speed": 0,
+            "mode": "idle",
+            "grounded": true,
+            "score": 0,
+            "draws": 343,
+            "tris": 710534,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 0,
+            "context": null
+          }
+        },
+        {
+          "label": "walk-left",
+          "ms": 365,
+          "state": {
+            "pos": [
+              -1,
+              18
+            ],
+            "y": 0.11589328807394306,
+            "fps": 58.745180698781716,
+            "speed": 0,
+            "mode": "idle",
+            "grounded": true,
+            "score": 0,
+            "draws": 343,
+            "tris": 710534,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 0,
+            "context": null
+          }
+        },
+        {
+          "label": "walk-right",
+          "ms": 1418,
+          "state": {
+            "pos": [
+              -2.7499458121157883,
+              19.365757201080232
+            ],
+            "y": 0.12829018591145347,
+            "fps": 59.81970950851709,
+            "speed": 2.199085709935163,
+            "mode": "walk",
+            "grounded": true,
+            "score": 0,
+            "draws": 336,
+            "tris": 693392,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 2.2198205057265543,
+            "context": null
+          }
+        },
+        {
+          "label": "run-left",
+          "ms": 2481,
+          "state": {
+            "pos": [
+              -1.0490285413863203,
+              18.038264661107362
+            ],
+            "y": 0.11746776166557107,
+            "fps": 59.96995015843439,
+            "speed": 1.5893362910471893,
+            "mode": "walk",
+            "grounded": true,
+            "score": 0,
+            "draws": 342,
+            "tris": 710478,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 4.422753759735529,
+            "context": null
+          }
+        },
+        {
+          "label": "run-right",
+          "ms": 3382,
+          "state": {
+            "pos": [
+              -4.055965666487008,
+              20.38504934630651
+            ],
+            "y": 0.08536843104366888,
+            "fps": 59.998745159161494,
+            "speed": 4.498129854562172,
+            "mode": "run",
+            "grounded": true,
+            "score": 0,
+            "draws": 335,
+            "tris": 692966,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 8.23707797681436,
+            "context": null
+          }
+        },
+        {
+          "label": "stop",
+          "ms": 4297,
+          "state": {
+            "pos": [
+              -1.0898077856620167,
+              18.070091101754024
+            ],
+            "y": 0.11872408062192538,
+            "fps": 60.00704404034276,
+            "speed": 4.4981298544511965,
+            "mode": "run",
+            "grounded": true,
+            "score": 0,
+            "draws": 342,
+            "tris": 710478,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 12.084892093412359,
+            "context": null
+          }
+        },
+        {
+          "label": "jump",
+          "ms": 4655,
+          "state": {
+            "pos": [
+              -0.9820664199081791,
+              17.986003614522282
+            ],
+            "y": 0.21394220950523424,
+            "fps": 60.01257881105973,
+            "speed": 0.00009345904318274295,
+            "mode": "jump",
+            "grounded": false,
+            "score": 0,
+            "draws": 343,
+            "tris": 710534,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 12.221562892793393,
+            "context": null
+          }
+        },
+        {
+          "label": "landing-idle",
+          "ms": 5956,
+          "state": {
+            "pos": [
+              -0.9820577905931832,
+              17.985996879714257
+            ],
+            "y": 0.11529970100528365,
+            "fps": 60.00702868250977,
+            "speed": 0,
+            "mode": "idle",
+            "grounded": true,
+            "score": 0,
+            "draws": 343,
+            "tris": 710534,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 12.221573839149707,
+            "context": null
+          }
+        }
+      ]
+    },
+    {
+      "variant": "after",
+      "hash": "9556a94b99ba2afb0910689db7e29b61a1a845b05604f1456c860e44f43c173e",
+      "events": [
+        {
+          "label": "idle",
+          "ms": 50,
+          "state": {
+            "pos": [
+              -1,
+              18
+            ],
+            "y": 0.11589328807394306,
+            "fps": 58.43556236274531,
+            "speed": 0,
+            "mode": "idle",
+            "grounded": true,
+            "score": 0,
+            "draws": 342,
+            "tris": 709334,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 0,
+            "context": null
+          }
+        },
+        {
+          "label": "walk-left",
+          "ms": 352,
+          "state": {
+            "pos": [
+              -1,
+              18
+            ],
+            "y": 0.11589328807394306,
+            "fps": 59.12078264984706,
+            "speed": 0,
+            "mode": "idle",
+            "grounded": true,
+            "score": 0,
+            "draws": 343,
+            "tris": 710534,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 0,
+            "context": null
+          }
+        },
+        {
+          "label": "walk-right",
+          "ms": 1414,
+          "state": {
+            "pos": [
+              -2.750174111107187,
+              19.365935378592553
+            ],
+            "y": 0.12828610933923768,
+            "fps": 59.880044286836636,
+            "speed": 2.1990857099375725,
+            "mode": "walk",
+            "grounded": true,
+            "score": 0,
+            "draws": 336,
+            "tris": 693392,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 2.2201101048553,
+            "context": null
+          }
+        },
+        {
+          "label": "run-left",
+          "ms": 2467,
+          "state": {
+            "pos": [
+              -1.0698782702902911,
+              18.05453697490931
+            ],
+            "y": 0.11811615128046606,
+            "fps": 59.984692471934515,
+            "speed": 2.199085709853521,
+            "mode": "walk",
+            "grounded": true,
+            "score": 0,
+            "draws": 342,
+            "tris": 710478,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 4.39688490717942,
+            "context": null
+          }
+        },
+        {
+          "label": "run-right",
+          "ms": 3396,
+          "state": {
+            "pos": [
+              -4.149732909431874,
+              20.45823063363023
+            ],
+            "y": 0.0810454378943321,
+            "fps": 59.99959610444897,
+            "speed": 3.2509151376078225,
+            "mode": "run",
+            "grounded": true,
+            "score": 0,
+            "draws": 335,
+            "tris": 692966,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 8.327569434803232,
+            "context": null
+          }
+        },
+        {
+          "label": "stop",
+          "ms": 4304,
+          "state": {
+            "pos": [
+              -1.1472319186165518,
+              18.114908159834016
+            ],
+            "y": 0.12041081170431989,
+            "fps": 60.00629882925017,
+            "speed": 3.1201837935852534,
+            "mode": "run",
+            "grounded": true,
+            "score": 0,
+            "draws": 342,
+            "tris": 710478,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 12.173815636931115,
+            "context": null
+          }
+        },
+        {
+          "label": "jump",
+          "ms": 4657,
+          "state": {
+            "pos": [
+              -1.0820436100681499,
+              18.06403149770552
+            ],
+            "y": 0.11848862036721361,
+            "fps": 60.00547881167458,
+            "speed": 0.00008978761918523084,
+            "mode": "idle",
+            "grounded": true,
+            "score": 0,
+            "draws": 343,
+            "tris": 710534,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 12.25650753690166,
+            "context": null
+          }
+        },
+        {
+          "label": "landing-idle",
+          "ms": 5959,
+          "state": {
+            "pos": [
+              -1.0820372417278177,
+              18.06402652749068
+            ],
+            "y": 0.11848842651555945,
+            "fps": 59.99947615832195,
+            "speed": 0,
+            "mode": "idle",
+            "grounded": true,
+            "score": 0,
+            "draws": 343,
+            "tris": 710534,
+            "charged": false,
+            "awakened": false,
+            "restored": false,
+            "paused": false,
+            "started": true,
+            "porchRead": false,
+            "quietObserved": false,
+            "keepsakes": 0,
+            "travel": 12.256515615193202,
+            "context": null
+          }
+        }
+      ]
+    }
+  ]
+}

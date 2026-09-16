@@ -1,0 +1,40 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 527,
+  "tris": 15732,
+  "materials": 5,
+  "size": [
+   14.979,
+   13.909,
+   7.08
+  ],
+  "groundOffset": 0.021,
+  "centreOffset": [
+   -0.038,
+   0.039
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1164,
+    "edgeDensity": 0.2411
+   },
+   "right": {
+    "coverage": 0.0756,
+    "edgeDensity": 0.2105
+   },
+   "back": {
+    "coverage": 0.1037,
+    "edgeDensity": 0.221
+   },
+   "left": {
+    "coverage": 0.0852,
+    "edgeDensity": 0.2239
+   }
+  },
+  "error": null,
+  "name": "tree",
+  "problems": []
+ }
+]

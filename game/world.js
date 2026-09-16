@@ -29,7 +29,20 @@ export async function buildWorld(scene,art){
  const trunks=[[-7,17],[3,15],[-13,12],[-1,10],[-13,5],[-20,2],[-8,-2],[-20,-8],[-13,-13],[-5,-12],[-16,-20],[-5,-21],[1,-20],[16,-19],[20,-8],[16,4],[12,12],[-24,-14],[-24,12],[2,23]];
  // Soil/moss banks bind exposed roots to terrain rather than placing them on an unbroken carpet.
  terrain.traverse(n=>{const geo=n.geometry,c=geo?.attributes.color,p=geo?.attributes.position;if(!c||!p)return;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);let edge=99;for(const [tx,tz] of trunks)edge=Math.min(edge,Math.hypot(x-tx,z-tz));const w=(1-T.MathUtils.smoothstep(edge,1.1,3.4))*.48;const col=new T.Color().fromBufferAttribute(c,i);col.lerp(new T.Color(0x495e3b),w);c.setXYZ(i,col.r,col.g,col.b);}c.needsUpdate=true;});
- for(const [x,z] of trunks){const scale=.72+rnd()*.34;const tree=place('tree',x,z,scale,rnd()*6.28,{dynamic:true});const fadeMats=[];tree.traverse(n=>{if(n.isMesh){n.material=n.material.clone();art.style(n,{wood:true});n.material.forceSinglePass=true;n.material.transparent=true;fadeMats.push(n.material);}});tree.userData.fadeMats=fadeMats;tree.userData.fade=1;tree.userData.occluded=false;trees.push(tree);colliders.push({x,z,r:.6*scale});}
+ // Per-instance root contact; prototypes and gameplay surfaces remain unchanged.
+ function conformRoots(tree){
+  tree.updateMatrixWorld(true);const treeInverse=tree.matrixWorld.clone().invert(),v=new T.Vector3(),local=new T.Vector3();
+  tree.traverse(mesh=>{if(!mesh.isMesh||mesh.material?.name!=='timber')return;
+   const geometry=mesh.geometry.clone(),position=geometry.attributes.position,oldNormals=geometry.attributes.normal?.array.slice(),inverse=mesh.matrixWorld.clone().invert(),weights=[];
+   for(let i=0;i<position.count;i++){v.fromBufferAttribute(position,i).applyMatrix4(mesh.matrixWorld);local.copy(v).applyMatrix4(treeInverse);const weight=1-T.MathUtils.smoothstep(local.y,.06,1.55);weights.push(weight);if(weight<=0)continue;v.y+=(height(v.x,v.z)-tree.position.y)*weight;v.applyMatrix4(inverse);position.setXYZ(i,v.x,v.y,v.z);}
+   geometry.computeVertexNormals();const normal=geometry.attributes.normal,groups=new Map();
+   // Merged assets are non-indexed. Reconnect duplicated corners for soft lower-root normals.
+   for(let i=0;i<position.count;i++){if(weights[i]<=0){if(oldNormals)normal.setXYZ(i,oldNormals[i*3],oldNormals[i*3+1],oldNormals[i*3+2]);continue;}const key=[position.getX(i),position.getY(i),position.getZ(i)].map(v=>Math.round(v*1e5)).join(',');if(!groups.has(key))groups.set(key,{sum:new T.Vector3(),indices:[]});const group=groups.get(key);group.sum.add(v.fromBufferAttribute(normal,i));group.indices.push(i);}
+   for(const group of groups.values()){group.sum.normalize();for(const i of group.indices)normal.setXYZ(i,group.sum.x,group.sum.y,group.sum.z);}
+   position.needsUpdate=true;normal.needsUpdate=true;geometry.computeBoundingBox();geometry.computeBoundingSphere();mesh.geometry=geometry;
+  });
+ }
+ for(const [x,z] of trunks){const scale=.72+rnd()*.34;const tree=place('tree',x,z,scale,rnd()*6.28,{dynamic:true});conformRoots(tree);const fadeMats=[];tree.traverse(n=>{if(n.isMesh){n.material=n.material.clone();art.style(n,{wood:true});n.material.forceSinglePass=true;n.material.transparent=true;fadeMats.push(n.material);}});tree.userData.fadeMats=fadeMats;tree.userData.fade=1;tree.userData.occluded=false;trees.push(tree);colliders.push({x,z,r:.6*scale});}
  // Quiet path centres and dense edges keep small details legible against broad painted ground.
  for(let i=0;i<410;i++){
   const x=-25+rnd()*45,z=-24+rnd()*49,d=pathDistance(x,z);

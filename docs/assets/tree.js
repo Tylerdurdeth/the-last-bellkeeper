@@ -16,13 +16,35 @@ export default function(T){
 
 
  // Broad swept trunk with two strong elbows and long sheltering lateral limbs.
- curve(bark,[[-.8,.9,0],[-.6,3,.15],[.25,5.5,0],[1,8,-.3],[.65,11,-.5],[1.4,13,-.6]],1.05,.1,root,25,9);
+ // One closed continuous trunk surface, with six unequal basal buttresses.
+ const trunkPath=new T.CatmullRomCurve3([[-.8,0,0],[-.8,.9,0],[-.6,3,.15],[.25,5.5,0],[1,8,-.3],[.65,11,-.5],[1.4,13,-.6]].map(p=>new T.Vector3(...p)));
+ const levels=[0,.035,.10,.22,.40,.65,.95,1.30,1.75,2.2,2.7];for(let y=3.2;y<13;y+=.4)levels.push(y);levels.push(13);
+ const sides=48,positions=[],uvs=[],indices=[];
+ for(let i=0;i<levels.length;i++){
+  const y=levels[i];let lo=0,hi=1;for(let k=0;k<24;k++){const mid=(lo+hi)/2;if(trunkPath.getPoint(mid).y<y)lo=mid;else hi=mid;}const center=trunkPath.getPoint((lo+hi)/2);
+  const shaft=1.07*(1-.90*y/13);const flare=Math.pow(Math.max(0,1-y/2.25),2.5);
+  for(let j=0;j<=sides;j++){
+   const angle=j/sides*Math.PI*2;let lobes=0;
+   for(let k=0;k<6;k++){const axis=k*Math.PI/3+.11*Math.sin(k*2.3),alignment=Math.max(0,Math.cos(angle-axis));lobes+=Math.pow(alignment,24)*(2.55+.36*Math.sin(k*1.9));}
+   const radius=shaft+flare*lobes;
+   positions.push(center.x+Math.cos(angle)*radius,y,center.z+Math.sin(angle)*radius*(1-.18*flare));
+   // Tube-compatible UV: first coordinate follows growth, second wraps circumference.
+   uvs.push(y/13,j/sides);
+   if(i<levels.length-1&&j<sides){const a=i*(sides+1)+j,b=a+sides+1;indices.push(a,b,a+1,b,b+1,a+1);}
+  }
+ }
+ const bottom=positions.length/3;positions.push(-.8,0,0);uvs.push(0,.5);const top=positions.length/3;positions.push(1.4,13,-.6);uvs.push(1,.5);
+ for(let j=0;j<sides;j++){indices.push(bottom,j,j+1);const a=(levels.length-1)*(sides+1)+j;indices.push(top,a+1,a);}
+ const trunkGeometry=new T.BufferGeometry();trunkGeometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));trunkGeometry.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));trunkGeometry.setIndex(indices);trunkGeometry.computeVertexNormals();
+ // Average duplicated seam normals so the continuous wrap has no lighting seam.
+ const normals=trunkGeometry.attributes.normal;for(let i=0;i<levels.length;i++){const a=i*(sides+1),b=a+sides,n=new T.Vector3().fromBufferAttribute(normals,a).add(new T.Vector3().fromBufferAttribute(normals,b)).normalize();normals.setXYZ(a,n.x,n.y,n.z);normals.setXYZ(b,n.x,n.y,n.z);}mesh(trunkGeometry,bark);
+
  curve(wood,[[-.5,3.2,0],[-1.7,5,0],[-3.5,6,-.4],[-5.5,6.3,-1]],.57,.10,root,19);
  curve(bark,[[.3,6,-.3],[2.1,7.2,.4],[3.3,9,1.3],[5,9.4,1.7]],.46,.08,root,19);
- for(let i=0;i<6;i++){const a=i*1.047;curve(bark,[[Math.cos(a)*4,.05,Math.sin(a)*3],[Math.cos(a)*1.9,.45,Math.sin(a)*1.5],[-.6,1.6,0]],.14,4,root,12);}
+
  const clusters=[[-5.2,6.8,-.9],[-3.5,7.4,-.4],[-2,8.4,.5],[4.7,9.8,1.6],[3,10.5,1],[.7,12.2,-.5],[1.6,13.1,-.6],[-1.4,10.5,-1.5]];
  clusters.forEach(([x,y,z],i)=>{curve(bark,[[i<3?-1:.8,i<3?5.4:9,-.3],[x*.7,y-.5,z*.7],[x,y,z]],.22,.1,root,10);for(let k=0;k<7;k++){const a=k*2.399;leafSpray(x+Math.cos(a)*1.10,y+Math.sin(a*1.6)*.27,z+Math.sin(a)*.92,a,8,.97);}});
  for(let i=0;i<8;i++)leafSpray(-.8+Math.sin(i)*.7,.3+Math.cos(i)*.2,Math.cos(i)*.9,i,6,.35);
 
- root.name="tree candidate c"; root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),center=bounds.getCenter(new T.Vector3());for(const child of root.children){child.position.x-=center.x;child.position.y-=bounds.min.y;child.position.z-=center.z;}root.updateMatrixWorld(true);const size=bounds.getSize(new T.Vector3()),uniform=14/(size.y);for(const child of root.children){child.position.multiplyScalar(uniform);child.scale.multiplyScalar(uniform);}root.updateMatrixWorld(true);return root;
+ root.name="tree unified buttress candidate"; root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),center=bounds.getCenter(new T.Vector3());for(const child of root.children){child.position.x-=center.x;child.position.y-=bounds.min.y;child.position.z-=center.z;}root.updateMatrixWorld(true);const size=bounds.getSize(new T.Vector3()),uniform=14/(size.y);for(const child of root.children){child.position.multiplyScalar(uniform);child.scale.multiplyScalar(uniform);}root.updateMatrixWorld(true);return root;
 }

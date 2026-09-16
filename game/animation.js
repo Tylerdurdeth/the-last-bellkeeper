@@ -8,6 +8,7 @@ export function createAnimator(THREE, hero, movement) {
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const damp=(a,b,k,dt)=>a+(b-a)*(1-Math.exp(-k*dt));
   const add=(name,x=0,y=0,z=0)=>{const j=joints[name];if(j){j.rotation.x+=x;j.rotation.y+=y;j.rotation.z+=z;}};
+  const groundHipYaw=new THREE.Quaternion(), upAxis=new THREE.Vector3(0,1,0);
   const lengths={};
   for(const side of ['left','right']) {
     const shin=joints[side+'LowerLeg'], foot=joints[side+'Foot'];
@@ -37,7 +38,9 @@ export function createAnimator(THREE, hero, movement) {
     const idle=1-pace;
     const crouch=(landing*.12+launch*.035+idle*.018)*localLeg;
     const bob=(Math.cos(theta*2)*(.013+running*.008)-.016)*pace;
-    const reach=localLeg*(.32+running*.16)*pace;
+    // A stance foot travels backward by exactly the distance the body covers
+    // during stance; matching only cycle timing still leaves visible skating.
+    const reach=strideWorld*stance/(2*scale)*pace;
     // Lower the pelvis enough to reach the longest ground contact; otherwise an
     // almost straight leg target plus a long stride exceeds the chain length.
     const strideDrop=grounded?Math.max(0,localLeg*.975-Math.sqrt(Math.max(.001,(localLeg*.985)**2-reach**2))):0;
@@ -59,6 +62,9 @@ export function createAnimator(THREE, hero, movement) {
         const knee=Math.PI-Math.acos(clamp((l.upper*l.upper+l.lower*l.lower-distance*distance)/(2*l.upper*l.lower),-1,1));
         const thigh=-Math.atan2(z,-y)-beta;
         add(side+'UpperLeg',thigh-hips.rotation.x,0,sign*.025*pace);
+        // Pelvis twist expresses the run without dragging planted feet sideways.
+        groundHipYaw.setFromAxisAngle(upAxis,-hips.rotation.y);
+        joints[side+'UpperLeg']?.quaternion.premultiply(groundHipYaw);
         add(side+'LowerLeg',knee);
         add(side+'Foot',-thigh-knee-(p>stance?.12*running:0));
       } else {

@@ -65,3 +65,5 @@ At runtime release d7eb5a0:84% included weekly compute consumed/16% remaining. A
 At painted-surface/target-facing release c858e35, account-wide included weekly usage is90% consumed/10% remaining. This is the shared account meter, not an attribution of all usage to this project. Atlas rebuild remains25 settled/0reserved/375available; no new generation occurred in the surface-translation studies.
 
 At bark refinement c6ebc2c, included weekly account usage is92% consumed/8% remaining. Atlas unchanged25 rebuild credits,375 under cap available,1,959 account balance at last billing check. No reservations or new generations.
+
+At unified-root/stride checkpoint, included weekly account usage is97% consumed/3% remaining. Atlas remains25 settled,0reserved,375 available under rebuild cap; no new generation. This shared compute observation does not certify project-specific consumption or aesthetic completion.
