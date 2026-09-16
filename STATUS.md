@@ -1,6 +1,6 @@
 # Status — Waking Bough rebuild
 
-Current published runtime:029722e, a woodland first-area study replacing the rejected terrace. The user authorized repeated refinement of this scene up to400 additional Atlas credits, including running, jumping, richer environments and discovery. The full12–15-minute adventure remains outside this milestone.
+Current published runtime:69eaad2, a woodland first-area study replacing the rejected terrace. The user authorized repeated refinement of this scene up to400 additional Atlas credits, including running, jumping, richer environments and discovery. The full12–15-minute adventure remains outside this milestone.
 
 The rebuild introduces a human apprentice with articulated coat/cape and a hand-attached copper staff; a winding continuous woodland with inhabited cottage, listening garden, wheel/bridge and layered valley; painted ground/bark/stone with colored cel lighting; birds, foliage motion, wind effects and a procedural woodland soundscape. Desktop and actual emulated-touch routes support walk/run/jump, three optional keepsakes, capture/carry/restoration, safe fall recovery and reset.
 
@@ -19,3 +19,5 @@ Unified trunk/buttress geometry and terrain-fitted root edges now pass independe
 Fern repair: connected arching fronds and broader leaflets replace disconnected shard-like foliage. Independent base/A/B desktop/portrait review selects B, while noting its lower opaque density and remaining repeated radial forms. Source fern passes the recipe verifier at1008triangles; actual desktop/portrait route checks pass. No Atlas spend.
 
 Footstep audio now follows the actual alternating stance events rather than an unrelated fixed travel distance. Physical-bounds/cadence and independent correctness checks pass; full touch route and live gate pass. No listening-quality approval is implied. See evidence/rebuild/NEXT-QUALITY-PASS.md for the remaining concrete defects and acceptance gaps.
+
+Runtime69eaad2: connected shoulder drape and continuous jaw/cheek, motion follow-through and descending landing preparation, reduced cottage occlusion opacity. Independent bounded reviews accept improvements, explicitly below Zelda reference quality. Animation/contact/cue/follow-through checks and full touch route47.818s pass; live gate PASS264draws/684700triangles/56.09medianFPS,0errors/404/external dependencies. Changed public bytes match. See jam-live-69eaad2/verdict.json and motion-followthrough-independent.md. Earlier029722e metrics above are historical. Physical iPhone and human listening remain unverified.

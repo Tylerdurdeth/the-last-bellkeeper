@@ -1,0 +1,14 @@
+{
+  "animation.js": {
+    "matches": true,
+    "sha256": "ed7fa6ee823e2dd262804790b00cb9942c1753ca7ef7f2692f8445591bcfe587"
+  },
+  "assets/hero.js": {
+    "matches": true,
+    "sha256": "ae33514d259b4a1450faaf6819a0bb8d27c0f57a3556728c2a444cfdf638d704"
+  },
+  "world.js": {
+    "matches": true,
+    "sha256": "a955c8dca87a7c5575a20c7c1a13c76f3e68172375e393b6fc92bf67b4fb2524"
+  }
+}
