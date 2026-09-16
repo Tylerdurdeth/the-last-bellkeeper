@@ -67,7 +67,11 @@ export async function buildWorld(scene,art){
   chimes.rotation.z=gentle?0:Math.sin(t*1.7)*.055;
   // Keep fade materials transparent from their first shader compilation so alpha is honored during transitions.
   // Clear the action window around hands, staff and the nearby interactable, not only the torso centre.
-  occlusionTimer-=dt;if(camera&&occlusionTimer<=0){occlusionTimer=.12;for(const tree of trees){tree.userData.occluded=(tree.userData.occludedUntil||0)>t;if(tree.position.distanceTo(pos)>21)continue;for(const [side,h,forward] of [[0,.45,0],[0,1.25,0],[-1.35,1.05,0],[1.35,1.05,0],[0,1.1,1.8]]){const target=new T.Vector3(pos.x+side*.788-forward*.615,pos.y+h,pos.z-side*.615-forward*.788),dir=target.sub(camera.position),dist=dir.length();cameraRay.set(camera.position,dir.normalize());cameraRay.far=dist-.15;if(cameraRay.intersectObject(tree,true).length){tree.userData.occluded=true;tree.userData.occludedUntil=t+.65;break;}}}}
+  occlusionTimer-=dt;if(camera&&occlusionTimer<=0){occlusionTimer=.12;for(const tree of trees){tree.userData.occluded=(tree.userData.occludedUntil||0)>t;if(tree.position.distanceTo(pos)>21)continue;for(const [side,h,forward] of [[0,.45,0],[0,1.25,0],[-1.35,1.05,0],[1.35,1.05,0],[0,1.1,1.8]]){const target=new T.Vector3(pos.x+side*.788-forward*.615,pos.y+h,pos.z-side*.615-forward*.788),dir=target.sub(camera.position),dist=dir.length();cameraRay.set(camera.position,dir.normalize());cameraRay.far=dist-.15;if(cameraRay.intersectObject(tree,true).length){tree.userData.occluded=true;tree.userData.occludedUntil=t+.65;break;}}
+   // A nearby branch can fill the frame without crossing the hero-centre rays.
+   // Fade only actual geometry in the first three metres of the view cone.
+   if(!tree.userData.occluded){for(const [sx,sy] of [[-.72,.62],[0,.62],[.72,.62],[-.72,0],[0,0],[.72,0],[-.72,-.55],[0,-.55],[.72,-.55]]){cameraRay.setFromCamera(new T.Vector2(sx,sy),camera);cameraRay.far=3;if(cameraRay.intersectObject(tree,true).length){tree.userData.occluded=true;tree.userData.occludedUntil=t+.65;break;}}}
+  }}
   for(const tree of trees){tree.userData.fade=T.MathUtils.damp(tree.userData.fade,tree.userData.occluded?0:1,18,dt);tree.visible=tree.position.distanceTo(pos)<39&&tree.userData.fade>.012;for(const m of tree.userData.fadeMats){m.opacity=tree.userData.fade;m.depthWrite=m.opacity>=.99;}}
 
   for(const {o,center} of chunkList)o.visible=Math.hypot(center.x-pos.x,center.z-pos.z)<34;
