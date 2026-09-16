@@ -1,0 +1,43 @@
+--- game/art-direction.js
++++ game/art-direction.js
+@@ -46,6 +46,7 @@
+     const priorCompile = source.onBeforeCompile;
+     m.onBeforeCompile = (shader, context) => {
+       priorCompile?.call(m, shader, context);
++      if (terrain) shader.uniforms.bkBankStone = { value: stone };
+       shader.uniforms.bkWindTime = windTime;
+       shader.uniforms.bkWindMotion = windMotion;
+       shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vBkWorld;\nuniform float bkWindTime;\nuniform float bkWindMotion;');
+@@ -87,6 +88,7 @@
+ #endif`);}
+       if(wood&&source.name==='timber'){shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP\n diffuseColor.rgb *= mix(vec3(1.0), .5 + 1.7 * texture2D(map,vMapUv).rgb,.5);\n#endif`);}
+       if (terrain) {
++        shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D bkBankStone;');
+         shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
+           #ifdef USE_MAP
+             vec4 bkGround = texture2D(map, vBkWorld.xz / 11.0);
+@@ -100,7 +102,15 @@
+             vec3 bkPaint = vec3(.025) + bkGround.rgb * 1.65;
+             vec3 bkFaceNormal = normalize(cross(dFdx(vBkWorld),dFdy(vBkWorld)));
+             float bkUp = smoothstep(.50,.85,abs(bkFaceNormal.y));
++            vec3 bkBankWeights = pow(abs(bkFaceNormal), vec3(4.));
++            bkBankWeights /= max(.001, bkBankWeights.x + bkBankWeights.y + bkBankWeights.z);
++            vec3 bkBank = texture2D(bkBankStone, vBkWorld.zy / 5.).rgb * bkBankWeights.x
++                        + texture2D(bkBankStone, vBkWorld.xz / 5.).rgb * bkBankWeights.y
++                        + texture2D(bkBankStone, vBkWorld.xy / 5.).rgb * bkBankWeights.z;
++            // Coloured exposed strata remain the authored earth tone, never white boulders.
++            vec3 bkBankAlbedo = bkAuthored * (vec3(.45) + bkBank * 1.55);
+             vec3 bkFloorAlbedo = mix(bkAuthored, bkPaint, .70 * (1.0-bkPath) * bkUp);
++            bkFloorAlbedo = mix(bkBankAlbedo, bkFloorAlbedo, bkUp);
+             // Keep the continuous authored cream path and quiet texture amplitude on it.
+             bkFloorAlbedo *= mix(1.0, .95 + .12*bkGroundValue, bkPath);
+             diffuseColor.rgb *= bkFloorAlbedo;
+@@ -133,7 +143,7 @@
+       );
+     };
+     const priorKey = source.customProgramCacheKey();
+-    m.customProgramCacheKey = () => `bellkeeper-painted-v5:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
++    m.customProgramCacheKey = () => `bellkeeper-bank-study-A:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
+     return m;
+   }
+ 

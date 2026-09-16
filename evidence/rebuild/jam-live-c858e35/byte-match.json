@@ -1,0 +1,14 @@
+{
+  "art-direction.js": {
+    "match": true,
+    "sha256": "b8f188a6d3b913f39c03c85691a9b31dd3948b2ddfaa586caf73901f9012dd77"
+  },
+  "main.js": {
+    "match": true,
+    "sha256": "45551235bbe0e5e3727b1b97ee36abdb8832bd7b6d9aad1884761d6312b94c03"
+  },
+  "movement.js": {
+    "match": true,
+    "sha256": "383161c24692b49c5120451c3a3b2bba3c5a8c71f383fd9fa1b49d9584e5e1b9"
+  }
+}

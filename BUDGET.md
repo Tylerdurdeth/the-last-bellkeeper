@@ -61,3 +61,5 @@ Included compute checkpoint during story/garden refinement:71%used/29%remaining,
 Included compute checkpoint during final physical-contact and brook repair:82% consumed/18% remaining in the same weekly window. Atlas remains25settled,0reserved,375remaining for this rebuild. No extra purchases, resets or paid API usage.
 
 At runtime release d7eb5a0:84% included weekly compute consumed/16% remaining. Atlas unchanged25/400 rebuild spending; reservations0. The visual goal remains active; this is a tested checkpoint, not a claim of complete aesthetic acceptance.
+
+At painted-surface/target-facing release c858e35, account-wide included weekly usage is90% consumed/10% remaining. This is the shared account meter, not an attribution of all usage to this project. Atlas rebuild remains25 settled/0reserved/375available; no new generation occurred in the surface-translation studies.
