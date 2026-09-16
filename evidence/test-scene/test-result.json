@@ -1,0 +1,44 @@
+{
+  "kind": "real-input scene regression; emulation not physical phone",
+  "emptyMiss": true,
+  "captured": true,
+  "retained": true,
+  "restored": true,
+  "paused": true,
+  "reset": true,
+  "touchDistance": 2.283133152928166,
+  "initial": {
+    "pos": [
+      0,
+      3.2
+    ],
+    "fps": 64.57300619555363,
+    "speed": 0,
+    "score": 0,
+    "over": false,
+    "draws": 306,
+    "tris": 185620,
+    "charged": false,
+    "restored": false,
+    "paused": false,
+    "started": true
+  },
+  "final": {
+    "pos": [
+      0,
+      3.2
+    ],
+    "fps": 60.0139904264937,
+    "speed": 0,
+    "score": 0,
+    "over": false,
+    "draws": 306,
+    "tris": 185620,
+    "charged": false,
+    "restored": false,
+    "paused": false,
+    "started": true
+  },
+  "errors": [],
+  "misses": []
+}

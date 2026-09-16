@@ -1,0 +1,327 @@
+{
+  "build": "f9c57fb49a3bd95beaff85388f23b6a54fe43530",
+  "errors": [],
+  "observations": [
+    {
+      "label": "desktop-closed-gate",
+      "state": {
+        "pos": [
+          4.5104517812774585,
+          -2.1994774479150343
+        ],
+        "fps": 59.9995908707942,
+        "speed": 0.041586120350877394,
+        "score": 0,
+        "over": false,
+        "draws": 308,
+        "tris": 185808,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Just a pressure puff. Keep your footing — your gust is safe."
+    },
+    {
+      "label": "desktop-capture",
+      "state": {
+        "pos": [
+          -3.1685785862009093,
+          1.4052513862517455
+        ],
+        "fps": 60.00875258281707,
+        "speed": 0.0000017902899958951563,
+        "score": 0,
+        "over": false,
+        "draws": 308,
+        "tris": 185200,
+        "charged": true,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Hold that little current. The seed wheel is across the terrace."
+    },
+    {
+      "label": "desktop-miss-retained",
+      "state": {
+        "pos": [
+          -3.16857865605172,
+          1.4052512967521915
+        ],
+        "fps": 59.998354677261396,
+        "speed": 2.377769620588663e-12,
+        "score": 0,
+        "over": false,
+        "draws": 308,
+        "tris": 185200,
+        "charged": true,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Too far from the wheel. Your bell keeps the gust."
+    },
+    {
+      "label": "desktop-transfer-pending",
+      "state": {
+        "pos": [
+          1.434814770484956,
+          -0.41963637559370437
+        ],
+        "fps": 60.00936785495543,
+        "speed": 0.006301722602762591,
+        "score": 0,
+        "over": false,
+        "draws": 309,
+        "tris": 185968,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Let the current find its way back."
+    },
+    {
+      "label": "desktop-restored",
+      "state": {
+        "pos": [
+          1.4351297909281653,
+          -0.41988223546974773
+        ],
+        "fps": 60.00365053816403,
+        "speed": 7.857748032365944e-11,
+        "score": 1,
+        "over": false,
+        "draws": 307,
+        "tris": 185780,
+        "charged": false,
+        "restored": true,
+        "paused": false,
+        "started": true
+      },
+      "caption": "There. The return channel is open — the morning can move again."
+    },
+    {
+      "label": "desktop-open-gate",
+      "state": {
+        "pos": [
+          4.978925169011729,
+          -2.916417531013514
+        ],
+        "fps": 60.00076085635408,
+        "speed": 0.12656501938836245,
+        "score": 1,
+        "over": false,
+        "draws": 306,
+        "tris": 185620,
+        "charged": false,
+        "restored": true,
+        "paused": false,
+        "started": true
+      },
+      "caption": "There. The return channel is open — the morning can move again."
+    },
+    {
+      "label": "desktop-reset-gate",
+      "state": {
+        "pos": [
+          4.563676184971003,
+          -2.173767130096446
+        ],
+        "fps": 60.00121852381967,
+        "speed": 0.045718283922607406,
+        "score": 0,
+        "over": false,
+        "draws": 306,
+        "tris": 185620,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Another quiet morning. Find the wandering gust."
+    },
+    {
+      "label": "charged-after-impact",
+      "state": {
+        "pos": [
+          1.2870415032107028,
+          -1.2112701222220967
+        ],
+        "fps": 59.998242202510724,
+        "speed": 0,
+        "score": 0,
+        "over": false,
+        "draws": 311,
+        "tris": 186156,
+        "charged": true,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "The wheel is coughing. Give the pale ring a little room."
+    },
+    {
+      "label": "evaded-outside-ring",
+      "state": {
+        "pos": [
+          -0.1463777463200455,
+          1.0965522835113015
+        ],
+        "fps": 60.014220044481206,
+        "speed": 0,
+        "score": 0,
+        "over": false,
+        "draws": 311,
+        "tris": 186156,
+        "charged": true,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "The wheel is coughing. Give the pale ring a little room."
+    },
+    {
+      "label": "phone-closed-gate",
+      "state": {
+        "pos": [
+          4.769460946706555,
+          -2.0743617585133864
+        ],
+        "fps": 59.99946657144768,
+        "speed": 0.00009914320537569298,
+        "score": 0,
+        "over": false,
+        "draws": 205,
+        "tris": 104588,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Just a pressure puff. Keep your footing — your gust is safe."
+    },
+    {
+      "label": "phone-capture",
+      "state": {
+        "pos": [
+          -3.097334562526855,
+          1.34159940875294
+        ],
+        "fps": 60.00494144517942,
+        "speed": 7.884489587497554e-7,
+        "score": 0,
+        "over": false,
+        "draws": 217,
+        "tris": 139500,
+        "charged": true,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Hold that little current. The seed wheel is across the terrace."
+    },
+    {
+      "label": "phone-miss-retained",
+      "state": {
+        "pos": [
+          -3.097334605403279,
+          1.3415993830270772
+        ],
+        "fps": 59.99934253376549,
+        "speed": 6.537929185905986e-13,
+        "score": 0,
+        "over": false,
+        "draws": 217,
+        "tris": 139500,
+        "charged": true,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Too far from the wheel. Your bell keeps the gust."
+    },
+    {
+      "label": "phone-transfer-pending",
+      "state": {
+        "pos": [
+          1.5164618148452875,
+          -0.40623659073009993
+        ],
+        "fps": 60.00151587332496,
+        "speed": 0.01123902612842,
+        "score": 0,
+        "over": false,
+        "draws": 243,
+        "tris": 142968,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Let the current find its way back."
+    },
+    {
+      "label": "phone-restored",
+      "state": {
+        "pos": [
+          1.5171283911679283,
+          -0.4064891085721846
+        ],
+        "fps": 60.00237603610488,
+        "speed": 1.1108644674416111e-10,
+        "score": 1,
+        "over": false,
+        "draws": 250,
+        "tris": 143460,
+        "charged": false,
+        "restored": true,
+        "paused": false,
+        "started": true
+      },
+      "caption": "There. The return channel is open — the morning can move again."
+    },
+    {
+      "label": "phone-open-gate",
+      "state": {
+        "pos": [
+          5.01912120552625,
+          -2.8851413852929455
+        ],
+        "fps": 59.99985581358651,
+        "speed": 0.06479484010506632,
+        "score": 1,
+        "over": false,
+        "draws": 181,
+        "tris": 88324,
+        "charged": false,
+        "restored": true,
+        "paused": false,
+        "started": true
+      },
+      "caption": "There. The return channel is open — the morning can move again."
+    },
+    {
+      "label": "phone-reset-gate",
+      "state": {
+        "pos": [
+          4.769503182534079,
+          -2.074341356282951
+        ],
+        "fps": 60.006648574749825,
+        "speed": 0.0000055943976226541265,
+        "score": 0,
+        "over": false,
+        "draws": 205,
+        "tris": 104588,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Just a pressure puff. Keep your footing — your gust is safe."
+    }
+  ],
+  "kind": "normal inputs; telemetry read only; headless emulated phone, no physical performance/audio claim"
+}

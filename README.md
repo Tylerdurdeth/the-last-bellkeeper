@@ -10,7 +10,7 @@ Move with WASD/arrows or the touch joystick. Find the wandering gust, press Spac
 
 Node22 or later. Run `npm ci`, `npm run build`, then `npm run serve`. Open http://127.0.0.1:4173/the-last-bellkeeper/. Source is in `game/`; `docs/` is the self-contained published output. It includes Three.js locally and needs no API keys, account or remote generation at runtime.
 
-`tools/test-scene.mjs` is the development real-input regression driver. Its Puppeteer dependency path points to the separate local recipe checkout used for development; change that import to a local Puppeteer installation when reproducing elsewhere. It does not change game state to complete the puzzle.
+`tools/test-scene.mjs` is the development real-input regression driver. Install the supported Chrome test browser with `npx puppeteer browsers install chrome` if it is not already cached. It does not change game state to complete the puzzle.
 
 ## Provenance
 

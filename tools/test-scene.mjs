@@ -1,4 +1,4 @@
-import puppeteer from '/Users/seb/Documents/ChatGPT/Project BellKeeper/recipe-reference/node_modules/puppeteer/lib/puppeteer/puppeteer.js';
+import puppeteer from 'puppeteer';
 import fs from 'node:fs/promises';
 const out='evidence/test-scene';await fs.mkdir(out,{recursive:true});const browser=await puppeteer.launch({headless:true});const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});const misses=[];page.on('response',r=>{if(r.status()>=400)misses.push(r.url())});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

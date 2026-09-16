@@ -1,0 +1,47 @@
+{
+  "build": "b5eb674ac6de701e200da9dd48678966bbb761e9",
+  "errors": [],
+  "observations": [
+    {
+      "label": "gate front closed",
+      "state": {
+        "pos": [
+          4.278255744485605,
+          -1.6711696152698912
+        ],
+        "fps": 60.000595347534514,
+        "speed": 2.1406785755122497,
+        "score": 0,
+        "over": false,
+        "draws": 310,
+        "tris": 185104,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "A wandering gust is circling the left lantern. Bring it to the copper wheel."
+    },
+    {
+      "label": "gate rear still closed",
+      "state": {
+        "pos": [
+          5.038993017567344,
+          -2.8667977371711624
+        ],
+        "fps": 60.00686537599199,
+        "speed": 0.26072151140135774,
+        "score": 0,
+        "over": false,
+        "draws": 311,
+        "tris": 185104,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "The wheel is coughing. Give the pale ring a little room."
+    }
+  ],
+  "kind": "normal inputs; telemetry read only; headless emulated phone, no physical performance/audio claim"
+}

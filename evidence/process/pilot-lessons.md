@@ -21,3 +21,5 @@ Verify syntax, scale, grounding, all sides and articulated hierarchy. Inspect ca
 ## First implementation feedback
 
 The reference prompt's scenic composition did not specify enough traversable architecture. First code assembly became a broad empty disk. Independent review identified this directly. Future environment work orders must explicitly describe layered garden banks, curved paired channels, route width, silhouette/negative space and playable-camera crop. Keep hero/source/target visible at the phone aspect ratio, and test muted readability. Do not spend on another image to correct a known camera, shader, UI or layout defect.
+
+Second review lessons: a gate animation is insufficient unless its closed collision blocks the same route; successful release needs a visible travelling current and a stable pending objective until arrival; hazard displacement needs bracing/recovery; numeric geometry passes cannot detect coplanar rendered surfaces. Test these observed defects directly with real input and moving-camera captures. Keep failed reviews instead of rewriting them as passes.

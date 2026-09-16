@@ -1,0 +1,268 @@
+{
+  "build": "b5eb674ac6de701e200da9dd48678966bbb761e9",
+  "errors": [],
+  "observations": [
+    {
+      "label": "desktop miss empty",
+      "state": {
+        "pos": [
+          0,
+          3.2
+        ],
+        "fps": 66.52165125703965,
+        "speed": 0,
+        "score": 0,
+        "over": false,
+        "draws": 309,
+        "tris": 184936,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Move close to the drifting leaves beside the left lantern."
+    },
+    {
+      "label": "desktop captured",
+      "state": {
+        "pos": [
+          -3.1112191273047562,
+          1.4377403142072822
+        ],
+        "fps": 60.00615170349706,
+        "speed": 0.0000017902797164495883,
+        "score": 0,
+        "over": false,
+        "draws": 308,
+        "tris": 182656,
+        "charged": true,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Hold that little current. The seed wheel is across the terrace."
+    },
+    {
+      "label": "desktop failed release retained",
+      "state": {
+        "pos": [
+          -3.1112191971600627,
+          1.4377402247019684
+        ],
+        "fps": 59.99351157717896,
+        "speed": 1.808462961384227e-13,
+        "score": 0,
+        "over": false,
+        "draws": 309,
+        "tris": 182656,
+        "charged": true,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Too far from the wheel. Your bell keeps the gust."
+    },
+    {
+      "label": "desktop restored repeated",
+      "state": {
+        "pos": [
+          1.6335090866742368,
+          -0.5300858923885519
+        ],
+        "fps": 60.007234065037025,
+        "speed": 1.9379017794869988e-11,
+        "score": 1,
+        "over": false,
+        "draws": 309,
+        "tris": 184936,
+        "charged": false,
+        "restored": true,
+        "paused": false,
+        "started": true
+      },
+      "caption": "There. The return channel is open — the morning can move again."
+    },
+    {
+      "label": "after pause resume",
+      "state": {
+        "pos": [
+          1.6335090866752051,
+          -0.5300858923893078
+        ],
+        "fps": 60.01242030545711,
+        "speed": 0,
+        "score": 1,
+        "over": false,
+        "draws": 309,
+        "tris": 184936,
+        "charged": false,
+        "restored": true,
+        "paused": false,
+        "started": true
+      },
+      "caption": "There. The return channel is open — the morning can move again."
+    },
+    {
+      "label": "desktop reset",
+      "state": {
+        "pos": [
+          0,
+          3.2
+        ],
+        "fps": 60.004254691702094,
+        "speed": 0,
+        "score": 0,
+        "over": false,
+        "draws": 309,
+        "tris": 184936,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Another quiet morning. Find the wandering gust."
+    },
+    {
+      "label": "hazard wait",
+      "state": {
+        "pos": [
+          1.4984071208422742,
+          -1.218572386203304
+        ],
+        "fps": 59.999289379393744,
+        "speed": 0,
+        "score": 0,
+        "over": false,
+        "draws": 310,
+        "tris": 184936,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "The wheel is coughing. Give the pale ring a little room."
+    },
+    {
+      "label": "phone empty miss",
+      "state": {
+        "pos": [
+          0,
+          3.2
+        ],
+        "fps": 77.82598101741944,
+        "speed": 0,
+        "score": 0,
+        "over": false,
+        "draws": 233,
+        "tris": 141064,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Move close to the drifting leaves beside the left lantern."
+    },
+    {
+      "label": "phone captured",
+      "state": {
+        "pos": [
+          -3.096973553671669,
+          1.3418160140497413
+        ],
+        "fps": 60.00367243089028,
+        "speed": 7.873452287261657e-7,
+        "score": 0,
+        "over": false,
+        "draws": 217,
+        "tris": 137944,
+        "charged": true,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Hold that little current. The seed wheel is across the terrace."
+    },
+    {
+      "label": "phone failed release retained",
+      "state": {
+        "pos": [
+          -3.0969735964911655,
+          1.3418159883580365
+        ],
+        "fps": 59.999693887446774,
+        "speed": 2.9730947943081435e-14,
+        "score": 0,
+        "over": false,
+        "draws": 218,
+        "tris": 137944,
+        "charged": true,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Too far from the wheel. Your bell keeps the gust."
+    },
+    {
+      "label": "phone restored",
+      "state": {
+        "pos": [
+          1.5466037939413602,
+          -0.41765823261355467
+        ],
+        "fps": 60.005669014989074,
+        "speed": 4.366457763101278e-11,
+        "score": 1,
+        "over": false,
+        "draws": 250,
+        "tris": 143576,
+        "charged": false,
+        "restored": true,
+        "paused": false,
+        "started": true
+      },
+      "caption": "There. The return channel is open — the morning can move again."
+    },
+    {
+      "label": "phone pause",
+      "state": {
+        "pos": [
+          1.5466037939439004,
+          -0.4176582326145171
+        ],
+        "fps": 60.00830852189454,
+        "speed": 8.247860103088778e-13,
+        "score": 1,
+        "over": false,
+        "draws": 250,
+        "tris": 143576,
+        "charged": false,
+        "restored": true,
+        "paused": false,
+        "started": true
+      },
+      "caption": "There. The return channel is open — the morning can move again."
+    },
+    {
+      "label": "phone reset",
+      "state": {
+        "pos": [
+          0,
+          3.2
+        ],
+        "fps": 60.00462456616946,
+        "speed": 0,
+        "score": 0,
+        "over": false,
+        "draws": 233,
+        "tris": 141064,
+        "charged": false,
+        "restored": false,
+        "paused": false,
+        "started": true
+      },
+      "caption": "Another quiet morning. Find the wandering gust."
+    }
+  ],
+  "kind": "normal inputs; telemetry read only; headless emulated phone, no physical performance/audio claim",
+  "pausePositionFrozen": true
+}

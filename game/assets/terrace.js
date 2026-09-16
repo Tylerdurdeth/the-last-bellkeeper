@@ -8,7 +8,7 @@ export default function (T) {
   function beam(parent,m,a,b,r){const va=new T.Vector3(...a),vb=new T.Vector3(...b),d=vb.clone().sub(va);const mid=va.clone().add(vb).multiplyScalar(.5);const o=cyl(parent,m,mid.x,mid.y,mid.z,r*.85,r,d.length(),8);o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o;}
   function ring(parent,m,x,y,z,r,t,axis='z'){const o=mesh(parent,new T.TorusGeometry(r,t,6,24),m,x,y,z);if(axis==='y')o.rotation.x=Math.PI/2;return o;}
   // Rounded carved platform with a front arrival gap and continuous safe rail elsewhere.
-  const base=cyl(g,ivory,0,.275,0,1,1,.55,48);base.scale.set(7.4,1,5.75);
+  const base=cyl(g,ivory,0,.25,0,1,1,.50,48);base.scale.set(7.4,1,5.75);
   const rim=cyl(g,copperDark,0,.50,0,1,1,.05,48);rim.scale.set(7.36,1,5.71);
   const deck=cyl(g,light,0,.535,0,1,1,.03,48);deck.scale.set(7.27,1,5.62);
   const n=36;for(let i=0;i<n;i++){const t=2*Math.PI*i/n,u=2*Math.PI*(i+1)/n;if(Math.sin(t)>.85||Math.sin(u)>.85)continue;
