@@ -7,6 +7,7 @@ export async function buildWorld(scene,art){
  const colliders=[],chunks=new Map(),animated=[],birds=[],lanterns=[],trees=[];let seed=419;const rnd=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);
  const shortcutLine=[[-10,-9],[-3,2]];
  const shortcutDistance=(x,z)=>{const a=shortcutLine[0],b=shortcutLine[1],dx=b[0]-a[0],dz=b[1]-a[1],u=T.MathUtils.clamp(((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz),0,1);return Math.hypot(x-a[0]-u*dx,z-a[1]-u*dz);};
+ const gardenClearance=(x,z)=>[POINTS.garden,POINTS.quietGarden].some(([gx,gz])=>Math.hypot(x-gx,z-gz)<1.6);
  const prototypes={};
  for(const name of ['terrain','cottage','tree','fern','rock','bridge','chimes','bird','flower','wheel','lantern']){
   prototypes[name]=await ASSET('./assets/'+name+'.js',{keepHierarchy:['terrain','bird','wheel','chimes'].includes(name)});
@@ -31,7 +32,7 @@ export async function buildWorld(scene,art){
  // Quiet path centres and dense edges keep small details legible against broad painted ground.
  for(let i=0;i<410;i++){
   const x=-25+rnd()*45,z=-24+rnd()*49,d=pathDistance(x,z);
-  if(Math.hypot(x+10,z+17)<1.8||Math.hypot(x-8,z+10)<2.3||Math.hypot(x+8,z+15)<2||height(x,z)<-2||Math.hypot(x+8,z-9)<3.2||Math.hypot(x-6,z-2.5)<2||Math.hypot(x-8,z+3.35)<4)continue;
+  if(gardenClearance(x,z)||Math.hypot(x+10,z+17)<1.8||Math.hypot(x-8,z+10)<2.3||Math.hypot(x+8,z+15)<2||height(x,z)<-2||Math.hypot(x+8,z-9)<3.2||Math.hypot(x-6,z-2.5)<2||Math.hypot(x-8,z+3.35)<4)continue;
   const branch=Math.min(...[[0,5],[5,3],[8,0]].map(([a,b])=>Math.hypot(x-a,z-b)));
   if(d<1.4||branch<2||shortcutDistance(x,z)<1.25)continue;
   const near=d<4.5||branch<4;
@@ -41,7 +42,7 @@ export async function buildWorld(scene,art){
   if(name==='rock')colliders.push({x,z,r:.38});
  }
  // Dense, deliberately grouped beds under the roots and around the listening garden.
- for(const [cx,cz] of [[-6,15],[-2,11],[-10,12],[-12,3],[-18,-3],[-14,-9],[-12,-17],[-7,-18],[0,6],[10,-10],[-2,21],[4,19],[-7,20],[2,16]])for(let i=0;i<16;i++){const angle=rnd()*6.28,r=.4+rnd()*2.2,x=cx+Math.cos(angle)*r,z=cz+Math.sin(angle)*r;if(shortcutDistance(x,z)<1.25||pathDistance(x,z)<1.65||Math.hypot(x+8,z-9)<2.7||Math.hypot(x+10,z+17)<1.8||Math.hypot(x-8,z+10)<2.3||Math.hypot(x+8,z+15)<2)continue;place(i%4?'fern':'flower',x,z,.8+rnd()*.8,angle);}
+ for(const [cx,cz] of [[-6,15],[-2,11],[-10,12],[-12,3],[-18,-3],[-14,-9],[-12,-17],[-7,-18],[0,6],[10,-10],[-2,21],[4,19],[-7,20],[2,16]])for(let i=0;i<16;i++){const angle=rnd()*6.28,r=.4+rnd()*2.2,x=cx+Math.cos(angle)*r,z=cz+Math.sin(angle)*r;if(gardenClearance(x,z)||shortcutDistance(x,z)<1.25||pathDistance(x,z)<1.65||Math.hypot(x+8,z-9)<2.7||Math.hypot(x+10,z+17)<1.8||Math.hypot(x-8,z+10)<2.3||Math.hypot(x+8,z+15)<2)continue;place(i%4?'fern':'flower',x,z,.8+rnd()*.8,angle);}
  for(const [x,z] of [[-3,15],[-9,5],[-16,-4],[-12,-15],[8,-11]]){const b=place('bird',x,z,1,0,{dynamic:true});birds.push({o:b,home:new T.Vector3(x,height(x,z),z),phase:rnd()*6.28,flight:0});}
  const backdrop=buildBackdrop(T,scene,{prototypes,art,height});
  const memoryRock=prototypes.rock.clone(true);memoryRock.position.set(-19,height(-19,-5),-5);memoryRock.scale.set(1.7,1.1,1.7);scene.add(memoryRock);memoryRock.updateMatrixWorld(true);const rockRay=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0));
