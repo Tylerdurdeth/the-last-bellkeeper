@@ -1,0 +1,79 @@
+{
+  "rows": [
+    {
+      "name": "hips",
+      "identical": true
+    },
+    {
+      "name": "head",
+      "identical": true
+    },
+    {
+      "name": "leftUpperLeg",
+      "identical": true
+    },
+    {
+      "name": "leftLowerLeg",
+      "identical": true
+    },
+    {
+      "name": "leftFoot",
+      "identical": true
+    },
+    {
+      "name": "leftUpperArm",
+      "identical": true
+    },
+    {
+      "name": "leftLowerArm",
+      "identical": true
+    },
+    {
+      "name": "leftHand",
+      "identical": true
+    },
+    {
+      "name": "coatLeft",
+      "identical": true
+    },
+    {
+      "name": "rightUpperLeg",
+      "identical": true
+    },
+    {
+      "name": "rightLowerLeg",
+      "identical": true
+    },
+    {
+      "name": "rightFoot",
+      "identical": true
+    },
+    {
+      "name": "rightUpperArm",
+      "identical": true
+    },
+    {
+      "name": "rightLowerArm",
+      "identical": true
+    },
+    {
+      "name": "rightHand",
+      "identical": true
+    },
+    {
+      "name": "coatRight",
+      "identical": true
+    },
+    {
+      "name": "cape",
+      "identical": true
+    },
+    {
+      "name": "chest",
+      "identical": true
+    }
+  ],
+  "rootScaleEqual": true,
+  "gripEqual": true,
+  "candidateSha256": "ae33514d259b4a1450faaf6819a0bb8d27c0f57a3556728c2a444cfdf638d704"
+}

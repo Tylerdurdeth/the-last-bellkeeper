@@ -10,13 +10,21 @@ export function createAnimator(THREE, hero, movement) {
   const damp=(a,b,k,dt)=>a+(b-a)*(1-Math.exp(-k*dt));
   const add=(name,x=0,y=0,z=0)=>{const j=joints[name];if(j){j.rotation.x+=x;j.rotation.y+=y;j.rotation.z+=z;}};
   const groundHipYaw=new THREE.Quaternion(), upAxis=new THREE.Vector3(0,1,0);
+  const cloth={pitch:0,pitchVelocity:0,yaw:0,yawVelocity:0};
+  function settleCloth(dt,pitch,yaw){
+    // Damped secondary motion reacts to acceleration/turning and continues after stopping.
+    const count=Math.max(1,Math.ceil(dt*120)),h=dt/count;
+    for(let i=0;i<count;i++)for(const [axis,target] of [['pitch',pitch],['yaw',yaw]]){
+      const v=axis+'Velocity';cloth[v]+=(190*(target-cloth[axis])-19*cloth[v])*h;cloth[axis]+=cloth[v]*h;
+    }
+  }
   const lengths={};
   for(const side of ['left','right']) {
     const shin=joints[side+'LowerLeg'], foot=joints[side+'Foot'];
     lengths[side]={upper:shin?.position.length()||.25, lower:foot?.position.length()||.23};
   }
   function bindPose(){for(const [j,b] of bind){j.position.copy(b.position);j.quaternion.copy(b.quaternion);j.scale.copy(b.scale);}}
-  function reset(){footfalls.length=0;bindPose();phase=0;landing=launch=pace=turn=acceleration=previousSpeed=0;previousYaw=movement.yaw;previousGrounded=movement.grounded;}
+  function reset(){cloth.pitch=cloth.pitchVelocity=cloth.yaw=cloth.yawVelocity=0;footfalls.length=0;bindPose();phase=0;landing=launch=pace=turn=acceleration=previousSpeed=0;previousYaw=movement.yaw;previousGrounded=movement.grounded;}
   function update(dt, {time=0,action=null,actionProgress=0,charged=false,impact=0}={}) {
     footfalls.length=0;dt=clamp(Number.isFinite(dt)?dt:0,0,.05);bindPose();if(!hips)return;
     const speed=Math.max(0,movement.speed||0), grounded=movement.grounded;
@@ -54,7 +62,8 @@ export function createAnimator(THREE, hero, movement) {
     hips.position.y+=grounded?bob-crouch-strideDrop:-localLeg*.035;
     add('hips',grounded?(.035*pace+running*.035+acceleration*.001):- .035,clamp(turn*.023,-.16,.16)+Math.sin(theta)*running*.035,clamp(-turn*.022,-.14,.14));
     add('chest',grounded?(.07*pace+running*.25+acceleration*.004):.10,-Math.sin(theta)*running*.15-clamp(turn*.018,-.12,.12),-.045*idle+Math.sin(theta)*running*.026);
-    add('head',-.02-.04*pace-.13*running,-clamp(turn*.04,-.28,.28),clamp(turn*.014,-.08,.08)+.03*idle);
+    add('head',-.02-.04*pace-.13*running,clamp(turn*.025,-.22,.22),clamp(turn*.014,-.08,.08)+.03*idle);
+    settleCloth(dt,-.065*pace-acceleration*.004-landing*.13-(!grounded?.09:0),-clamp(turn*.035,-.25,.25));
     for(const [side,offset,sign] of [['left',0,-1],['right',.5,1]]) {
       const l=lengths[side], p=(phase+offset)%1;
       if(grounded) {
@@ -76,16 +85,17 @@ export function createAnimator(THREE, hero, movement) {
         add(side+'Foot',-thigh-knee-(p>stance?.12*running:0));
       } else {
         const rising=clamp(movement.verticalVelocity/6,0,1);
-        const tuck=.35+rising*.45+(side==='left'?.17:0);
+        const falling=clamp(-movement.verticalVelocity/5,0,1);
+        const tuck=.30+rising*.48-falling*.20+(side==='left'?.15:0);
         add(side+'UpperLeg',-tuck,0,sign*.075);
-        add(side+'LowerLeg',.65+rising*.65);
-        add(side+'Foot',-.15-rising*.20);
+        add(side+'LowerLeg',.60+rising*.70-falling*.42);
+        add(side+'Foot',-.12-rising*.20+falling*.12);
       }
       const armSwing=Math.sin(theta+offset*Math.PI*2)*(.33+running*(side==='left'?.57:.16))*pace;
       add(side+'UpperArm',grounded?armSwing:-.40,side==='left'?-running*.10:0,sign*(.07+running*.09+(!grounded?.13:0)));
-      add(side+'LowerArm',-(.20+running*(side==='left'?.81:.39))*pace-(!grounded?.65:0));
-      add(side+'Hand',-.04,0,sign*.04);
-      add('coat'+(side==='left'?'Left':'Right'),-.05-pace*.10+Math.sin(theta+offset*Math.PI*2)*.14*pace-(!grounded?.17:0),0,sign*(.015+running*.04));
+      add(side+'LowerArm',-(.20+running*(side==='left'?.81+.16*Math.sin(theta-.65):.39))*pace-(!grounded?.65:0));
+      add(side+'Hand',-.04+(side==='left'?.10*Math.sin(theta-.4)*running*pace:0),0,sign*.04);
+      add('coat'+(side==='left'?'Left':'Right'),-.05+cloth.pitch+Math.sin(theta+offset*Math.PI*2-.45)*.14*pace,cloth.yaw*.55,sign*(.015+running*.04));
     }
     // Tool side remains controlled; free arm does most of the athletic swing.
     add('rightUpperArm',-.16-(charged?.12:0));
@@ -97,7 +107,8 @@ export function createAnimator(THREE, hero, movement) {
     add('leftLowerArm',-.62*idle);
     add('leftUpperArm',.09*idle,-.11*idle,-.16*idle);
     add('leftHand',0,.16*idle,-.08*idle);
-    add('cape',Math.sin(time*1.8)*.016-.04*pace,Math.sin(theta)*.024*pace,Math.sin(time*1.3)*.012);
+    add('cape',Math.sin(time*1.8)*.012+cloth.pitch,Math.sin(theta-.6)*.024*pace+cloth.yaw,Math.sin(time*1.3)*.012);
+    if(!grounded)add('head',clamp(-movement.verticalVelocity/5,0,1)*.10);
     // Intent precedes the contact beat. No root translation or physics lock.
     const p=clamp(actionProgress,0,1);
     if(action==='capture') {

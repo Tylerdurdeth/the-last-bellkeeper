@@ -78,7 +78,7 @@ export async function buildWorld(scene,art){
   brook.update(t,gentle);
   shortcutAwake=T.MathUtils.damp(shortcutAwake,charged||isRestored?1:0,3,dt);for(const f of shortcutFlowers){f.o.rotation.z=Math.sin(t*3-f.phase)*.16*shortcutAwake*(gentle?.2:1);for(const m of f.mats)m.emissiveIntensity=shortcutAwake*(.55+.3*Math.sin(t*2-f.phase));}
   backdrop.update?.(dt,t,pos);restored=isRestored;bridgeLift=T.MathUtils.damp(bridgeLift,restored?1:0,7,dt);bridge.visible=restored;bridge.position.y=.9-(1-bridgeLift)*3.6;
-  const cdx=cottage.position.x-pos.x,cdz=cottage.position.z-pos.z,front=cdx*.615+cdz*.788,side=Math.abs(cdx*.788-cdz*.615);cottageOpacity=T.MathUtils.damp(cottageOpacity,front> -1&&front<12&&side<3.4?.16:1,12,dt);for(const m of cottageMats){m.opacity=cottageOpacity;m.depthWrite=cottageOpacity>.98;}
+  const cdx=cottage.position.x-pos.x,cdz=cottage.position.z-pos.z,front=cdx*.615+cdz*.788,side=Math.abs(cdx*.788-cdz*.615);cottageOpacity=T.MathUtils.damp(cottageOpacity,front> -1&&front<12&&side<3.4?.025:1,12,dt);for(const m of cottageMats){m.opacity=cottageOpacity;m.depthWrite=cottageOpacity>.98;}
   const rotor=wheel.userData.rotor||wheel.getObjectByName('rotor');if(rotor?.rotation)rotor.rotation.z+=dt*(restored?1.4:.05);
   chimes.rotation.z=gentle?0:Math.sin(t*1.7)*.055;
   // Keep fade materials transparent from their first shader compilation so alpha is honored during transitions.

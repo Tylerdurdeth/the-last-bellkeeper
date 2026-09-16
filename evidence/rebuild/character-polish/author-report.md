@@ -1,0 +1,13 @@
+# Selected-A character polish candidate
+
+Candidate: `recipe/hero.js`. Scratch only; no production assets changed. This is a repair of the selected A construction, not a new asset proposal. All four user-supplied images and original Atlas hero-r01 were inspected. Original coral/cream/dark-hair/copper identity retained; no reference model/image incorporated.
+
+Changes: connected double-surface shoulder drape with diagonal hem replaces separate front/back plates; continuous cheek/jaw replaces stacked spheres; iris, pupil and highlight sit within the almond whites; rounded temple/nape replaces flat side profiles; thicker beveled hair locks and smoother rounded small forms. Cape remains attached to the same articulated pivot. Root scale and origin are intentionally preserved from selected A, rather than recalculated from changed garment bounds.
+
+Verification: unmodified recipe harness with five views, `recipe/_verify/sheet.png` and report. All eighteen joint local transforms, root scale, and grip metadata match the original exactly (`rig-check.json`). Additional close-up before/candidate front, side, back and three-quarter renders use the same lighting/camera. `gameplay-idle/run/jump.png` show the candidate via scratch asset substitution into current docs, using real click/WASD/Shift/J inputs, not teleportation. No page errors. No motion code was edited and these stills do not approve motion quality or performance.
+
+Failed intermediate work is retained: attempt-1.js plus attempt-1-verify show shoulder clipping and lumpy segmented nape; attempt-2.js retains the early connected drape before stronger asymmetric shaping. First iris dimensions spilled below the whites; reduced after close-up inspection. Final shoulder width was expanded slightly to clear the hanging sleeve in the side recipe view. These were repairs within this one selected-A candidate, not hidden alternate candidate selection.
+
+Candid limits: connected garment construction is materially better in side view, but the broad shawl remains fairly simple and cape deformation remains rigid pivot motion. Face construction still has an attached angular nose and tube-like smile, and hair remains visibly constructed from swept extrusions rather than organic sculpted locks. It does not yet equal the supplied Zelda close-up target. At normal gameplay scale the garment silhouette is legible, while eye refinements are mostly too small to judge. Independent visual review must decide whether this is a useful incremental repair; this author does not approve it for production.
+
+Final recipe: PASS, 21,908 triangles, 82 meshes, 0.608 × 1.600 × 0.323m. Candidate SHA256: ae33514d259b4a1450faaf6819a0bb8d27c0f57a3556728c2a444cfdf638d704.

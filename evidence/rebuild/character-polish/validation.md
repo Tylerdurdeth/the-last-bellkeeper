@@ -1,0 +1,1 @@
+Combined release checks: test-animation, test-foot-contact, test-footfall-cues and test-animation-followthrough all PASS. Cloth settling and descending-leg tests cover30/60/120Hz. Existing gait contact metrics unchanged. Full touch and live performance results recorded separately. No claim of human motion acceptance.

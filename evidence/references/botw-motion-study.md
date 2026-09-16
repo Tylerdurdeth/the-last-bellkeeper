@@ -1,0 +1,9 @@
+# BOTW motion reference — bounded observation
+
+User explicitly requested learning from Breath of the Wild animation quality. Primary source: Nintendo of America, The Legend of Zelda: Breath of the Wild — Exploration Gameplay — Nintendo E3 2016, https://www.youtube.com/watch?v=Ze05xdORvYs . Official channel identity verified in public player. This is2016demonstration footage, not a claim about every final-release animation.
+
+Actually inspected paused running poses around3:00,3:00.33,3:00.50,3:00.67,3:00.83 through public player keyboard frame stepping. Read player media time; waits after seek were necessary because UI/currentTime can update before decoded frame. Short rear/side running sequence shows bent elbows, lifted recovery heel, alternating extended legs and a relatively stable head above forward body effort. These are qualitative pose observations, not measured joint angles or ground-speed estimates. Equipment partially obscures torso.
+
+A rooftop idle at2:30.83 and an intermediate gliding image were also seen. Screenshot failures at2:35.83 prevented reliable jump/landing sequence inspection in this pass. Do not claim observed BOTW anticipation/braking/turn timing or full motion parity. Some first frame-step attempts captured player overlays or stale frames and are excluded from observation claims. No footage downloaded or game assets incorporated.
+
+Original implementation response being tested separately: damped garment follow-through on acceleration/turn/landing, free-arm articulation, forward-looking turn head response and an airborne pose that unfolds for landing. These are design hypotheses targeting observed stiffness; they are not reconstructions of Nintendo animation data. Actual before/after normal-input recording and independent review are required before adoption. The user's overall motion-quality bar remains open.

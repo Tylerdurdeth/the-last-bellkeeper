@@ -2,7 +2,7 @@
 
 The high-bar goal is active, not achieved. Last completed turns made verified progress: root/stride repair, fern form repair, and footfall synchronization. No genuine blocked-turn sequence has been established. Atlas rebuild25settled,0reserved,375remaining; latest verified Atlas account1959. Never spend merely to exhaust the cap.
 
-Use current STATUS.md and Git/log/live gate as authority. Keep original scope and four separate review categories. Account-wide included Codex usage last observed100%; available account credits are not authorization for paid overage. Check actual allowance before substantial new work. Master brief authorizes substantial included usage and requires release/continuation headroom; no purchases, paid API or resets.
+Use current STATUS.md and Git/log/live gate as authority. Keep original scope and four separate review categories. Account-wide included Codex usage last observed100%; The user has now explicitly authorized up to500existing Codex credits. Check actual allowance before substantial new work. Master brief authorizes substantial included usage and requires release/continuation headroom; no purchases, paid API or resets.
 
 ## Next decisions grounded in observed images
 
@@ -17,4 +17,4 @@ Human sound/feel/discovery and actual iPhone performance remain unverified. A pr
 
 Publish only selected, independently reviewed, tested improvements. Preserve rejected candidates and exact comparison limits. The current milestone is one rich first scene, not the complete12–15-minute adventure or a competition submission. No submission/message to others is authorized here.
 
-Current capacity checkpoint: included meter100%, available Codex credits2500. User authorization question pending for at most250credits or waiting for included reset. Do not start further paid production without an affirmative answer. First observation of this blocker; do not mark blocked until the goal’s three-consecutive-turn rule is satisfied.
+Current authorization supersedes the quota pause: up to500existing Codex credits. Conservatively meter from2500balance to2000, including the8.9739decrease observed at the first fresh reading2491.0261. No purchases/API/top-ups/resets. Further work is authorized; retain the full quality objective.
