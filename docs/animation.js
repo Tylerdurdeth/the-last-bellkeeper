@@ -3,6 +3,7 @@ export function createAnimator(THREE, hero, movement) {
   const joints = hero.userData.joints || {};
   const bind = new Map(Object.values(joints).map(j => [j, {position:j.position.clone(), quaternion:j.quaternion.clone(), scale:j.scale.clone()}]));
   const hips = joints.hips, head = joints.head;
+  const footfalls=[];
   let phase=0, previousYaw=movement.yaw, previousGrounded=movement.grounded;
   let landing=0, launch=0, pace=0, turn=0, previousSpeed=0, acceleration=0;
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -15,16 +16,17 @@ export function createAnimator(THREE, hero, movement) {
     lengths[side]={upper:shin?.position.length()||.25, lower:foot?.position.length()||.23};
   }
   function bindPose(){for(const [j,b] of bind){j.position.copy(b.position);j.quaternion.copy(b.quaternion);j.scale.copy(b.scale);}}
-  function reset(){bindPose();phase=0;landing=launch=pace=turn=acceleration=previousSpeed=0;previousYaw=movement.yaw;previousGrounded=movement.grounded;}
+  function reset(){footfalls.length=0;bindPose();phase=0;landing=launch=pace=turn=acceleration=previousSpeed=0;previousYaw=movement.yaw;previousGrounded=movement.grounded;}
   function update(dt, {time=0,action=null,actionProgress=0,charged=false,impact=0}={}) {
-    dt=clamp(Number.isFinite(dt)?dt:0,0,.05);bindPose();if(!hips)return;
+    footfalls.length=0;dt=clamp(Number.isFinite(dt)?dt:0,0,.05);bindPose();if(!hips)return;
     const speed=Math.max(0,movement.speed||0), grounded=movement.grounded;
     const running=clamp((speed-2.1)/1.7,0,1);
     pace=damp(pace,clamp(speed/.9,0,1),18,dt);
     acceleration=damp(acceleration,dt?clamp((speed-previousSpeed)/dt,-20,20):0,9,dt);previousSpeed=speed;
     const angle=Math.atan2(Math.sin(movement.yaw-previousYaw),Math.cos(movement.yaw-previousYaw));
     turn=damp(turn,dt?clamp(angle/dt,-8,8):0,12,dt);previousYaw=movement.yaw;
-    if(!previousGrounded&&grounded)landing=1;
+    const justLanded=!previousGrounded&&grounded;
+    if(justLanded)landing=1;
     if(previousGrounded&&!grounded&&movement.verticalVelocity>0)launch=1;
     previousGrounded=grounded;landing=Math.max(0,landing-dt/ .16);launch=Math.max(0,launch-dt/.10);
     // Cycle length is a travelled stride, so changing speed cannot make feet skate
@@ -33,7 +35,12 @@ export function createAnimator(THREE, hero, movement) {
     hero.updateWorldMatrix(true,false);
     const scale=hips.parent.getWorldScale(new THREE.Vector3()).y || 1;
     const strideWorld=localLeg*scale*(1.7+running*.65);
-    if(grounded)phase=(phase+speed*dt/Math.max(.3,strideWorld))%1;
+    if(grounded){
+      const next=phase+speed*dt/Math.max(.3,strideWorld);
+      // Emit on each foot's swing-to-stance boundary. Landing has its own cue.
+      if(speed>.2&&!justLanded)for(let beat=Math.floor(phase*2)+1;beat<=Math.floor(next*2);beat++)footfalls.push(beat%2?'right':'left');
+      phase=next%1;
+    }
     const theta=phase*Math.PI*2, stance=.62-running*.14;
     const idle=1-pace;
     const crouch=(landing*.12+launch*.035+idle*.018)*localLeg;
@@ -117,5 +124,5 @@ export function createAnimator(THREE, hero, movement) {
     const recoil=clamp(impact,0,1);
     add('chest',-recoil*.23);add('head',recoil*.13);add('leftUpperArm',-recoil*.7,0,-recoil*.22);
   }
-  return {update,reset};
+  return {update,reset,footfalls};
 }

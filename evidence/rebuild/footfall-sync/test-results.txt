@@ -1,0 +1,39 @@
+[
+  {
+    "hz": 30,
+    "speed": 2.2,
+    "count": 11,
+    "maxSole": 0.020968583436457314
+  },
+  {
+    "hz": 30,
+    "speed": 4.5,
+    "count": 17,
+    "maxSole": 0.021758681978863853
+  },
+  {
+    "hz": 60,
+    "speed": 2.2,
+    "count": 11,
+    "maxSole": 0.020968583434898533
+  },
+  {
+    "hz": 60,
+    "speed": 4.5,
+    "count": 17,
+    "maxSole": 0.02175868197822777
+  },
+  {
+    "hz": 120,
+    "speed": 2.2,
+    "count": 11,
+    "maxSole": 0.020968583434203547
+  },
+  {
+    "hz": 120,
+    "speed": 4.5,
+    "count": 17,
+    "maxSole": 0.022044653808832936
+  }
+]
+PASS actual foot bounds at gait cues; preceding swing, alternation, frame-rate consistency, no air/idle/landing/reset duplicates. Not listening approval.
