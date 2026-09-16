@@ -1,0 +1,4 @@
+d21161b34de7f7614b51d93091dab55ff2eed1cfc109c3ddf51a6cbe8dc479eb  docs/main.js
+8bcdd9617e94077a32eeeb2bd0c783e9924c2c1487a6ad01fa5d2809acee2e6c  docs/animation.js
+d3a42c57e04b34db0e41cd0be9d347779fe648d290710629856b304d247cf9c9  docs/assets/hero.js
+77a141f33428646e34af48e7297bcb90dfdfa001af9ef669ad947b1065c5bf84  docs/world.js

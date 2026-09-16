@@ -48,3 +48,7 @@ Art lock is provisional until the pilot reference is inspected. Keep accepted re
 ## Pilot refinement — 16 September 2026
 
 Pilot inspected: retain the coral practical coat, swept hair, copper staff and layered ivory/tree composition. Generated headings, labels and invented character name are rejected. Use isolated object portraits for future modelling references; avoid the word board. Current hero image is sufficient for candidate exploration; mechanical parts need clearer isolated forms before production. Character candidates must be compared in multi-view sheets, then animated at actual camera distance. Art lock remains provisional until the scene is reviewed.
+
+## User-directed rebuild v2
+
+Prior study art rejected. New original hero reference R01 governs character:1.60m athletic proportions, expressive angular face/eyebrows, swept aubergine forelock, asymmetric coral coat with long split tails, diagonal ivory shoulder cape, dark teal trousers and wrapped practical boots. R02 governs landscape: continuous woodland ground, mossy worn curved paths, branch-integrated ivory/copper cottage, layered root banks and partially hidden garden. Do not adopt R02 incidental character identity. Target gameplay hero12–16% frame height. Colored cel bands, painted broad surface variation, deliberate material response; no bare circular stage or isolated evenly-spaced bushes. Run/jump are now explicitly authorized. Original project identity preserved; reference-game assets never copied.

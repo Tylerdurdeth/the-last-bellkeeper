@@ -1,0 +1,17 @@
+# Waking Bough reconstruction provenance
+
+User rejected first study and explicitly authorized continued iteration up to400 additional Atlas credits, including run/jump and richer exploration. This is a revised scene study, not the complete game.
+
+Atlas direct UI generated original R01 hero reference, R02 woodland composition, R03 painted ground texture, R04 painted bark texture. Each settled5credits; R01's first stale cached run cost0. Same Gemini3.1 Flash Lite Image,1:1(1K),seed43. No downloaded meshes; all shipped models are original Three.js code following the recipe candidate/render workflow. R01 figure is canonical; incidental R02 red-haired figure was not adopted. Texture files are runtime assets; concept images remain evidence outside payload. R04 inspected flowing bark before download. Runtime bark mapping is restrained; generated ground texture is blended with authored path colours.
+
+R01 actual persisted prompt described an original lean young adult with half-smile, almond brown eyes, angular nose, swept aubergine comma locks/copper clasp, short coral workcoat with long swallowtails, asymmetric ivory shoulder cape, teal trousers, wrapped copper-toe boots, turquoise clasp, bell satchel, fingerless glove, crown staff. Three independently constructed code candidates selected A; not a reproduction of a benchmark character.
+
+Twenty-four environment candidates (three each of cottage/tree/fern/rock/bridge/chimes/bird/flower) and three terrain constructions reviewed. Hero and environment selection records accompany this file. Later bounded repairs broadened fern leaves, added cottage habitation, corrected exact rock centering, and added chest acting/curled hand grip. All13 selected runtime asset modules passed the unmodified recipe verifier in the recorded integration check. Terrain is subsequently extended to conceal its edge; relevant verification must be refreshed before promotion.
+
+Audio is currently original procedural WebAudio (colored noise, chirps, inharmonic resonances, convolution). Prior Atlas2-second SFX settled9credits but remains excluded because reliable file retrieval is unresolved. An offline soundscape sample is evidence, not a claim of listening approval. No commercial/reference music was copied.
+
+Benchmarks supply design principles, not copied asset geometry or game code. Nintendo Wind Waker and Diablo II Resurrected actual still references and observation limits are in evidence/references/rebuild-benchmarks.md. Existing recipe loader and Three.js retain their licenses/provenance.
+
+Occlusion round3: exact camera-to-head/hip rays replace rough trunk-position exclusion; only actual foreground occluders fade. A brief hash-dither candidate was visually rejected for grain and replaced with smooth alpha fade. A terrain cliff repair initially extended below the asset's normalization baseline, shifting its surface above character feet; caught in actual capture, fixed before publication, and a new test compares rendered ground rays with physics at eight landmarks. Build now excludes `_verify` folders to prevent generated sheets entering runtime. Final terrain extends120m and omits verifier boundary walls from runtime; selected rock/tree prototypes supply composed distant landscape.
+
+Raw numbered motion captures and full intermediate verifier image sheets are preserved locally but excluded from Git to avoid publishing more than100MB of repetitive images. Versioned contact sheets, release closeups, matched scene screenshots, hashes, reports and scripts preserve the review trail.

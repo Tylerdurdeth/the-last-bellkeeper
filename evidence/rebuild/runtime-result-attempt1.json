@@ -1,0 +1,376 @@
+{
+  "kind": "Actual keyboard/touch input with read-only telemetry; known-route scripted regression, not a natural discovery playtest",
+  "startedAt": "2026-09-16T16:29:14.819Z",
+  "errors": [],
+  "requests": [],
+  "checks": {
+    "walkRun": {
+      "walk": 2.191332589438836,
+      "run": 4.4858423236553975,
+      "pass": true
+    },
+    "jump": {
+      "air": {
+        "pos": [
+          -2.0784956712412748,
+          16.618122619612805
+        ],
+        "y": 0.8658221784603982,
+        "fps": 59.45081785345458,
+        "speed": 1.019813273995835,
+        "mode": "jump",
+        "grounded": false,
+        "score": 0,
+        "draws": 262,
+        "tris": 227174,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "keepsakes": 0,
+        "travel": 1.7529227043175473,
+        "context": null
+      },
+      "land": {
+        "pos": [
+          -2.1512024609037788,
+          16.524963350907022
+        ],
+        "y": 0.1121859205192534,
+        "fps": 59.849936677788584,
+        "speed": 0.00003276149531368246,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 262,
+        "tris": 227174,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "keepsakes": 0,
+        "travel": 1.8710959949073585,
+        "context": null
+      },
+      "pass": true
+    },
+    "pause": {
+      "pass": true
+    },
+    "reset": {
+      "pass": true
+    },
+    "chimes-awakened": {
+      "pos": [
+        -8.293853483754848,
+        -14.835501151940242
+      ],
+      "y": 2.2659006355747073,
+      "fps": 60.004033516709725,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 215,
+      "tris": 157214,
+      "charged": false,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "keepsakes": 0,
+      "travel": 45.72722583371097,
+      "context": null
+    },
+    "captured": {
+      "pos": [
+        -9.835320882048123,
+        -16.81058458259894
+      ],
+      "y": 1.9992353696485423,
+      "fps": 60.00710419452999,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 204,
+      "tris": 152210,
+      "charged": true,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "keepsakes": 0,
+      "travel": 48.2326352409863,
+      "context": null
+    },
+    "restored": {
+      "pos": [
+        4.817262983143119,
+        3.988569592282171
+      ],
+      "y": 1.1571376341391966,
+      "fps": 60.007638885302164,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 357,
+      "tris": 297716,
+      "charged": false,
+      "awakened": true,
+      "restored": true,
+      "paused": false,
+      "started": true,
+      "keepsakes": 0,
+      "travel": 95.0805942385745,
+      "context": null
+    }
+  },
+  "waypoints": [
+    {
+      "label": "first-bend",
+      "target": [
+        -5,
+        13
+      ],
+      "actual": [
+        -4.747755890354511,
+        13.197997330732756
+      ],
+      "time": 1789576158977,
+      "travel": 6.091379470147685
+    },
+    {
+      "label": "cottage",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.13971688383973,
+        8.18147434018356
+      ],
+      "time": 1789576160195,
+      "travel": 11.144995184426955
+    },
+    {
+      "label": "roots",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -9.977665531912347,
+        5.215633500880598
+      ],
+      "time": 1789576164113,
+      "travel": 18.14619984393795
+    },
+    {
+      "label": "west-path",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -15.049788701926982,
+        -0.07610894425236704
+      ],
+      "time": 1789576166075,
+      "travel": 25.716799541091973
+    },
+    {
+      "label": "upper-bend",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.921517070626978,
+        -7.050833772709867
+      ],
+      "time": 1789576167855,
+      "travel": 33.21091018063504
+    },
+    {
+      "label": "garden-approach",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -9.946141327489919,
+        -9.915295853885599
+      ],
+      "time": 1789576169526,
+      "travel": 40.245648046247275
+    },
+    {
+      "label": "chimes",
+      "target": [
+        -8,
+        -15
+      ],
+      "actual": [
+        -8.302580662194947,
+        -14.828685322065988
+      ],
+      "time": 1789576170855,
+      "travel": 45.71615247918757
+    },
+    {
+      "label": "garden",
+      "target": [
+        -10,
+        -17
+      ],
+      "actual": [
+        -9.828511786516051,
+        -16.80186008295786
+      ],
+      "time": 1789576172694,
+      "travel": 48.22156814218162
+    },
+    {
+      "label": "return-garden",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.174875439432451,
+        -10.207441950686045
+      ],
+      "time": 1789576175558,
+      "travel": 55.19457257737238
+    },
+    {
+      "label": "return-upper",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -16.038654577889357,
+        -6.9631215344073984
+      ],
+      "time": 1789576177228,
+      "travel": 62.21813932959041
+    },
+    {
+      "label": "return-west",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -15.327308523050027,
+        -0.17348175216919678
+      ],
+      "time": 1789576179013,
+      "travel": 69.67373616111847
+    },
+    {
+      "label": "return-roots",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -10.083369214548167,
+        4.825003264107609
+      ],
+      "time": 1789576180792,
+      "travel": 77.24528059124164
+    },
+    {
+      "label": "return-cottage",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.200541454483999,
+        7.7113593906933335
+      ],
+      "time": 1789576182458,
+      "travel": 84.29187036550549
+    },
+    {
+      "label": "wheel-approach",
+      "target": [
+        0,
+        6
+      ],
+      "actual": [
+        0.012936475011872634,
+        5.857806733257762
+      ],
+      "time": 1789576183784,
+      "travel": 89.59381984486737
+    },
+    {
+      "label": "wheel-path",
+      "target": [
+        4,
+        4
+      ],
+      "actual": [
+        3.9071218071488603,
+        4.229970693607033
+      ],
+      "time": 1789576184887,
+      "travel": 94.09238208464294
+    },
+    {
+      "label": "wheel",
+      "target": [
+        5,
+        3.7
+      ],
+      "actual": [
+        4.808370456107764,
+        3.9948739697824602
+      ],
+      "time": 1789576185199,
+      "travel": 95.06969367837148
+    }
+  ],
+  "screenshots": [
+    "evidence/rebuild/runtime-arrival.png",
+    "evidence/rebuild/runtime-cottage.png",
+    "evidence/rebuild/runtime-roots.png",
+    "evidence/rebuild/runtime-chimes.png",
+    "evidence/rebuild/runtime-capture.png",
+    "evidence/rebuild/runtime-restoration.png",
+    "evidence/rebuild/runtime-failure.png"
+  ],
+  "failure": "Collision/route blocker bridge-near at {\"pos\":[5.2896066973778195,2.033012790830548],\"y\":1.2,\"fps\":60.002313333008495,\"speed\":0,\"mode\":\"idle\",\"grounded\":true,\"score\":0,\"draws\":356,\"tris\":305576,\"charged\":false,\"awakened\":true,\"restored\":true,\"paused\":false,\"started\":true,\"keepsakes\":0,\"travel\":97.22547132622115,\"context\":null}",
+  "pass": false,
+  "failureState": {
+    "pos": [
+      5.2896066973778195,
+      2.033012790830548
+    ],
+    "y": 1.2,
+    "fps": 60.00083316857907,
+    "speed": 0,
+    "mode": "idle",
+    "grounded": true,
+    "score": 0,
+    "draws": 356,
+    "tris": 305576,
+    "charged": false,
+    "awakened": true,
+    "restored": true,
+    "paused": false,
+    "started": true,
+    "keepsakes": 0,
+    "travel": 97.22547132622115,
+    "context": null
+  },
+  "finishedAt": "2026-09-16T16:29:49.315Z"
+}

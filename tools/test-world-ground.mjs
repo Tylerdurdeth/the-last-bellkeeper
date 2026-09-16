@@ -1,0 +1,4 @@
+import * as T from 'three';import terrain from '../game/assets/terrain.js';import {height} from '../game/world-layout.js';import assert from 'node:assert/strict';
+const t=terrain(T);const bounds=new T.Box3().setFromObject(t);assert(Math.abs(bounds.min.y)<.001,'asset normalization must not shift the ground');t.position.y=-8;t.updateMatrixWorld(true);const ray=new T.Raycaster(undefined,new T.Vector3(0,-1,0));
+for(const [x,z]of [[-1,18],[-5,13],[-4,8],[-15,0],[-16,-7],[-10,-17],[6,2.5],[8,-10]]){ray.ray.origin.set(x,20,z);const hit=ray.intersectObject(t,true)[0];assert(hit,`missing ground ${x},${z}`);assert(Math.abs(hit.point.y-height(x,z))<.08,`rendered/physics mismatch at ${x},${z}: ${hit.point.y} vs ${height(x,z)}`);}
+console.log('PASS ground/physics contact at eight traversable landmarks and asset baseline');

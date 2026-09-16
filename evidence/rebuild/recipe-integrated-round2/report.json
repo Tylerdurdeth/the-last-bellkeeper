@@ -1,0 +1,650 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 18,
+  "tris": 570,
+  "materials": 5,
+  "size": [
+   0.088,
+   0.168,
+   0.245
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0.003
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.0862,
+    "edgeDensity": 0.1592
+   },
+   "right": {
+    "coverage": 0.1485,
+    "edgeDensity": 0.1327
+   },
+   "back": {
+    "coverage": 0.0973,
+    "edgeDensity": 0.0974
+   },
+   "left": {
+    "coverage": 0.1473,
+    "edgeDensity": 0.1221
+   }
+  },
+  "error": null,
+  "name": "bird",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 36,
+  "tris": 2736,
+  "materials": 3,
+  "size": [
+   2.3,
+   1.204,
+   5
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1607,
+    "edgeDensity": 0.335
+   },
+   "right": {
+    "coverage": 0.1658,
+    "edgeDensity": 0.365
+   },
+   "back": {
+    "coverage": 0.1604,
+    "edgeDensity": 0.3459
+   },
+   "left": {
+    "coverage": 0.1662,
+    "edgeDensity": 0.3475
+   }
+  },
+  "error": null,
+  "name": "bridge",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 24,
+  "tris": 1804,
+  "materials": 5,
+  "size": [
+   0.8,
+   1.208,
+   0.8
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1158,
+    "edgeDensity": 0.2345
+   },
+   "right": {
+    "coverage": 0.1189,
+    "edgeDensity": 0.2147
+   },
+   "back": {
+    "coverage": 0.1156,
+    "edgeDensity": 0.1776
+   },
+   "left": {
+    "coverage": 0.1189,
+    "edgeDensity": 0.1752
+   }
+  },
+  "error": null,
+  "name": "chimes",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 268,
+  "tris": 10837,
+  "materials": 15,
+  "size": [
+   5.253,
+   6.017,
+   5.135
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   -0.016,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.2519,
+    "edgeDensity": 0.2924
+   },
+   "right": {
+    "coverage": 0.2579,
+    "edgeDensity": 0.2125
+   },
+   "back": {
+    "coverage": 0.2436,
+    "edgeDensity": 0.2345
+   },
+   "left": {
+    "coverage": 0.256,
+    "edgeDensity": 0.1595
+   }
+  },
+  "error": null,
+  "name": "cottage",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 120,
+  "tris": 1024,
+  "materials": 3,
+  "size": [
+   1.361,
+   0.418,
+   1.375
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   -0.007,
+   -0.011
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.0834,
+    "edgeDensity": 0.5056
+   },
+   "right": {
+    "coverage": 0.0896,
+    "edgeDensity": 0.487
+   },
+   "back": {
+    "coverage": 0.0838,
+    "edgeDensity": 0.505
+   },
+   "left": {
+    "coverage": 0.0775,
+    "edgeDensity": 0.5251
+   }
+  },
+  "error": null,
+  "name": "fern",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 54,
+  "tris": 816,
+  "materials": 6,
+  "size": [
+   0.503,
+   0.479,
+   0.49
+  ],
+  "groundOffset": 0.005,
+  "centreOffset": [
+   0.002,
+   -0.004
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.0806,
+    "edgeDensity": 0.3911
+   },
+   "right": {
+    "coverage": 0.083,
+    "edgeDensity": 0.396
+   },
+   "back": {
+    "coverage": 0.0818,
+    "edgeDensity": 0.3807
+   },
+   "left": {
+    "coverage": 0.079,
+    "edgeDensity": 0.3216
+   }
+  },
+  "error": null,
+  "name": "flower",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 28,
+  "tris": 3120,
+  "materials": 4,
+  "size": [
+   1.32,
+   1.123,
+   1.498
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1791,
+    "edgeDensity": 0.1372
+   },
+   "right": {
+    "coverage": 0.2059,
+    "edgeDensity": 0.146
+   },
+   "back": {
+    "coverage": 0.1353,
+    "edgeDensity": 0.1517
+   },
+   "left": {
+    "coverage": 0.1901,
+    "edgeDensity": 0.1491
+   }
+  },
+  "error": null,
+  "name": "foliage",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 18,
+  "tris": 1800,
+  "materials": 4,
+  "size": [
+   2.04,
+   1.84,
+   0.46
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1588,
+    "edgeDensity": 0.317
+   },
+   "right": {
+    "coverage": 0.0777,
+    "edgeDensity": 0.1642
+   },
+   "back": {
+    "coverage": 0.1586,
+    "edgeDensity": 0.2584
+   },
+   "left": {
+    "coverage": 0.0777,
+    "edgeDensity": 0.1986
+   }
+  },
+  "error": null,
+  "name": "gate",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 78,
+  "tris": 8984,
+  "materials": 12,
+  "size": [
+   0.607,
+   1.6,
+   0.296
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0.002,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1452,
+    "edgeDensity": 0.3014
+   },
+   "right": {
+    "coverage": 0.0792,
+    "edgeDensity": 0.3351
+   },
+   "back": {
+    "coverage": 0.1441,
+    "edgeDensity": 0.2093
+   },
+   "left": {
+    "coverage": 0.0798,
+    "edgeDensity": 0.292
+   }
+  },
+  "error": null,
+  "name": "hero",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 16,
+  "tris": 1176,
+  "materials": 4,
+  "size": [
+   0.337,
+   0.599,
+   0.3
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1909,
+    "edgeDensity": 0.1786
+   },
+   "right": {
+    "coverage": 0.1828,
+    "edgeDensity": 0.1492
+   },
+   "back": {
+    "coverage": 0.191,
+    "edgeDensity": 0.1398
+   },
+   "left": {
+    "coverage": 0.1828,
+    "edgeDensity": 0.1312
+   }
+  },
+  "error": null,
+  "name": "lantern",
+  "problems": []
+ },
+ {
+  "ok": false,
+  "mounts": null,
+  "meshes": 15,
+  "tris": 288,
+  "materials": 3,
+  "size": [
+   1.324,
+   0.536,
+   0.963
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   -0.088,
+   -0.054
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1941,
+    "edgeDensity": 0.1063
+   },
+   "right": {
+    "coverage": 0.1672,
+    "edgeDensity": 0.1103
+   },
+   "back": {
+    "coverage": 0.1825,
+    "edgeDensity": 0.125
+   },
+   "left": {
+    "coverage": 0.1683,
+    "edgeDensity": 0.1253
+   }
+  },
+  "error": null,
+  "name": "rock",
+  "problems": [
+   "not centred on x/z (offset -0.088, -0.054)"
+  ]
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 9,
+  "tris": 1320,
+  "materials": 4,
+  "size": [
+   0.22,
+   1.25,
+   0.212
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.04,
+    "edgeDensity": 0.3925
+   },
+   "right": {
+    "coverage": 0.0335,
+    "edgeDensity": 0.3621
+   },
+   "back": {
+    "coverage": 0.0426,
+    "edgeDensity": 0.3249
+   },
+   "left": {
+    "coverage": 0.0333,
+    "edgeDensity": 0.2945
+   }
+  },
+  "error": null,
+  "name": "staff",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 121,
+  "tris": 10656,
+  "materials": 6,
+  "size": [
+   14.8,
+   2.99,
+   11.5
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1699,
+    "edgeDensity": 0.2607
+   },
+   "right": {
+    "coverage": 0.1635,
+    "edgeDensity": 0.2847
+   },
+   "back": {
+    "coverage": 0.1606,
+    "edgeDensity": 0.3315
+   },
+   "left": {
+    "coverage": 0.1621,
+    "edgeDensity": 0.2973
+   }
+  },
+  "error": null,
+  "name": "terrace",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 7,
+  "tris": 20062,
+  "materials": 3,
+  "size": [
+   80.2,
+   10.95,
+   80.2
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.2366,
+    "edgeDensity": 0.0915
+   },
+   "right": {
+    "coverage": 0.2355,
+    "edgeDensity": 0.0932
+   },
+   "back": {
+    "coverage": 0.2364,
+    "edgeDensity": 0.1017
+   },
+   "left": {
+    "coverage": 0.2392,
+    "edgeDensity": 0.0908
+   }
+  },
+  "error": null,
+  "name": "terrain",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 2139,
+  "tris": 14182,
+  "materials": 5,
+  "size": [
+   12.962,
+   13.944,
+   6.509
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   -0.004,
+   -0.028
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.105,
+    "edgeDensity": 0.5797
+   },
+   "right": {
+    "coverage": 0.0771,
+    "edgeDensity": 0.579
+   },
+   "back": {
+    "coverage": 0.1285,
+    "edgeDensity": 0.5795
+   },
+   "left": {
+    "coverage": 0.0919,
+    "edgeDensity": 0.6262
+   }
+  },
+  "error": null,
+  "name": "tree",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 26,
+  "tris": 4048,
+  "materials": 4,
+  "size": [
+   1.8,
+   2.09,
+   0.591
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.2631,
+    "edgeDensity": 0.2449
+   },
+   "right": {
+    "coverage": 0.0942,
+    "edgeDensity": 0.2642
+   },
+   "back": {
+    "coverage": 0.263,
+    "edgeDensity": 0.2903
+   },
+   "left": {
+    "coverage": 0.0941,
+    "edgeDensity": 0.2257
+   }
+  },
+  "error": null,
+  "name": "wheel",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 43,
+  "tris": 4284,
+  "materials": 3,
+  "size": [
+   3.605,
+   3.844,
+   1.22
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.2414,
+    "edgeDensity": 0.246
+   },
+   "right": {
+    "coverage": 0.1426,
+    "edgeDensity": 0.1736
+   },
+   "back": {
+    "coverage": 0.2476,
+    "edgeDensity": 0.1832
+   },
+   "left": {
+    "coverage": 0.1425,
+    "edgeDensity": 0.1328
+   }
+  },
+  "error": null,
+  "name": "windworks",
+  "problems": []
+ }
+]

@@ -1,0 +1,9 @@
+# Inhabited cottage repair
+
+Compared against the already inspected Atlas woodland-r02 reference and the observed in-game bare facade. Kept the original arched door/curved copper roof profile. Added a right-side timber porch with braces and separate planks, two window planters with uneven stems/flowers, warm inset panes, roof standing seams following the exact Bezier roof surface, side shelf with basket/oil bottle/linen, rear staggered firewood with cut ends/rings, front peg-supported cloth ribbons, a hanging copper planter, door latch/hinges and worn threshold patch.
+
+The initial unmodified recipe verification passed but measured 12,637 triangles, above this task's 12k cap. Reduced tiny growth-ring tessellation, without deleting meaningful construction. Final unmodified `recipe-reference/harness/verify.mjs <scratch-dir> --size=560` passed: 10,837 triangles, 268 unmerged source meshes, 15 materials, 5.253×6.017×5.135m, ground offset0, no mounts/blank-side exemptions, all five views rendered. Final report `_verify/report.json`, five-view `_verify/cottage.png`.
+
+Actually inspected front, right, rear, left and three-quarter final renders before copying the improved module to `game/assets/cottage.js`. The porch preserves the door silhouette; planters and a hanging pot read from the side; woodpile gives the rear evidence of habitation. No floating gross defects observed. The back upper wall remains deliberately quiet, and fine cloth/latch details will be small at the gameplay camera. This is a concrete improvement in construction/detail, not a claim the entire scene meets the Zelda comparison. Lead must inspect integrated shading and scale.
+
+Only game/assets/cottage.js changed in the game repository. No other world geometry or runtime changes, Atlas calls or external meshes. Static loader should merge this source hierarchy by material as usual.

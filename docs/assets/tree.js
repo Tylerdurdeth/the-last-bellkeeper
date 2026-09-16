@@ -1,19 +1,28 @@
-export default function (T) {
-  const g=new T.Group();
-  const mat=(c,n='plaster',r=.9)=>{const m=new T.MeshStandardMaterial({color:c,roughness:r});m.name=n;return m;};
-  const ivory=mat(0xE7DDC2), light=mat(0xFFF0C9), copper=mat(0xB76F48,'metal',.62), copperDark=mat(0x704337,'metal'), wood=mat(0x977557,'timber'), bark=mat(0x704F40,'timber'), leaf=mat(0x3F7860,'foliage'), leafLight=mat(0x90AE68,'foliage'), deep=mat(0x183E3D,'foliage'), teal=mat(0x62C9BC,'plaster');
-  function mesh(parent,geo,material,x=0,y=0,z=0){const m=new T.Mesh(geo,material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
-  function ell(parent,m,x,y,z,a,b,c){const o=mesh(parent,new T.SphereGeometry(1,12,8),m,x,y,z);o.scale.set(a,b,c);return o;}
-  function cyl(parent,m,x,y,z,rt,rb,h,n=12){return mesh(parent,new T.CylinderGeometry(rt,rb,h,n),m,x,y,z);}
-  function beam(parent,m,a,b,r){const va=new T.Vector3(...a),vb=new T.Vector3(...b),d=vb.clone().sub(va);const mid=va.clone().add(vb).multiplyScalar(.5);const o=cyl(parent,m,mid.x,mid.y,mid.z,r*.85,r,d.length(),8);o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o;}
-  function ring(parent,m,x,y,z,r,t,axis='z'){const o=mesh(parent,new T.TorusGeometry(r,t,6,24),m,x,y,z);if(axis==='y')o.rotation.x=Math.PI/2;return o;}
-  // Sculpted living tree: broad roots, curved segmented trunk and intentional canopy tiers.
-  ell(g,bark,0,1.7,0,.72,1.7,.62);ell(g,wood,-.28,3.2,-.04,.49,1.55,.43);
-  beam(g,bark,[0,1.8,0],[-.50,4.8,.10],.42);
-  for(let i=0;i<7;i++){const t=i*Math.PI*2/7;const x=Math.cos(t),z=Math.sin(t);beam(g,bark,[x*.2,.7,z*.2],[x*1.75,.11,z*1.48],.19);ell(g,bark,x*1.40,.12,z*1.2,.55,.13,.37);}
-  for(let i=0;i<8;i++){const a=i*2.399;const x=Math.cos(a)*(1.7+(i%2)*.5),z=Math.sin(a)*1.65,y=4.2+(i%3)*.56;beam(g,bark,[-.3,2.8+i*.16,0],[x,y,z],.16);ell(g,i%3?leaf:deep,x,y+.3,z,1.26,.69,1.03);ell(g,leafLight,x-.14,y+.64,z-.08,.81,.35,.73);}
-  ell(g,leaf,-.25,6.0,0,1.47,.70,1.35);ell(g,leafLight,-.5,6.43,-.1,.98,.36,.9);
-  for(let i=0;i<4;i++)ell(g,deep,-.59,1.2+i*.59,.24,.13,.28,.07);
+export default function(T){
 
-  g.updateMatrixWorld(true);const box=new T.Box3(),v=new T.Vector3();g.traverse(n=>{if(n.isMesh){const a=n.geometry.attributes.position;for(let i=0;i<a.count;i++)box.expandByPoint(v.fromBufferAttribute(a,i).applyMatrix4(n.matrixWorld));}});const c=box.getCenter(new T.Vector3());for(const n of g.children){n.position.x-=c.x;n.position.y-=box.min.y;n.position.z-=c.z;}return g;
+ const root=new T.Group();
+ const mat=(color,name='timber',roughness=.9)=>{const m=new T.MeshStandardMaterial({color,roughness,side:T.DoubleSide});m.name=name;return m;};
+ const wood=mat(0x715140),woodLight=mat(0x9B7657),bark=mat(0x5A5040),ivory=mat(0xE7DDC2,'plaster'),stone=mat(0x929884,'stone'),copper=mat(0xB76F48,'metal',.55),patina=mat(0x629082,'metal',.7),dark=mat(0x253C38,'timber'),leaf=mat(0x3F7860,'foliage'),leafLight=mat(0x90AE68,'foliage'),leafDark=mat(0x285849,'foliage'),coral=mat(0xD96956,'foliage'),teal=mat(0x62C9BC,'foliage'),rope=mat(0xB49E77,'fabric');
+ const mesh=(geo,m,x=0,y=0,z=0,parent=root)=>{const o=new T.Mesh(geo,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;parent.add(o);return o;};
+ const box=(m,x,y,z,w,h,d,parent=root)=>mesh(new T.BoxGeometry(w,h,d),m,x,y,z,parent);
+ const ell=(m,x,y,z,a,b,c,parent=root)=>{const o=mesh(new T.SphereGeometry(1,8,6),m,x,y,z,parent);o.scale.set(a,b,c);return o;};
+ const rod=(m,a,b,r1,r2=r1,parent=root,n=8)=>{const va=new T.Vector3(...a),vb=new T.Vector3(...b),d=vb.clone().sub(va);const o=mesh(new T.CylinderGeometry(r2,r1,d.length(),n),m,0,0,0,parent);o.position.copy(va.add(vb).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o;};
+ const curve=(m,points,r=.08,taper=.7,parent=root,segments=16,sides=7)=>{const path=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));const g=new T.TubeGeometry(path,segments,r,sides,false),a=g.attributes.position,v=new T.Vector3();for(let i=0;i<=segments;i++){const center=path.getPointAt(i/segments);const scale=1-(1-taper)*i/segments;for(let j=0;j<=sides;j++){const k=i*(sides+1)+j;v.fromBufferAttribute(a,k).sub(center).multiplyScalar(scale).add(center);a.setXYZ(k,v.x,v.y,v.z);}}g.computeVertexNormals();const first=points[0],last=points[points.length-1];ell(m,...first,r,r*.6,r,parent);ell(m,...last,r*taper,r*taper*.6,r*taper,parent);return mesh(g,m,0,0,0,parent);};
+ const shape=(m,points,depth,x=0,y=0,z=0,parent=root,bevel=.02)=>{const s=new T.Shape();points.forEach((p,i)=>i?s.lineTo(...p):s.moveTo(...p));s.closePath();return mesh(new T.ExtrudeGeometry(s,{depth,bevelEnabled:bevel>0,bevelSize:bevel,bevelThickness:bevel,bevelSegments:1,steps:1}),m,x,y,z,parent);};
+ const blade=(m,length=.3,width=.10,parent=root)=>{const s=new T.Shape();s.moveTo(0,0);s.quadraticCurveTo(width,.3*length,0,length);s.quadraticCurveTo(-width,.3*length,0,0);const g=new T.ShapeGeometry(s,3);const a=g.attributes.position;for(let i=0;i<a.count;i++){const y=a.getY(i);a.setZ(i,Math.sin(y/length*Math.PI)*width*.5);}g.computeVertexNormals();return mesh(g,m,0,0,0,parent);};
+ const ring=(m,x,y,z,r,t=.03,parent=root)=>mesh(new T.TorusGeometry(r,t,5,16),m,x,y,z,parent);
+ const pot=(x,y,z,size=.3,m=copper)=>{const pts=[[.48,0],[.65,.15],[.70,.6],[.46,.85],[.45,1]].map(([r,h])=>new T.Vector2(r*size,h*size));const o=mesh(new T.LatheGeometry(pts,10),m,x,y,z);ring(m,x,y+size,z,size*.45,.025).rotation.x=Math.PI/2;return o;};
+ const leafSpray=(x,y,z,angle,count=11,size=.4,parent=root)=>{const g=new T.Group();g.position.set(x,y,z);g.rotation.set(.25,angle,-.2);parent.add(g);for(let i=0;i<count;i++){const a=i*2.39996;const r=Math.sqrt(i/count)*size;const l=blade(i%3===0?leafLight:i%3===1?leaf:leafDark,size*(.95+(i%4)*.13),size*.36,g);l.position.set(Math.cos(a)*r,Math.sin(a)*r*.55,Math.sin(a*1.3)*r);l.rotation.set(-1.10+(i%3)*.14,a,Math.sin(a)*.42);}return g;};
+
+
+ // Broad swept trunk with two strong elbows and long sheltering lateral limbs.
+ curve(bark,[[-.8,.9,0],[-.6,3,.15],[.25,5.5,0],[1,8,-.3],[.65,11,-.5],[1.4,13,-.6]],1.05,.1,root,25,9);
+ curve(wood,[[-.5,3.2,0],[-1.7,5,0],[-3.5,6,-.4],[-5.5,6.3,-1]],.57,.10,root,19);
+ curve(bark,[[.3,6,-.3],[2.1,7.2,.4],[3.3,9,1.3],[5,9.4,1.7]],.46,.08,root,19);
+ for(let i=0;i<6;i++){const a=i*1.047;curve(bark,[[Math.cos(a)*4,.05,Math.sin(a)*3],[Math.cos(a)*1.9,.45,Math.sin(a)*1.5],[-.6,1.6,0]],.14,4,root,12);}
+ const clusters=[[-5.2,6.8,-.9],[-3.5,7.4,-.4],[-2,8.4,.5],[4.7,9.8,1.6],[3,10.5,1],[.7,12.2,-.5],[1.6,13.1,-.6],[-1.4,10.5,-1.5]];
+ clusters.forEach(([x,y,z],i)=>{curve(bark,[[i<3?-1:.8,i<3?5.4:9,-.3],[x*.7,y-.5,z*.7],[x,y,z]],.22,.1,root,10);for(let k=0;k<14;k++){const a=k*2.399;leafSpray(x+Math.cos(a)*1.2,y+Math.sin(a)*.5,z+Math.sin(a)*1.2,a,18,.67);}});
+ for(let i=0;i<8;i++)leafSpray(-.8+Math.sin(i)*.7,.3+Math.cos(i)*.2,Math.cos(i)*.9,i,9,.35);
+
+ root.name="tree candidate c"; root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),center=bounds.getCenter(new T.Vector3());for(const child of root.children){child.position.x-=center.x;child.position.y-=bounds.min.y;child.position.z-=center.z;}root.updateMatrixWorld(true);const size=bounds.getSize(new T.Vector3()),uniform=14/(size.y);for(const child of root.children){child.position.multiplyScalar(uniform);child.scale.multiplyScalar(uniform);}root.updateMatrixWorld(true);return root;
 }

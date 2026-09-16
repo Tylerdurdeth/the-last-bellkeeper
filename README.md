@@ -1,21 +1,23 @@
 # The Last Bellkeeper
 
-An original woodland adventure in development. The current build is a small playable terrace study, not the complete game or a submission-ready entry.
+An original woodland adventure in development. **The Waking Bough** is the current first-area study, rebuilt around a winding woodland route, a listening garden, a sleeping crossing and three small discoveries. It is not the complete game or a submission-ready entry.
 
 [Play the study](https://tylerdurdeth.github.io/the-last-bellkeeper/)
 
-Move with WASD/arrows or the touch joystick. Find the wandering gust, press Space or Catch wind, carry it toward the copper seed wheel and release it. A pressure puff is harmless; the bell retains its wind. Escape/pause opens sound, gentle-motion and restart controls.
+Move with WASD/arrows; Shift runs, J jumps, Space interacts. Touch uses an analogue joystick plus Jump and the contextual action button. A full joystick push runs. Escape/pause opens sound, gentle motion and restart controls. Follow environmental clues to awaken and carry the wind back to the crossing. Optional keepsakes reward searching beyond the main path.
 
 ## Development
 
-Node22 or later. Run `npm ci`, `npm run build`, then `npm run serve`. Open http://127.0.0.1:4173/the-last-bellkeeper/. Source is in `game/`; `docs/` is the self-contained published output. It includes Three.js locally and needs no API keys, account or remote generation at runtime.
+Node22 or later. Run `npm ci`, `npm run build`, then `npm run serve`. Open http://127.0.0.1:4173/the-last-bellkeeper/. Source is in `game/`; `docs/` is self-contained published output with Three.js included locally. No API keys, accounts or runtime generation are needed.
 
-`tools/test-scene.mjs` is the development real-input regression driver. Install the supported Chrome test browser with `npx puppeteer browsers install chrome` if it is not already cached. It does not change game state to complete the puzzle.
+`tools/test-rebuild.mjs` exercises the full known route with actual keyboard input plus touch-control smoke checks. `tools/test-rebuild-touch.mjs` exercises the full route and discoveries with actual emulated touch events. Tests read telemetry but never teleport the player or set puzzle state. Movement, animation and rendered-ground contact tests accompany them. Install the supported test browser with `npx puppeteer browsers install chrome` if needed.
 
-## Provenance
+## Provenance and limits
 
-Every object is authored as Three.js geometry through the 404 recipe's reference → three independent code candidates → multi-view render → visual selection process. All candidate sources/reports are outside the runtime in `evidence/geometry/`. Selection reasoning is in `evidence/provenance/geometry.md`.
+Every modeled object is original Three.js geometry produced through the 404 recipe's reference → three independent candidates → multi-view render → visual selection workflow, followed by documented repairs. Background composition reuses reviewed tree/rock geometry. The rebuild's reference, selection, material and spending records are in `evidence/rebuild/provenance/`. Earlier rejected terrace evidence remains in history and `evidence/geometry/`.
 
-Three.js0.180.0 is MIT licensed; its license is included in the build. `assetlib.js` and `surfaces.js` are copied from the 404 recipe at4effad311c5e137bca316257259fe5bffd6737de, following its explicit copy/use instructions. Original project geometry, game code, design and synthesized audio are developed for this entry. Atlas created one concept reference and one pilot SFX. The SFX has not been downloaded/listening-approved and is not shipped; current sound is clearly labelled provisional synthesized feedback.
+Atlas supplied original hero/woodland references and painted ground/bark/stone textures. Rebuild generation has settled25 credits; lifetime41 including the earlier pilot. Audio currently uses original procedural woodland/water textures, bird chirps and copper resonances. The paid pilot SFX is not shipped because reliable retrieval remains unresolved. Audio listening approval and physical iPhone performance are unverified.
 
-The complete planned adventure remains12–15 minutes. No full-route, physical-phone, final-art or submission-readiness claim is made by this prototype.
+Three.js0.180.0 is MIT licensed; the build includes its license. `assetlib.js` and `surfaces.js` originate from the 404 recipe at4effad311c5e137bca316257259fe5bffd6737de under its explicit copy/use instructions.
+
+The scripted known route with all discoveries covers about130 metres in49 seconds; this is a regression test, not a first-time discovery-duration claim. Independent visual and motion reviews still drive refinement. Passing the technical gate does not certify Zelda/Diablo-level artistic quality. The eventual complete adventure remains a separate12–15 minute scope.

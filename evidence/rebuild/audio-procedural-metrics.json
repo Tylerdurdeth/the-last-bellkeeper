@@ -1,0 +1,9 @@
+{
+  "seconds": 15,
+  "sampleRate": 22050,
+  "channels": 2,
+  "peak": 0.09857086837291718,
+  "rms": 0.009806497170359252,
+  "meanStereoDifference": 0.007092517763332974,
+  "nonfinite": 0
+}

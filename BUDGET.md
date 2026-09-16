@@ -23,3 +23,31 @@ Settled spending16; outstanding reservations0. PILOT-001 ended, both internal as
 Latest account observation at launch preparation, 16 September: 28% consumed / 72% remaining in reported weekly window; no purchased credit balance. Account-wide snapshot, not a task allocation or exact token budget. Recheck before substantial additional rounds; keep practical release/handoff headroom. At most three active agents including lead.
 
 First code-geometry milestone: no new Atlas jobs or reservations; settled total16 unchanged. Included compute meter16 September:34% used/66% remaining,10080-minute window, reset19 September11:39:18UTC; other window unavailable. No paid allowance/reset use. Three active agents maximum observed.
+
+## User-authorized rebuild — 16 September 2026
+
+Latest user requests sustained iteration on this same first area, including run/jump, charismatic hero, painterly materials, richer life and exploration, benchmarked against Zelda/Diablo2. Lead caps this rebuild at400 additional Atlas credits (maximum lifetime416 including previous16), inside original500 scene/1200 initial caps; protect800. Recheck present account UI:1984 remaining, member usage16. Current included weekly meter42%used58%remaining. No paid model overage/purchases.
+
+| Rebuild job | State | Reserved | Settled | Evidence |
+|---|---|---:|---:|---|
+| R01 hero isolated reference | Complete1:1(1K), Gemini3.1 Flash Lite Image seed43 | 0 | 5 | Actual typed prompt persisted; image inspected/downloaded |
+
+Rebuild spent5, reserved0, unallocated395. Lead only may dispatch. Stop new paid runs when settled+reserved would exceed400 for this rebuild; do not spend merely to exhaust the cap. All failed jobs/retries included. Record known unresolved retrieval charges honestly.
+
+R02 woodland composition reference reserved37 from configured UI, one direct1K image, same Gemini engine, typed original environment prompt. Rebuild spent5,reserved37,available358. No other paid runs authorized concurrently.
+
+R02 completed LastRun5; reference downloaded and inspected. Release37 reservation. Rebuild spent10,reserved0,available390; lifetime26. R01 initial stale cached result cost0 retained as workflow evidence. Image identity from R01 is canonical; scenery image's incidental red-haired figure is not adopted.
+
+R03 painted ground albedo reserved36, one direct1K Gemini image. Configured UI Max36. Rebuild spent10,reserved36,available354. Purpose: broad painted ground breakup instead of flat colors, inspect tiling before shipping.
+
+R03 completed LastRun5, downloaded1024px PNG. Release36 reservation. Rebuild spent15,reserved0,available385; lifetime31, expected balance1969. Ground tiling/actual scene review pending.
+
+R04 painted bark albedo: reserve36 configured Max, one direct1K Gemini image seed43. Rebuild settled15,reserved36,unallocated349. Purpose break flat naked trunks with broad flowing painted grain; no new audio job while retrieval unresolved.
+
+R04 completed LastRun5; inspected flowing painted bark and downloaded1024px PNG. Release36 reservation. Rebuild20 settled,0reserved,380available; lifetime36,expectedbalance1964. Included weekly meter53%used47%remaining.
+
+Billing UI rechecked after R04: remaining1964, member36credits this period, confirming20 rebuild+16 prior. Reservations0. Noaudio reruns, purchases, on-demand or subscription changes.
+
+R05 painted cliff stone material: reserve36, configured directimageMax36, one1K Gemini seed43. Rebuild settled20,reserved36,unallocated344. Concrete defect: bare enlarged cliff rocks read as smooth geometric blocks; target broad painted strata and mineral wear.
+
+R05 terminalLastRun5, inspected/downloaded1Kpaintedlayeredstone. Release36reservation. Rebuild25settled,0reserved,375available; lifetime41,expectedbalance1959.

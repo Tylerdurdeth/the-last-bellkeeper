@@ -9,3 +9,6 @@ node_modules/
 .DS_Store
 # Local motion evidence; selected stills and reports are versioned.
 evidence/**/*.webm
+# Preserve full local frame sequences and verifier renders; publish selected views/reports.
+evidence/rebuild/motion-round*/0*.png
+evidence/rebuild/recipe-integrated-round2/*.png
