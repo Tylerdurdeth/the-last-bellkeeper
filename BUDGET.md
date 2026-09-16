@@ -69,3 +69,5 @@ At bark refinement c6ebc2c, included weekly account usage is92% consumed/8% rema
 At unified-root/stride checkpoint, included weekly account usage is97% consumed/3% remaining. Atlas remains25 settled,0reserved,375 available under rebuild cap; no new generation. This shared compute observation does not certify project-specific consumption or aesthetic completion.
 
 During fern silhouette repair, included weekly account usage is98% consumed/2% remaining (16September2026; reset19September11:39:18UTC). Atlas unchanged25settled,0reserved,375available. Existing Atlas woodland reference reused; no new generation or paid compute.
+
+Footfall synchronization checkpoint: included account meter99%used/1%remaining, weekly reset19September11:39:18UTC. The account now reports2500Codex credits; no authorization to use paid overage is inferred, and no purchase/reset/API call was made. Atlas unchanged25settled/0reserved/375remaining.
