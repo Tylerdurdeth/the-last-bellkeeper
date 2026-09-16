@@ -1,0 +1,855 @@
+{
+  "kind": "Actual keyboard/touch input with read-only telemetry; known-route scripted regression, not a natural discovery playtest",
+  "startedAt": "2026-09-16T17:33:29.456Z",
+  "errors": [],
+  "requests": [],
+  "checks": {
+    "counterInitiallyHidden": {
+      "pass": true
+    },
+    "walkRun": {
+      "walk": 2.187728015814398,
+      "run": 4.490006798505411,
+      "pass": true
+    },
+    "jump": {
+      "air": {
+        "pos": [
+          -2.10438378442224,
+          16.584952159146795
+        ],
+        "y": 0.8147339955663989,
+        "fps": 59.455289554701324,
+        "speed": 1.2513570419935864,
+        "mode": "jump",
+        "grounded": false,
+        "score": 0,
+        "draws": 354,
+        "tris": 719458,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 1.7949997033977774,
+        "context": null
+      },
+      "land": {
+        "pos": [
+          -2.192623948476381,
+          16.471889965204248
+        ],
+        "y": 0.11201280950448403,
+        "fps": 59.85461472257264,
+        "speed": 0.000054943228271073483,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 352,
+        "tris": 719398,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 1.938420016643161,
+        "context": null
+      },
+      "pass": true
+    },
+    "pause": {
+      "pass": true
+    },
+    "reset": {
+      "pass": true
+    },
+    "porch-story": {
+      "pos": [
+        -6.524033591542204,
+        10.994281452248941
+      ],
+      "y": 0.06953009132797203,
+      "fps": 60.00213714086002,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 363,
+      "tris": 736624,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 8.937438520842726,
+      "context": null
+    },
+    "porchStory": {
+      "pass": true
+    },
+    "chimes-awakened": {
+      "pos": [
+        -8.408101319115074,
+        -14.910397818239648
+      ],
+      "y": 2.2641117988370216,
+      "fps": 59.775488309725965,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 342,
+      "tris": 520020,
+      "charged": false,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 48.768256596949826,
+      "context": null
+    },
+    "quietPocket": {
+      "pass": true
+    },
+    "captured": {
+      "pos": [
+        -13.112558446035013,
+        -17.525535379782987
+      ],
+      "y": 1.8246301710438024,
+      "fps": 60.00868452983456,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 312,
+      "tris": 510826,
+      "charged": true,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": true,
+      "keepsakes": 0,
+      "travel": 62.71573371973503,
+      "context": null
+    },
+    "restored": {
+      "pos": [
+        4.742880702063666,
+        3.8685182262637072
+      ],
+      "y": 1.1400564281445427,
+      "fps": 60.00191199189425,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 443,
+      "tris": 733872,
+      "charged": false,
+      "awakened": true,
+      "restored": true,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": true,
+      "keepsakes": 0,
+      "travel": 111.75067311851366,
+      "context": null
+    },
+    "completed": {
+      "pos": [
+        8.133121452824339,
+        -9.858314340159007
+      ],
+      "y": 1.2,
+      "fps": 60.00831580047816,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 1,
+      "draws": 395,
+      "tris": 591404,
+      "charged": false,
+      "awakened": true,
+      "restored": true,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": true,
+      "keepsakes": 0,
+      "travel": 129.27152498381983,
+      "context": null
+    },
+    "completion": {
+      "pass": true,
+      "scriptedSeconds": 42.22,
+      "travel": 129.27152498381983
+    },
+    "fallRecovery": {
+      "pass": true,
+      "fell": true,
+      "recovered": true,
+      "state": {
+        "pos": [
+          8.275313607772839,
+          -0.9518504855420763
+        ],
+        "y": 1.2,
+        "fps": 60.00531155487985,
+        "speed": 0,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 278,
+        "tris": 546120,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 33.02711791855113,
+        "context": null
+      }
+    },
+    "touch": {
+      "pass": true,
+      "before": {
+        "pos": [
+          -1,
+          18
+        ],
+        "y": 0.11589328807394306,
+        "fps": 58.74641800517728,
+        "speed": 0,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 244,
+        "tris": 626850,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 0,
+        "context": null
+      },
+      "during": {
+        "pos": [
+          -2.5955663107248172,
+          15.955599588859915
+        ],
+        "y": 0.11004839979391196,
+        "fps": 59.63485892683049,
+        "speed": 4.498126302700966,
+        "mode": "run",
+        "grounded": true,
+        "score": 0,
+        "draws": 247,
+        "tris": 643158,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 2.593338561196697,
+        "context": null
+      },
+      "stopped": {
+        "pos": [
+          -2.771219506122844,
+          15.730535006788944
+        ],
+        "y": 0.1090059283031472,
+        "fps": 59.744299671638885,
+        "speed": 0.03600621257888539,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 248,
+        "tris": 643066,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 2.878834815386341,
+        "context": null
+      },
+      "touchAir": {
+        "pos": [
+          -2.771903642611227,
+          15.729658422150163
+        ],
+        "y": 0.9082051205695695,
+        "fps": 59.84480332080438,
+        "speed": 0.0008762921936092481,
+        "mode": "jump",
+        "grounded": false,
+        "score": 0,
+        "draws": 248,
+        "tris": 641650,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 2.8799467701352794,
+        "context": null
+      },
+      "touchPaused": {
+        "pos": [
+          -2.7719651827292533,
+          15.7295795707469
+        ],
+        "y": 0.10900123260125684,
+        "fps": 59.97046968977664,
+        "speed": 7.986362737193276e-9,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 228,
+        "tris": 640704,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": true,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 2.8800467937821006,
+        "context": null
+      },
+      "touchReset": {
+        "pos": [
+          -1,
+          18
+        ],
+        "y": 0.11589328807394306,
+        "fps": 59.975129871792696,
+        "speed": 0,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 244,
+        "tris": 626850,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 0,
+        "context": null
+      }
+    }
+  },
+  "waypoints": [
+    {
+      "label": "first-bend",
+      "target": [
+        -5,
+        13
+      ],
+      "actual": [
+        -5.024868901415124,
+        12.84293220436568
+      ],
+      "time": 1789580014205,
+      "travel": 6.541782472869852
+    },
+    {
+      "label": "porch-note",
+      "target": [
+        -6.5,
+        11
+      ],
+      "actual": [
+        -6.524033591542204,
+        10.994281452248941
+      ],
+      "time": 1789580014854,
+      "travel": 8.937438520842726
+    },
+    {
+      "label": "cottage",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -3.8016078853511575,
+        8.00053784461224
+      ],
+      "time": 1789580018563,
+      "travel": 13.340752925306262
+    },
+    {
+      "label": "roots",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -9.85872398451845,
+        5.23349158126827
+      ],
+      "time": 1789580022192,
+      "travel": 20.435484532557027
+    },
+    {
+      "label": "west-path",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -14.795753923974454,
+        0.19870590021325885
+      ],
+      "time": 1789580024165,
+      "travel": 27.905758562486998
+    },
+    {
+      "label": "upper-bend",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.992117328356466,
+        -7.191895398430649
+      ],
+      "time": 1789580026053,
+      "travel": 35.92744999903171
+    },
+    {
+      "label": "garden-approach",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.260160331053843,
+        -9.869411402955151
+      ],
+      "time": 1789580027717,
+      "travel": 42.85052329014821
+    },
+    {
+      "label": "chimes",
+      "target": [
+        -8,
+        -15
+      ],
+      "actual": [
+        -8.409969803292231,
+        -14.899777430567607
+      ],
+      "time": 1789580029153,
+      "travel": 48.75747309717357
+    },
+    {
+      "label": "quiet-approach",
+      "target": [
+        -9,
+        -19.5
+      ],
+      "actual": [
+        -9.097022483070889,
+        -19.331742049773666
+      ],
+      "time": 1789580031627,
+      "travel": 53.798111503770855
+    },
+    {
+      "label": "quiet-near",
+      "target": [
+        -7,
+        -19.5
+      ],
+      "actual": [
+        -7.153054204998614,
+        -19.101962418272173
+      ],
+      "time": 1789580032163,
+      "travel": 55.75606704385914
+    },
+    {
+      "label": "quiet-bed",
+      "target": [
+        -7,
+        -18.7
+      ],
+      "actual": [
+        -7.143021907571581,
+        -19.100725381493696
+      ],
+      "time": 1789580032246,
+      "travel": 55.766175320253055
+    },
+    {
+      "label": "current-trail",
+      "target": [
+        -9,
+        -19.5
+      ],
+      "actual": [
+        -9.09349685074569,
+        -19.341232984761614
+      ],
+      "time": 1789580032999,
+      "travel": 57.733221081278934
+    },
+    {
+      "label": "current-bed-approach",
+      "target": [
+        -11,
+        -19.5
+      ],
+      "actual": [
+        -11.060994556776816,
+        -19.583839615654963
+      ],
+      "time": 1789580033532,
+      "travel": 59.71561993130664
+    },
+    {
+      "label": "garden",
+      "target": [
+        -13.2,
+        -17.5
+      ],
+      "actual": [
+        -13.103786718064985,
+        -17.53238135518007
+      ],
+      "time": 1789580034294,
+      "travel": 62.70460669898744
+    },
+    {
+      "label": "return-around-root",
+      "target": [
+        -11,
+        -16
+      ],
+      "actual": [
+        -11.122198198985087,
+        -16.097393536638627
+      ],
+      "time": 1789580036523,
+      "travel": 65.52773364083507
+    },
+    {
+      "label": "return-path",
+      "target": [
+        -10,
+        -13
+      ],
+      "actual": [
+        -10.095428757608044,
+        -12.971893515929976
+      ],
+      "time": 1789580037395,
+      "travel": 69.0512878934467
+    },
+    {
+      "label": "return-garden",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.106694618058881,
+        -10.061710636876922
+      ],
+      "time": 1789580038162,
+      "travel": 72.05161151508636
+    },
+    {
+      "label": "return-upper",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.648727812156192,
+        -7.000450811937866
+      ],
+      "time": 1789580039944,
+      "travel": 79.31545515585734
+    },
+    {
+      "label": "return-west",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -14.886696000615887,
+        -0.22227848400859038
+      ],
+      "time": 1789580041733,
+      "travel": 86.83170565134844
+    },
+    {
+      "label": "return-roots",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -10.135524995685882,
+        4.659337142777802
+      ],
+      "time": 1789580043396,
+      "travel": 93.87731093946398
+    },
+    {
+      "label": "return-cottage",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -3.976163042056102,
+        7.898114438659099
+      ],
+      "time": 1789580045172,
+      "travel": 101.3725763424576
+    },
+    {
+      "label": "wheel-approach",
+      "target": [
+        0,
+        6
+      ],
+      "actual": [
+        0.03147626366976068,
+        5.800258567296098
+      ],
+      "time": 1789580046385,
+      "travel": 106.34057484789867
+    },
+    {
+      "label": "wheel-path",
+      "target": [
+        4,
+        4
+      ],
+      "actual": [
+        3.909750592313835,
+        4.119262547604275
+      ],
+      "time": 1789580047490,
+      "travel": 110.83826262320586
+    },
+    {
+      "label": "wheel",
+      "target": [
+        5,
+        3.7
+      ],
+      "actual": [
+        4.734126612924659,
+        3.874742648662274
+      ],
+      "time": 1789580047800,
+      "travel": 111.73993172610625
+    },
+    {
+      "label": "wheel-around",
+      "target": [
+        8,
+        4
+      ],
+      "actual": [
+        7.735014786997469,
+        4.237469898889189
+      ],
+      "time": 1789580049783,
+      "travel": 114.76546858735654
+    },
+    {
+      "label": "bridge-near",
+      "target": [
+        8,
+        0.1
+      ],
+      "actual": [
+        8.2474528671231,
+        0.20345558982778292
+      ],
+      "time": 1789580050776,
+      "travel": 118.83277551810684
+    },
+    {
+      "label": "bridge-deck",
+      "target": [
+        8,
+        -3.35
+      ],
+      "actual": [
+        8.324527670206756,
+        -3.155715824527079
+      ],
+      "time": 1789580051645,
+      "travel": 122.28617292845762
+    },
+    {
+      "label": "bridge-far",
+      "target": [
+        8,
+        -6.5
+      ],
+      "actual": [
+        8.01765323993259,
+        -6.478313376069165
+      ],
+      "time": 1789580052760,
+      "travel": 125.81086657530375
+    },
+    {
+      "label": "overlook",
+      "target": [
+        8,
+        -10
+      ],
+      "actual": [
+        8.139054302423116,
+        -9.849449653605578
+      ],
+      "time": 1789580053638,
+      "travel": 129.26085814867292
+    },
+    {
+      "label": "fall-route-bend",
+      "target": [
+        -4,
+        13
+      ],
+      "actual": [
+        -4.019751543699253,
+        12.923951203054523
+      ],
+      "time": 1789580056462,
+      "travel": 6.1374561515920885
+    },
+    {
+      "label": "fall-route-cottage",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -3.760653844325729,
+        8.006547622406687
+      ],
+      "time": 1789580057680,
+      "travel": 11.159848629215706
+    },
+    {
+      "label": "fall-route-east",
+      "target": [
+        0,
+        6
+      ],
+      "actual": [
+        -0.251367868047098,
+        6.125047650309954
+      ],
+      "time": 1789580058776,
+      "travel": 15.53520124821163
+    },
+    {
+      "label": "fall-route-wheel",
+      "target": [
+        4,
+        4
+      ],
+      "actual": [
+        4.0404139064519615,
+        4.120672459385273
+      ],
+      "time": 1789580059996,
+      "travel": 20.557600431399138
+    },
+    {
+      "label": "fall-route-around-wheel",
+      "target": [
+        8,
+        4
+      ],
+      "actual": [
+        7.968123988602341,
+        4.279451485936091
+      ],
+      "time": 1789580060993,
+      "travel": 24.576924612504303
+    },
+    {
+      "label": "fall-edge",
+      "target": [
+        8,
+        0
+      ],
+      "actual": [
+        8.18178948176565,
+        -0.11390158132144725
+      ],
+      "time": 1789580062097,
+      "travel": 29.073795230933207
+    }
+  ],
+  "screenshots": [
+    "evidence/rebuild/discovery-review/desktop/runtime-arrival.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-porch-note.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-cottage.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-roots.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-chimes.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-quiet-pocket.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-responsive-pocket.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-capture.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-restoration.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-bridge.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-overlook.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-fall-recovery.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-phone-arrival.png",
+    "evidence/rebuild/discovery-review/desktop/runtime-phone-reset.png"
+  ],
+  "pass": true,
+  "finishedAt": "2026-09-16T17:34:26.491Z"
+}

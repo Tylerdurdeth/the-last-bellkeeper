@@ -1,0 +1,278 @@
+{
+  "kind": "Actual keyboard/touch input with read-only telemetry; known-route scripted regression, not a natural discovery playtest",
+  "startedAt": "2026-09-16T17:15:36.696Z",
+  "errors": [],
+  "requests": [],
+  "checks": {},
+  "waypoints": [
+    {
+      "label": "approach",
+      "target": [
+        -5,
+        13
+      ],
+      "actual": [
+        -4.747807748704125,
+        13.197930884587247
+      ],
+      "time": 1789578941068,
+      "travel": 6.0914637576240835
+    },
+    {
+      "label": "approach",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.131033383380841,
+        8.10956266284957
+      ],
+      "time": 1789578942299,
+      "travel": 11.217462538679353
+    },
+    {
+      "label": "approach",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -10.037854501912559,
+        5.164489620520336
+      ],
+      "time": 1789578946249,
+      "travel": 18.260427660563053
+    },
+    {
+      "label": "approach",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -14.89512461149292,
+        0.062013274141035406
+      ],
+      "time": 1789578948035,
+      "travel": 25.72870363813989
+    },
+    {
+      "label": "approach",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.81398722102255,
+        -6.9738838560805885
+      ],
+      "time": 1789578949819,
+      "travel": 33.30022385224949
+    },
+    {
+      "label": "approach",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.201324894578994,
+        -9.962253462702451
+      ],
+      "time": 1789578951473,
+      "travel": 40.193369527112324
+    },
+    {
+      "label": "approach",
+      "target": [
+        -8,
+        -15
+      ],
+      "actual": [
+        -8.035733740887316,
+        -14.813417440920796
+      ],
+      "time": 1789578952905,
+      "travel": 46.13256261566015
+    },
+    {
+      "label": "east",
+      "target": [
+        -7.3,
+        -14.4
+      ],
+      "actual": [
+        -7.2157253764309015,
+        -14.385952880926487
+      ],
+      "time": 1789578953216,
+      "travel": 47.110222774721514
+    },
+    {
+      "label": "south",
+      "target": [
+        -8.5,
+        -13.5
+      ],
+      "actual": [
+        -8.345336525196387,
+        -13.490579992292599
+      ],
+      "time": 1789578953889,
+      "travel": 48.56296421807416
+    },
+    {
+      "label": "west",
+      "target": [
+        -10,
+        -15
+      ],
+      "actual": [
+        -9.848741710565532,
+        -14.88435595568732
+      ],
+      "time": 1789578954765,
+      "travel": 50.90491455279622
+    },
+    {
+      "label": "approach",
+      "target": [
+        -5,
+        13
+      ],
+      "actual": [
+        -4.9770901462006485,
+        12.904151162266489
+      ],
+      "time": 1789578957356,
+      "travel": 6.464125726502873
+    },
+    {
+      "label": "approach",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.36938381985231,
+        7.889762357748976
+      ],
+      "time": 1789578958571,
+      "travel": 11.515586277910057
+    },
+    {
+      "label": "approach",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -9.798839263156664,
+        5.096284321893022
+      ],
+      "time": 1789578961806,
+      "travel": 18.198996219021737
+    },
+    {
+      "label": "approach",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -14.99595788639449,
+        0.15778160591210716
+      ],
+      "time": 1789578963578,
+      "travel": 25.69434863699163
+    },
+    {
+      "label": "approach",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -16.029454724915883,
+        -7.0212541176465475
+      ],
+      "time": 1789578965465,
+      "travel": 33.61354286118776
+    },
+    {
+      "label": "approach",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.11542498282467,
+        -9.84149410046278
+      ],
+      "time": 1789578967127,
+      "travel": 40.56397321672105
+    },
+    {
+      "label": "approach",
+      "target": [
+        -8,
+        -15
+      ],
+      "actual": [
+        -8.05692130602073,
+        -15.078215323708168
+      ],
+      "time": 1789578968562,
+      "travel": 46.56068136889778
+    },
+    {
+      "label": "east",
+      "target": [
+        -7.3,
+        -14.4
+      ],
+      "actual": [
+        -7.239067531651227,
+        -14.653395769071468
+      ],
+      "time": 1789578968870,
+      "travel": 47.534980694709745
+    },
+    {
+      "label": "south",
+      "target": [
+        -8.5,
+        -13.5
+      ],
+      "actual": [
+        -8.427161193786906,
+        -13.712270585530689
+      ],
+      "time": 1789578969416,
+      "travel": 49.06161218980412
+    },
+    {
+      "label": "west",
+      "target": [
+        -10,
+        -15
+      ],
+      "actual": [
+        -9.951489709471995,
+        -15.12698331638094
+      ],
+      "time": 1789578970181,
+      "travel": 51.47779680496208
+    }
+  ],
+  "screenshots": [
+    "evidence/rebuild/visual-round4/arc/runtime-desktop-east.png",
+    "evidence/rebuild/visual-round4/arc/runtime-desktop-south.png",
+    "evidence/rebuild/visual-round4/arc/runtime-desktop-west.png",
+    "evidence/rebuild/visual-round4/arc/runtime-phone-east.png",
+    "evidence/rebuild/visual-round4/arc/runtime-phone-south.png",
+    "evidence/rebuild/visual-round4/arc/runtime-phone-west.png"
+  ],
+  "pass": true
+}

@@ -94,3 +94,20 @@ All applicable process requirements below also apply. Full-route/title/intro/fin
 - An old proposed 100-credit single-call pilot ceiling is a planning sub-allocation, not additional funds or a verified quote. The relaxed 10-credit limit is superseded. Hard-bounded configuration must be established before dispatch.
 - Lower actual Atlas balances reduce the overall initial/repair allocations proportionally. Fix the test allocation from verified balance before first dispatch; later drops require reconciliation and never authorize a cap increase.
 - Historical setup state and user start authorization do not manufacture missing workflow/recording/download evidence. Record those proofs during the bounded pilot or report the precise blocker.
+
+## Current rebuild checkpoint — 16 September
+
+The user's later instruction replaces the rejected bare terrace with a richer explorable first area and explicitly adds run/jump. Original full-adventure requirements remain outstanding; the change does not certify or expand into the complete adventure.
+
+Current evidence supersedes historical terrace observations where applicable:
+
+- TEST-01/02 and ART: woodland/character/material reconstruction, independent visual-round1 through5. Round5 passes the bounded canopy visibility defect; broad premium-art equivalence is not claimed.
+- TEST-03: full known-route keyboard and actual emulated-touch traversals pass, including optional elevated discovery, persistent restoration and reset. New garden/shortcut candidate is being rechecked.
+- TEST-04: movement/animation numerical checks, actual staff/action motion round2 and denser visibility transition recording. Human normal-speed animation-quality approval remains unverified.
+- TEST-05: new original procedural soundscape, validated audio graph/sample, no listening approval. New cottage/keeper and garden interpretation work awaits independent story/gameplay review.
+- TEST-06/08:25rebuild credits,41lifetime,0reservations; generation/reference/candidate/recipe evidence in evidence/rebuild/provenance/ and BUDGET.md.
+- TEST-07: image generation/retrieval demonstrated; prior paid SFX file retrieval is still blocked. No success is inferred for that audio requirement.
+- TEST-09: preserve separate verdicts and limitations; gameplay-review.md initially withholds discovery/story approval and names the candidate repairs.
+- TEST-10: runtime59464e9 unmodified live phone gate PASS (evidence/rebuild/jam-live-59464e9). Physical-phone, fresh human discovery and actual listening are unverified.
+
+Final contact regression: full phone-emulated touch quest, three keepsakes and reset pass after actual-rock grounding and brook/bank repairs (`evidence/rebuild/touch-final`). Desktop completion, exact eastern-edge exploration and closed-gap recovery pass (`runtime-bank-final`). Independent first-exposure agent completed in3m51s and understood cottage/finale relationship; this does not certify human timing. Continuous-camera repair passes the captured previous flash interval (`nearbranch-retest3.md`). Overall visual ambition remains open: connected understory refinement is being judged separately from mechanical completion.

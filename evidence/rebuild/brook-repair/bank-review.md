@@ -1,0 +1,11 @@
+# Conservative bank repair
+
+One candidate, retained. game/assets/terrain.js and game/world-layout.js share identical revised height logic. Original profile remains at x6..10 around the bridge; exposed stretches gradually acquire up to0.25m irregular inward edge and0.7m smoothed cut. Existing28×4.3m water footprint, bridge endpoints and terrain footprint unchanged. Vertex colour locates muted earth/wet stone at the exposed banks instead of carrying grass down the cut.
+
+Unmodified terrain recipe: PASS45062tri7meshes groundOffset0 bounds120×12.35×120. World-ground test: PASS eight traversable landmarks and baseline. Actual desktop normal-keyboard route completed with0console/shader/page errors and0HTTP errors; source→wheel→bridge→vista. Desktop runtime-result.json plus runtime-restoration.png and runtime-bridge.png show this bank candidate. Phone frames in this directory are earlier water-only captures and DO NOT establish bank-version phone review.
+
+Visual judgment: right-bank earth colouring clearly improves the grass trench; soft irregular bank edge has modest effect. Channel still looks engineered, with abrupt left termination; this limited repair does not meet the full natural river reference bar. Do not claim otherwise. One candidate only, no churn or spending.
+
+Physics caveat discovered and coordinated: smooth banks include elevations between-.6water and-2old ground rejection, potentially permitting underwater standing. Root added river-only ground rejection below-.35 after the restored bridge override. That root patch was not in this capture and needs the root's final runtime regression. My own profile preserves original closed-gap height exactly beneath bridge x6..10; distant smooth bank physics must be verified after cutoff build. No runtime claims for that pending patch.
+
+Root follow-up: river-only cutoff is now included in the served build. `touch-final/result.json` passes the full touch quest, all optional memories and reset; `runtime-bank-final/runtime-result.json` passes the complete keyboard route, exact east-boundary exploration, closed-gap fall recovery and phone controls. No JS/HTTP errors. These supersede the pending physics caveat above without altering the earlier capture's scope.

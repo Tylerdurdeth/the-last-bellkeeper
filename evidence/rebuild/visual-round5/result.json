@@ -1,0 +1,425 @@
+{
+  "kind": "Actual keyboard/touch input with read-only telemetry; known-route scripted regression, not a natural discovery playtest",
+  "startedAt": "2026-09-16T17:21:55.199Z",
+  "errors": [],
+  "requests": [],
+  "checks": {
+    "desktop-ring": {
+      "pos": [
+        -8.045723595429711,
+        -15.128682206654705
+      ],
+      "y": 2.198350171676935,
+      "fps": 60.00400193208453,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 219,
+      "tris": 509748,
+      "charged": false,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "keepsakes": 0,
+      "travel": 46.7828958179946,
+      "context": null
+    },
+    "desktop-capture": {
+      "pos": [
+        -9.902516819202654,
+        -16.95056290492213
+      ],
+      "y": 1.973159326352512,
+      "fps": 60.00631680451231,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 208,
+      "tris": 494280,
+      "charged": true,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "keepsakes": 0,
+      "travel": 53.75372235736903,
+      "context": null
+    },
+    "phone-ring": {
+      "pos": [
+        -8.058005431074962,
+        -14.82046560244957
+      ],
+      "y": 2.247064390545116,
+      "fps": 60.0058999281312,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 170,
+      "tris": 417350,
+      "charged": false,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "keepsakes": 0,
+      "travel": 46.68010708889172,
+      "context": null
+    },
+    "phone-capture": {
+      "pos": [
+        -9.873036411885192,
+        -17.182907054628416
+      ],
+      "y": 1.9244500500109472,
+      "fps": 60.001518682843596,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 162,
+      "tris": 413366,
+      "charged": true,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "keepsakes": 0,
+      "travel": 53.46040124589507,
+      "context": null
+    }
+  },
+  "waypoints": [
+    {
+      "label": "roots",
+      "target": [
+        -5,
+        13
+      ],
+      "actual": [
+        -5.023390027758423,
+        12.84482708638433
+      ],
+      "time": 1789579317571,
+      "travel": 6.539378799606474
+    },
+    {
+      "label": "roots",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.101059493287566,
+        8.011026127228405
+      ],
+      "time": 1789579318797,
+      "travel": 11.560967607430177
+    },
+    {
+      "label": "roots",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -9.860545282153035,
+        5.069288907910971
+      ],
+      "time": 1789579322284,
+      "travel": 18.64801064587958
+    },
+    {
+      "label": "garden-approach",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -15.056057772520141,
+        0.13578167931738128
+      ],
+      "time": 1789579324283,
+      "travel": 26.14369868403972
+    },
+    {
+      "label": "garden-approach",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.831462924442132,
+        -6.716934943795107
+      ],
+      "time": 1789579326072,
+      "travel": 33.686948806975636
+    },
+    {
+      "label": "garden-approach",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -9.964337586567192,
+        -9.969719053085358
+      ],
+      "time": 1789579327746,
+      "travel": 40.71335887635133
+    },
+    {
+      "label": "chime",
+      "target": [
+        -8,
+        -15
+      ],
+      "actual": [
+        -8.047617182566519,
+        -15.117868832780333
+      ],
+      "time": 1789579329297,
+      "travel": 46.771917898028086
+    },
+    {
+      "label": "east",
+      "target": [
+        -7.3,
+        -14.4
+      ],
+      "actual": [
+        -7.435317216466543,
+        -14.346568017023849
+      ],
+      "time": 1789579330864,
+      "travel": 47.775014033279895
+    },
+    {
+      "label": "south",
+      "target": [
+        -8.5,
+        -13.5
+      ],
+      "actual": [
+        -8.564949648103104,
+        -13.451024702394127
+      ],
+      "time": 1789579331535,
+      "travel": 49.22748311793529
+    },
+    {
+      "label": "west",
+      "target": [
+        -10,
+        -15
+      ],
+      "actual": [
+        -10.143230894298826,
+        -14.910079680970313
+      ],
+      "time": 1789579332424,
+      "travel": 51.68893603624814
+    },
+    {
+      "label": "capture",
+      "target": [
+        -10,
+        -17
+      ],
+      "actual": [
+        -9.903868372981622,
+        -16.939602037083322
+      ],
+      "time": 1789579333147,
+      "travel": 53.742678475741755
+    },
+    {
+      "label": "retreat",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.044700452617946,
+        -10.067815402099038
+      ],
+      "time": 1789579336063,
+      "travel": 60.86324429061275
+    },
+    {
+      "label": "roots",
+      "target": [
+        -5,
+        13
+      ],
+      "actual": [
+        -5.023968030124096,
+        12.844086491483273
+      ],
+      "time": 1789579339649,
+      "travel": 6.540318250266274
+    },
+    {
+      "label": "roots",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.052523339717706,
+        8.034779168838583
+      ],
+      "time": 1789579340864,
+      "travel": 11.547192409195262
+    },
+    {
+      "label": "roots",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -9.745529111367846,
+        5.101631445280782
+      ],
+      "time": 1789579344332,
+      "travel": 18.6187445152308
+    },
+    {
+      "label": "garden-approach",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -14.985879227344524,
+        0.108152075447065
+      ],
+      "time": 1789579346228,
+      "travel": 26.18848542845822
+    },
+    {
+      "label": "garden-approach",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.905177699674596,
+        -6.927479983262401
+      ],
+      "time": 1789579348002,
+      "travel": 33.75955473631147
+    },
+    {
+      "label": "garden-approach",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.231472888016317,
+        -9.962982226707084
+      ],
+      "time": 1789579349669,
+      "travel": 40.728722653369196
+    },
+    {
+      "label": "chime",
+      "target": [
+        -8,
+        -15
+      ],
+      "actual": [
+        -8.066798569740179,
+        -14.813666476196593
+      ],
+      "time": 1789579351129,
+      "travel": 46.66899190084158
+    },
+    {
+      "label": "east",
+      "target": [
+        -7.3,
+        -14.4
+      ],
+      "actual": [
+        -7.2964434742197435,
+        -14.442342992422665
+      ],
+      "time": 1789579352546,
+      "travel": 47.57234212769561
+    },
+    {
+      "label": "south",
+      "target": [
+        -8.5,
+        -13.5
+      ],
+      "actual": [
+        -8.427139594194959,
+        -13.546073535042796
+      ],
+      "time": 1789579353073,
+      "travel": 49.026331339951476
+    },
+    {
+      "label": "west",
+      "target": [
+        -10,
+        -15
+      ],
+      "actual": [
+        -9.815879022809673,
+        -14.790112361580201
+      ],
+      "time": 1789579353719,
+      "travel": 50.97665470480687
+    },
+    {
+      "label": "capture",
+      "target": [
+        -10,
+        -17
+      ],
+      "actual": [
+        -9.862676259630422,
+        -17.168189745903174
+      ],
+      "time": 1789579354483,
+      "travel": 53.442403136803954
+    },
+    {
+      "label": "retreat",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.115114721547426,
+        -9.911198337652637
+      ],
+      "time": 1789579357379,
+      "travel": 60.94678065177356
+    }
+  ],
+  "screenshots": [
+    "evidence/rebuild/visual-round5/runtime-desktop-roots.png",
+    "evidence/rebuild/visual-round5/runtime-desktop-chime-arrival.png",
+    "evidence/rebuild/visual-round5/runtime-desktop-east.png",
+    "evidence/rebuild/visual-round5/runtime-desktop-south.png",
+    "evidence/rebuild/visual-round5/runtime-desktop-west.png",
+    "evidence/rebuild/visual-round5/runtime-desktop-capture.png",
+    "evidence/rebuild/visual-round5/runtime-phone-roots.png",
+    "evidence/rebuild/visual-round5/runtime-phone-chime-arrival.png",
+    "evidence/rebuild/visual-round5/runtime-phone-east.png",
+    "evidence/rebuild/visual-round5/runtime-phone-south.png",
+    "evidence/rebuild/visual-round5/runtime-phone-west.png",
+    "evidence/rebuild/visual-round5/runtime-phone-capture.png"
+  ],
+  "pass": true
+}

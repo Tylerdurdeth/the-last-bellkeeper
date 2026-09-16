@@ -1,0 +1,3 @@
+# Full touch regression after physical contact and brook repairs
+
+Real browser touch contacts only; known-route script `tools/test-rebuild-touch.mjs`, phone emulation430×932. Passed complete quest, porch story, both garden pockets, jump-accessed rock and shortcut memories, third memory, finale and reset. No JS/HTTP errors. Travel115.75m, elapsed47.67s; not a human discovery or performance measurement. Code includes rendered rock ground, shallow void rescue, continuous camera fade, raised brook, revised bank profile and river-only underwater cutoff. Subsequent planting-only changes require readability checks but do not invalidate this physical-route evidence if colliders remain identical.

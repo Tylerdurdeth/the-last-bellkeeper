@@ -1,0 +1,405 @@
+{
+  "kind": "Actual keyboard/touch input with read-only telemetry; known-route scripted regression, not a natural discovery playtest",
+  "startedAt": "2026-09-16T17:37:31.267Z",
+  "errors": [],
+  "requests": [],
+  "checks": {
+    "chime": {
+      "pos": [
+        -8.390207866007286,
+        -14.892448768981533
+      ],
+      "y": 2.265382410022943,
+      "fps": 59.99486357604346,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 241,
+      "tris": 408950,
+      "charged": false,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": false,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 45.92196297913645,
+      "context": null
+    },
+    "capture": {
+      "pos": [
+        -13.315729411742314,
+        -17.499531938244097
+      ],
+      "y": 1.817846087644228,
+      "fps": 60.002519420764834,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 202,
+      "tris": 408450,
+      "charged": true,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": false,
+      "quietObserved": true,
+      "keepsakes": 0,
+      "travel": 60.366610621448515,
+      "context": null
+    }
+  },
+  "waypoints": [
+    {
+      "label": "approach",
+      "target": [
+        -5,
+        13
+      ],
+      "actual": [
+        -4.747377567350547,
+        13.198482076305323
+      ],
+      "time": 1789580253514,
+      "travel": 6.090764566443473
+    },
+    {
+      "label": "approach",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.1396393075304,
+        8.184400762029975
+      ],
+      "time": 1789580254736,
+      "travel": 11.14188961741847
+    },
+    {
+      "label": "approach",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -9.824552531173374,
+        5.091813029859083
+      ],
+      "time": 1789580258580,
+      "travel": 18.301325636990157
+    },
+    {
+      "label": "approach",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -15.115615231862934,
+        0.035102194294455914
+      ],
+      "time": 1789580260373,
+      "travel": 25.948384201620165
+    },
+    {
+      "label": "approach",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.817500786372804,
+        -6.80874785377939
+      ],
+      "time": 1789580262160,
+      "travel": 33.42201946646435
+    },
+    {
+      "label": "approach",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.133760556609092,
+        -9.917839903212966
+      ],
+      "time": 1789580263841,
+      "travel": 40.42146204736317
+    },
+    {
+      "label": "approach",
+      "target": [
+        -8,
+        -15
+      ],
+      "actual": [
+        -8.224180745453483,
+        -14.993697344255192
+      ],
+      "time": 1789580265290,
+      "travel": 46.404269427923275
+    },
+    {
+      "label": "quiet",
+      "target": [
+        -9,
+        -19.5
+      ],
+      "actual": [
+        -9.05629017976908,
+        -19.605528352501373
+      ],
+      "time": 1789580267509,
+      "travel": 51.42601060508977
+    },
+    {
+      "label": "quiet",
+      "target": [
+        -7,
+        -19.5
+      ],
+      "actual": [
+        -7.111210886937051,
+        -19.3762214961582
+      ],
+      "time": 1789580268042,
+      "travel": 53.385007456857686
+    },
+    {
+      "label": "quiet",
+      "target": [
+        -7,
+        -18.7
+      ],
+      "actual": [
+        -7.154305954046867,
+        -18.906911747256846
+      ],
+      "time": 1789580268240,
+      "travel": 53.856980267886335
+    },
+    {
+      "label": "responsive",
+      "target": [
+        -9,
+        -19.5
+      ],
+      "actual": [
+        -9.107889924394636,
+        -19.13730539214679
+      ],
+      "time": 1789580269307,
+      "travel": 55.834556677900274
+    },
+    {
+      "label": "responsive",
+      "target": [
+        -11,
+        -19.5
+      ],
+      "actual": [
+        -11.076221055737788,
+        -19.38001479038082
+      ],
+      "time": 1789580269840,
+      "travel": 57.81779526531374
+    },
+    {
+      "label": "responsive",
+      "target": [
+        -13.2,
+        -17.5
+      ],
+      "actual": [
+        -12.879871162854565,
+        -17.518088476550574
+      ],
+      "time": 1789580270606,
+      "travel": 60.691693324361005
+    },
+    {
+      "label": "approach",
+      "target": [
+        -5,
+        13
+      ],
+      "actual": [
+        -5.024106111448085,
+        12.843909567770584
+      ],
+      "time": 1789580274693,
+      "travel": 6.540542679435824
+    },
+    {
+      "label": "approach",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.1024165635849545,
+        8.00695495874535
+      ],
+      "time": 1789580275916,
+      "travel": 11.564194730198185
+    },
+    {
+      "label": "approach",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -9.846327731911932,
+        5.226686893726891
+      ],
+      "time": 1789580279296,
+      "travel": 18.343634987910985
+    },
+    {
+      "label": "approach",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -14.786219971676884,
+        0.18798632378062258
+      ],
+      "time": 1789580281081,
+      "travel": 25.858287191536057
+    },
+    {
+      "label": "approach",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.704648818703252,
+        -6.847489253007014
+      ],
+      "time": 1789580282860,
+      "travel": 33.42932829596027
+    },
+    {
+      "label": "approach",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.252369449343544,
+        -9.778182024972999
+      ],
+      "time": 1789580284413,
+      "travel": 39.92965635386345
+    },
+    {
+      "label": "approach",
+      "target": [
+        -8,
+        -15
+      ],
+      "actual": [
+        -8.392068581708012,
+        -14.881829878590867
+      ],
+      "time": 1789580285859,
+      "travel": 45.91118229752313
+    },
+    {
+      "label": "quiet",
+      "target": [
+        -9,
+        -19.5
+      ],
+      "actual": [
+        -8.892970442627,
+        -19.587618490412563
+      ],
+      "time": 1789580288071,
+      "travel": 50.93563666061948
+    },
+    {
+      "label": "quiet",
+      "target": [
+        -7,
+        -19.5
+      ],
+      "actual": [
+        -6.948799788265677,
+        -19.358524762074506
+      ],
+      "time": 1789580288609,
+      "travel": 52.89377423867727
+    },
+    {
+      "label": "quiet",
+      "target": [
+        -7,
+        -18.7
+      ],
+      "actual": [
+        -6.992264826345783,
+        -18.887611971802016
+      ],
+      "time": 1789580288811,
+      "travel": 53.36727711864575
+    },
+    {
+      "label": "responsive",
+      "target": [
+        -9,
+        -19.5
+      ],
+      "actual": [
+        -8.945045809518001,
+        -19.11810494838005
+      ],
+      "time": 1789580289777,
+      "travel": 55.3438706269456
+    },
+    {
+      "label": "responsive",
+      "target": [
+        -11,
+        -19.5
+      ],
+      "actual": [
+        -10.913734655172915,
+        -19.36085845536377
+      ],
+      "time": 1789580290317,
+      "travel": 57.327469637874714
+    },
+    {
+      "label": "responsive",
+      "target": [
+        -13.2,
+        -17.5
+      ],
+      "actual": [
+        -13.306853740233132,
+        -17.506459016772865
+      ],
+      "time": 1789580291079,
+      "travel": 60.35535175997486
+    }
+  ],
+  "screenshots": [
+    "evidence/rebuild/discovery-review/pocket-retest/runtime-desktop-quiet.png",
+    "evidence/rebuild/discovery-review/pocket-retest/runtime-desktop-responsive.png",
+    "evidence/rebuild/discovery-review/pocket-retest/runtime-desktop-captured.png",
+    "evidence/rebuild/discovery-review/pocket-retest/runtime-phone-quiet.png",
+    "evidence/rebuild/discovery-review/pocket-retest/runtime-phone-responsive.png",
+    "evidence/rebuild/discovery-review/pocket-retest/runtime-phone-captured.png"
+  ],
+  "pass": true
+}

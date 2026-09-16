@@ -1,0 +1,82 @@
+{
+  "kind": "Exact normal-input replay of unbriefed reviewer cottage-rock encounter; read-only telemetry",
+  "label": "after",
+  "errors": [],
+  "states": {
+    "approach": {
+      "pos": [
+        -6.339195900545371,
+        4.816461344776837
+      ],
+      "y": 0.2644147816894858,
+      "fps": 60.00002752166601,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 444,
+      "tris": 710826,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 17.62446804303609,
+      "context": null
+    },
+    "run": {
+      "pos": [
+        -6.339195900545371,
+        4.816461344776837
+      ],
+      "y": 0.2644147816894858,
+      "fps": 59.99958601116931,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 444,
+      "tris": 710826,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 17.62446804303609,
+      "context": null
+    },
+    "jump": {
+      "pos": [
+        -7.8782872651242775,
+        2.844842662429399
+      ],
+      "y": 0.40609350824897644,
+      "fps": 59.995693644461255,
+      "speed": 0.13034475781408666,
+      "mode": "walk",
+      "grounded": true,
+      "score": 0,
+      "draws": 522,
+      "tris": 736692,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 20.125810441726834,
+      "context": null
+    }
+  },
+  "runTravel": 0,
+  "jumpTravel": 2.5012161955942167,
+  "clearancePass": true
+}

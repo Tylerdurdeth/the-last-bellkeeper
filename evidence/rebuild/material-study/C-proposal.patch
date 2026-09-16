@@ -1,0 +1,30 @@
+--- game/art-direction.js
++++ game/art-direction.js
+@@ -110,21 +110,22 @@
+         // Measure light, not paint colour: dark hair must not become a light shadow band.
+         vec3 bkIrradiance = totalDiffuse / max(diffuseColor.rgb, vec3(0.018));
+         float bkLight = dot(bkIrradiance, vec3(0.2126, 0.7152, 0.0722));
++        float bkDirect = dot(reflectedLight.directDiffuse / max(diffuseColor.rgb, vec3(.018)), vec3(.2126,.7152,.0722));
+         float bkMiddle = smoothstep(${character ? '.30, .34' : '.23, .43'}, bkLight);
+         float bkSun = smoothstep(${character ? '.68, .73' : '.59, .84'}, bkLight);
+-        vec3 bkPaintedLight = mix(vec3(.40, .56, .58), vec3(.78, .83, .73), bkMiddle);
+-        bkPaintedLight = mix(bkPaintedLight, vec3(1.12, 1.055, .87), bkSun);
++        vec3 bkPaintedLight = mix(vec3(.48, .65, .70), vec3(.88, .88, .72), smoothstep(.02,.48,bkDirect));
++        bkPaintedLight = mix(bkPaintedLight, vec3(1.18, 1.08, .85), smoothstep(.45,.95,bkDirect));
+         // Broad quiet pigment variation: no grain, bump or animated screen-space noise.
+-        float bkBrush = sin(vBkWorld.x * 2.1 + sin(vBkWorld.z * 1.4))
+-                      * sin(vBkWorld.y * 2.8 + vBkWorld.z * .85);
+-        float bkPigment = 1.0 + bkBrush * ${character ? '.012' : terrain ? '.012' : '.038'};
++        float bkBrush = sin(vBkWorld.x * .65 + sin(vBkWorld.z * .43))
++                      * sin(vBkWorld.y * .8 + vBkWorld.z * .35);
++        float bkPigment = 1.0 + bkBrush * ${character ? '.012' : terrain ? '.025' : '.040'};
+         vec3 bkCel = diffuseColor.rgb * bkPaintedLight * bkPigment;
+         totalDiffuse = mix(totalDiffuse, bkCel, ${metal ? '.24' : character ? '.84' : terrain ? '.48' : '.63'});
+         `
+       );
+     };
+     const priorKey = source.customProgramCacheKey();
+-    m.customProgramCacheKey = () => `bellkeeper-painted-v3:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
++    m.customProgramCacheKey = () => `bellkeeper-material-study-C:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
+     return m;
+   }

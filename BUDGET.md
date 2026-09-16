@@ -51,3 +51,13 @@ Billing UI rechecked after R04: remaining1964, member36credits this period, conf
 R05 painted cliff stone material: reserve36, configured directimageMax36, one1K Gemini seed43. Rebuild settled20,reserved36,unallocated344. Concrete defect: bare enlarged cliff rocks read as smooth geometric blocks; target broad painted strata and mineral wear.
 
 R05 terminalLastRun5, inspected/downloaded1Kpaintedlayeredstone. Release36reservation. Rebuild25settled,0reserved,375available; lifetime41,expectedbalance1959.
+
+Latest included compute observation during canopy refinement:66% consumed/34% remaining in weekly window, reset19September11:39:18UTC. No paid compute, resets or extra Atlas calls. The Atlas rebuild remains25settled,0reserved,375available.
+
+Billing UI freshly verified after R05:1,959remaining and41membercredits used, confirming25rebuild+16prior. Outstanding reservations0. No further generation in canopy/camera repairs.
+
+Included compute checkpoint during story/garden refinement:71%used/29%remaining, same weekly window/reset. No additional Atlas spending. Remaining work prioritized for independent review, meaningful affected checks and deployment; no numeric personal reserve is invented.
+
+Included compute checkpoint during final physical-contact and brook repair:82% consumed/18% remaining in the same weekly window. Atlas remains25settled,0reserved,375remaining for this rebuild. No extra purchases, resets or paid API usage.
+
+At runtime release d7eb5a0:84% included weekly compute consumed/16% remaining. Atlas unchanged25/400 rebuild spending; reservations0. The visual goal remains active; this is a tested checkpoint, not a claim of complete aesthetic acceptance.

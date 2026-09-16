@@ -12,3 +12,21 @@ evidence/**/*.webm
 # Preserve full local frame sequences and verifier renders; publish selected views/reports.
 evidence/rebuild/motion-round*/0*.png
 evidence/rebuild/recipe-integrated-round2/*.png
+
+# Local diagnostic/duplicate captures; independent before/after reports are versioned.
+evidence/rebuild/occlusion-diagnostic/
+evidence/rebuild/story-garden-touch/
+
+# Intermediate visual captures stay local; selected release/review proof is explicitly versioned.
+evidence/rebuild/visual-round3/**/*.png
+evidence/rebuild/visual-round4/**/*.png
+evidence/rebuild/visual-round5/**/*.png
+evidence/rebuild/nearbranch-retest/**/*.png
+evidence/rebuild/nearbranch-retest2/**/*.png
+evidence/rebuild/material-study/base/
+evidence/rebuild/material-study/A/
+evidence/rebuild/material-study/B/
+evidence/rebuild/material-study/C/
+
+# Full diagnostic PNG sequences remain local; selected review/release frames are force-added.
+evidence/rebuild/**/*.png

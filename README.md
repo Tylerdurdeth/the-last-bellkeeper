@@ -4,7 +4,7 @@ An original woodland adventure in development. **The Waking Bough** is the curre
 
 [Play the study](https://tylerdurdeth.github.io/the-last-bellkeeper/)
 
-Move with WASD/arrows; Shift runs, J jumps, Space interacts. Touch uses an analogue joystick plus Jump and the contextual action button. A full joystick push runs. Escape/pause opens sound, gentle motion and restart controls. Follow environmental clues to awaken and carry the wind back to the crossing. Optional keepsakes reward searching beyond the main path.
+Move with WASD/arrows; Shift runs, J jumps, Space interacts. Touch uses an analogue joystick plus Jump and the contextual action button. A full joystick push runs. Escape/pause opens sound, gentle motion and restart controls. Follow environmental clues to awaken and carry the wind back to the crossing. Inspect the cottage note, watch which garden flowers answer the chime, and notice how carried wind changes the way home. Optional keepsakes reward searching and jumping beyond the main path.
 
 ## Development
 
@@ -20,4 +20,4 @@ Atlas supplied original hero/woodland references and painted ground/bark/stone t
 
 Three.js0.180.0 is MIT licensed; the build includes its license. `assetlib.js` and `surfaces.js` originate from the 404 recipe at4effad311c5e137bca316257259fe5bffd6737de under its explicit copy/use instructions.
 
-The scripted known route with all discoveries covers about130 metres in49 seconds; this is a regression test, not a first-time discovery-duration claim. Independent visual and motion reviews still drive refinement. Passing the technical gate does not certify Zelda/Diablo-level artistic quality. The eventual complete adventure remains a separate12–15 minute scope.
+The scripted known route with all discoveries covers about116 metres in48 seconds; this is a regression test, not a first-time discovery-duration claim. Independent visual and motion reviews still drive refinement. Passing the technical gate does not certify Zelda/Diablo-level artistic quality. The eventual complete adventure remains a separate12–15 minute scope.

@@ -1,0 +1,40 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 7,
+  "tris": 45062,
+  "materials": 3,
+  "size": [
+   120,
+   12.35,
+   120
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1757,
+    "edgeDensity": 0.0617
+   },
+   "right": {
+    "coverage": 0.177,
+    "edgeDensity": 0.0712
+   },
+   "back": {
+    "coverage": 0.1962,
+    "edgeDensity": 0.0692
+   },
+   "left": {
+    "coverage": 0.1872,
+    "edgeDensity": 0.061
+   }
+  },
+  "error": null,
+  "name": "terrain",
+  "problems": []
+ }
+]
