@@ -17,3 +17,7 @@ Use direct configured Atlas nodes with visible engine/duration/resolution/max qu
 ## Review gates
 
 Verify syntax, scale, grounding, all sides and articulated hierarchy. Inspect candidate render sheets before selection. Then inspect selected hero at gameplay distance and in motion; geometry verifier success alone is not visual or animation acceptance. Geometry authoring uses 404 path B, no paid GPU or downloaded meshes.
+
+## First implementation feedback
+
+The reference prompt's scenic composition did not specify enough traversable architecture. First code assembly became a broad empty disk. Independent review identified this directly. Future environment work orders must explicitly describe layered garden banks, curved paired channels, route width, silhouette/negative space and playable-camera crop. Keep hero/source/target visible at the phone aspect ratio, and test muted readability. Do not spend on another image to correct a known camera, shader, UI or layout defect.

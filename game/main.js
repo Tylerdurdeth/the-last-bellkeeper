@@ -1,13 +1,13 @@
 import * as T from 'three';
 import {ASSET,bakeStatic} from './assetlib.js';
 const $=s=>document.querySelector(s), canvas=$('#world');
-const scene=new T.Scene();scene.background=new T.Color('#b7d7cf');scene.fog=new T.FogExp2('#b7d7cf',.035);
+const scene=new T.Scene();scene.background=new T.Color('#b7d7cf');scene.fog=new T.Fog('#b7d7cf',30,70);
 const renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
 const camera=new T.PerspectiveCamera(36,1,.1,150);
 scene.add(new T.HemisphereLight(0xfff0c9,0x245958,1.4));
 const sun=new T.DirectionalLight(0xffe6af,2.7);sun.position.set(-8,15,7);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-13,right:13,top:13,bottom:-13,near:.5,far:40});sun.shadow.bias=-.00025;sun.shadow.normalBias=.02;scene.add(sun);
-const state={started:false,paused:false,charged:false,restored:false,t:0,phase:0,speed:0,action:0,actionKind:'',muted:localStorage.getItem('bellkeeper-muted')==='1',gentle:localStorage.getItem('bellkeeper-gentle')==='1'};
-const pos=new T.Vector3(0,.55,3.2),vel=new T.Vector2(),keys=new Set(),stick=new T.Vector2();let hero,joints,wheel,gate,staff,hipBase,rootScale=1,captionUntil=0,footPhase=0,audio;
+const state={started:false,paused:false,charged:false,restored:false,t:0,phase:0,speed:0,action:0,actionKind:'',releaseHit:false,pendingRestore:false,reaction:0,muted:localStorage.getItem('bellkeeper-muted')==='1',gentle:localStorage.getItem('bellkeeper-gentle')==='1'};
+const pos=new T.Vector3(0,.55,3.2),vel=new T.Vector2(),impact=new T.Vector2(),keys=new Set(),stick=new T.Vector2();let hero,joints,wheel,gate,staff,hipBase,rootScale=1,captionUntil=0,footPhase=0,audio;
 let rotor,door,lanterns=[],foliage=[],originalMaterials=new Map();
 const source=new T.Vector3(-3,.58,1.4),target=new T.Vector3(3,.58,-1.2);
 const objects=[];
@@ -23,16 +23,16 @@ function start(){if(!hero)return;state.started=true;state.paused=false;$('#title
 function pause(v){if(!state.started)return;state.paused=v;$('#pausePanel').hidden=!v;keys.clear();stick.set(0,0);$('#knob').style.transform='';}
 function action(){if(!state.started||state.paused||state.action>0)return;
  if(!state.charged){if(pos.distanceTo(source)<1.65){state.charged=true;state.action=.75;state.actionKind='capture';sound('capture');caption('Hold that little current. The seed wheel is across the terrace.');}else caption('Move close to the drifting leaves beside the left lantern.',3);}
- else {state.action=.85;state.actionKind='release';if(pos.distanceTo(target)<2.4){state.restored=true;state.charged=false;sound('restore');caption('There. The return channel is open — the morning can move again.',6);}else{caption('Too far from the wheel. Your bell keeps the gust.',3);sound('release');}}
+ else {state.action=.85;state.actionKind='release';state.releaseHit=false;if(pos.distanceTo(target)<2.4){state.pendingRestore=true;state.releaseHit=true;state.charged=false;sound('release');caption('Let the current find its way back.',2);}else{caption('Too far from the wheel. Your bell keeps the gust.',3);sound('release');}}
  updateUI();}
-$('#startb').onclick=start;window.__START__=start;$('#action').onclick=action;$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>pause(false);$('#sound').onclick=()=>{state.muted=!state.muted;localStorage.setItem('bellkeeper-muted',state.muted?'1':'0');updateUI();};$('#motion').onclick=()=>{state.gentle=!state.gentle;localStorage.setItem('bellkeeper-gentle',state.gentle?'1':'0');updateUI();};$('#reset').onclick=()=>{state.charged=state.restored=false;state.action=0;pos.set(0,.55,3.2);vel.set(0,0);pause(false);caption('Another quiet morning. Find the wandering gust.');updateUI();};
+$('#startb').onclick=start;window.__START__=start;$('#action').onclick=action;$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>pause(false);$('#sound').onclick=()=>{state.muted=!state.muted;localStorage.setItem('bellkeeper-muted',state.muted?'1':'0');updateUI();};$('#motion').onclick=()=>{state.gentle=!state.gentle;localStorage.setItem('bellkeeper-gentle',state.gentle?'1':'0');updateUI();};$('#reset').onclick=()=>{state.charged=state.restored=false;state.action=0;state.pendingRestore=state.releaseHit=false;state.reaction=0;pos.set(0,.55,3.2);vel.set(0,0);impact.set(0,0);pause(false);caption('Another quiet morning. Find the wandering gust.');updateUI();};
 window.addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.code==='Escape'){pause(!state.paused);return;}if(e.code==='Space'&&!e.repeat)action();keys.add(e.code);});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();stick.set(0,0);if(state.started)pause(true);});
 let stickId=null;function stickMove(e){const r=$('#stick').getBoundingClientRect();stick.set((e.clientX-r.left-r.width/2)/40,(e.clientY-r.top-r.height/2)/40);if(stick.length()>1)stick.normalize();$('#knob').style.transform=`translate(${stick.x*34}px,${stick.y*34}px)`;}
 $('#stick').addEventListener('pointerdown',e=>{e.preventDefault();stickId=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);stickMove(e);});$('#stick').addEventListener('pointermove',e=>{if(e.pointerId===stickId)stickMove(e);});function releaseStick(){stickId=null;stick.set(0,0);$('#knob').style.transform='';}$('#stick').addEventListener('pointerup',releaseStick);$('#stick').addEventListener('pointercancel',releaseStick);
 // Light ribbons are procedural effects, not imported object geometry.
-function ribbon(color,width=1){const points=Array.from({length:48},()=>new T.Vector3());const geo=new T.BufferGeometry().setFromPoints(points);const mat=new T.LineBasicMaterial({color,transparent:true,opacity:.8});const line=new T.Line(geo,mat);scene.add(line);return line;}
+function ribbon(color){const positions=new Float32Array(48*2*3);const indices=[];for(let i=0;i<47;i++){const n=i*2;indices.push(n,n+1,n+2,n+1,n+3,n+2);}const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(positions,3));geo.setIndex(indices);const mat=new T.MeshBasicMaterial({color,transparent:true,opacity:.85,side:T.DoubleSide,depthWrite:false});const line=new T.Mesh(geo,mat);line.frustumCulled=false;scene.add(line);return line;}
 const gusts=[ribbon(0xfff0c9),ribbon(0x62c9bc),ribbon(0x90ae68)],chargeRibbon=ribbon(0x62c9bc),releaseRibbon=ribbon(0xfff0c9);chargeRibbon.visible=false;releaseRibbon.visible=false;
-function circleLine(line,center,r,t,vertical=.25){const p=line.geometry.attributes.position;for(let i=0;i<p.count;i++){const a=i/(p.count-1)*Math.PI*1.7+t;p.setXYZ(i,center.x+Math.cos(a)*r,center.y+.7+Math.sin(a*1.8+t)*vertical,center.z+Math.sin(a)*r);}p.needsUpdate=true;line.geometry.computeBoundingSphere();}
+function circleLine(line,center,r,t,vertical=.25){const p=line.geometry.attributes.position;for(let i=0;i<48;i++){const a=i/47*Math.PI*1.7+t;const width=.045*Math.sin(i/47*Math.PI)+.008;const x=center.x+Math.cos(a)*r,y=center.y+.7+Math.sin(a*1.8+t)*vertical,z=center.z+Math.sin(a)*r;p.setXYZ(i*2,x,y-width,z);p.setXYZ(i*2+1,x,y+width,z);}p.needsUpdate=true;}
 let hazard=0,prevHazard=0,restoration=0,lastStep=-1;
 function animateHero(dt){const j=joints;const moving=state.speed>.03;const blend=Math.min(1,state.speed/1.7);footPhase+=state.speed*dt/.7;const cycle=footPhase%1;
  const stride=.19,scale=rootScale;
@@ -45,33 +45,39 @@ function animateHero(dt){const j=joints;const moving=state.speed>.03;const blend
  j.hips.position.y=hipBase+(state.gentle?0:Math.sin(cycle*Math.PI*4)*.008*blend);j.head.rotation.y=Math.sin(state.t*.55)*.045*(1-blend);j.head.rotation.x=-.035;
  j.coatLeft.rotation.x=-.07+Math.sin(cycle*Math.PI*2)*.10*blend;j.coatRight.rotation.x=-.07-Math.sin(cycle*Math.PI*2)*.10*blend;
  j.rightUpperArm.rotation.x=-.20+Math.sin(cycle*Math.PI*2)*.09*blend;j.rightLowerArm.rotation.x=-.24;
+ j.hips.rotation.x=-Math.sin(state.reaction*Math.PI)*.22;
+ if(state.reaction>0){j.leftUpperArm.rotation.x=-.8*state.reaction;j.rightUpperArm.rotation.x=-.4*state.reaction;j.leftLowerArm.rotation.x=-.5*state.reaction;}
  if(state.action>0){const a=Math.sin((1-state.action/(state.actionKind==='capture'?.75:.85))*Math.PI);j.rightUpperArm.rotation.x-=a*.65;j.leftUpperArm.rotation.x=-a*.8;j.leftLowerArm.rotation.x=-a*.5;j.head.rotation.x=-a*.1;}
  if(moving){const step=Math.floor(footPhase*2);if(step!==lastStep){sound('step');lastStep=step;}}
 }
 function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}window.addEventListener('resize',resize);resize();
 const forward=new T.Vector2(-.615,-.788),right=new T.Vector2(.788,-.615);
 let last=performance.now(),fps=60;function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;last=now;fps=T.MathUtils.lerp(fps,1/Math.max(.001,elapsed),.04);const dt=Math.min(elapsed,.04);
- if(!state.paused){state.t+=dt;if(state.action>0)state.action=Math.max(0,state.action-dt);
- if(hero&&state.started){let x=stick.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0);let y=-stick.y+(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0);const mag=Math.min(1,Math.hypot(x,y));const desired=right.clone().multiplyScalar(x).addScaledVector(forward,y);if(desired.length())desired.normalize().multiplyScalar(mag*(state.action>0?.4:2.15));vel.lerp(desired,1-Math.exp(-dt*14));const old=pos.clone();pos.x+=vel.x*dt;pos.z+=vel.y*dt;
+ if(!state.paused){state.t+=dt;if(state.action>0)state.action=Math.max(0,state.action-dt);state.reaction=Math.max(0,state.reaction-dt*1.5);if(state.pendingRestore&&state.action<.32){state.pendingRestore=false;state.restored=true;sound('restore');caption('There. The return channel is open — the morning can move again.',6);updateUI();}
+ if(hero&&state.started){let x=stick.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0);let y=-stick.y+(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0);const mag=Math.min(1,Math.hypot(x,y));const desired=right.clone().multiplyScalar(x).addScaledVector(forward,y);if(desired.length())desired.normalize().multiplyScalar(mag*(state.action>0?.4:2.15));vel.lerp(desired,1-Math.exp(-dt*14));const old=pos.clone();pos.x+=(vel.x+impact.x)*dt;pos.z+=(vel.y+impact.y)*dt;impact.multiplyScalar(Math.exp(-dt*10));
  const edge=Math.sqrt((pos.x/6.4)**2+(pos.z/4.65)**2);if(edge>1){pos.x/=edge;pos.z/=edge;}
- for(const ob of [{x:-3.5,z:-2.9,r:1.13},{x:3,z:-1.2,r:.85}]){const dx=pos.x-ob.x,dz=pos.z-ob.z,d=Math.hypot(dx,dz);if(d<ob.r){pos.x=ob.x+dx/Math.max(.001,d)*ob.r;pos.z=ob.z+dz/Math.max(.001,d)*ob.r;}}
- state.speed=old.distanceTo(pos)/dt;if(state.speed>.06){const angle=Math.atan2(vel.x,vel.y);hero.rotation.y+=T.MathUtils.euclideanModulo(angle-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;}
+ for(const ob of [{x:-3.35,z:-2.45,r:2.05},{x:3,z:-1.2,r:.85}]){const dx=pos.x-ob.x,dz=pos.z-ob.z,d=Math.hypot(dx,dz);if(d<ob.r){pos.x=ob.x+dx/Math.max(.001,d)*ob.r;pos.z=ob.z+dz/Math.max(.001,d)*ob.r;}}
+ if(!state.restored){const dx=pos.x-4.9,dz=pos.z+2.4,a=-.45,c=Math.cos(a),si=Math.sin(a),lx=c*dx-si*dz,lz=si*dx+c*dz;if(Math.abs(lx)<1.18&&Math.abs(lz)<.35){const safe=(lz>=0?1:-1)*.35;pos.x=4.9+c*lx+si*safe;pos.z=-2.4-si*lx+c*safe;}}
+ state.speed=old.distanceTo(pos)/dt;if(state.speed>.06){const angle=Math.atan2(vel.x,vel.y);hero.rotation.y+=(T.MathUtils.euclideanModulo(angle-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI)*(1-Math.exp(-dt*12));}
  hero.position.copy(pos);animateHero(dt);
  // A pressure puff is telegraphed at the un-restored wheel; safe shove, no damage/reset.
- const cycle=state.t%7;hazard=!state.restored&&cycle>4?cycle<5.5?1:2:0;if(hazard===1&&prevHazard!==1&&pos.distanceTo(target)<3.2)caption('The wheel is coughing. Give the pale ring a little room.',2);if(hazard===2&&prevHazard!==2&&pos.distanceTo(target)<2.05){const away=pos.clone().sub(target).normalize();pos.addScaledVector(away,.45);sound('hazard');caption('Just a pressure puff. Keep your footing — your gust is safe.',3);}prevHazard=hazard;
+ const cycle=state.t%7;hazard=!state.restored&&cycle>4?cycle<5.5?1:2:0;if(hazard===1&&prevHazard!==1&&pos.distanceTo(target)<3.2)caption('The wheel is coughing. Give the pale ring a little room.',2);if(hazard===2&&prevHazard!==2&&pos.distanceTo(target)<2.05){const away=pos.clone().sub(target).normalize();impact.set(away.x*4,away.z*4);state.reaction=1;sound('hazard');caption('Just a pressure puff. Keep your footing — your gust is safe.',3);}prevHazard=hazard;
  }else if(hero){hero.rotation.y=.3;animateHero(dt);}
  restoration=T.MathUtils.damp(restoration,state.restored?1:0,2,dt);if(rotor)rotor.rotation.z+=dt*(.04+restoration*1.3);if(door)door.rotation.y=-restoration*1.65;
- lanterns.forEach((o,i)=>{o.scale.setScalar(.75+restoration*.12);o.rotation.z=state.gentle?0:Math.sin(state.t*.9+i*.2)*.035;});foliage.forEach((o,i)=>{o.rotation.z=state.gentle?0:Math.sin(state.t*.9+i*.3)*.025;});
+ lanterns.forEach((o,i)=>{o.traverse(n=>{if(n.isMesh){const ms=Array.isArray(n.material)?n.material:[n.material];for(const m of ms){if(m.color.g>m.color.r*1.25&&m.color.b>m.color.r*1.15&&m.emissive){m.emissive.setHex(0x62c9bc);m.emissiveIntensity=.05+restoration*.8;}}}});o.scale.setScalar(.75+restoration*.12);o.rotation.z=state.gentle?0:Math.sin(state.t*.9+i*.2)*.035;});foliage.forEach((o,i)=>{o.rotation.z=state.gentle?0:Math.sin(state.t*.9+i*.3)*.025;});
  gusts.forEach((line,i)=>{circleLine(line,source,.62+i*.08,state.t*(.7+i*.06)+i*2,.18);line.material.opacity=state.charged?.15:.7;});chargeRibbon.visible=state.charged;if(hero)circleLine(chargeRibbon,pos,.45,state.t*2,.21);
- releaseRibbon.visible=hazard>0||state.actionKind==='release'&&state.action>0;if(releaseRibbon.visible){circleLine(releaseRibbon,target,hazard===1?1.6:2,state.t*2,.03);releaseRibbon.material.color.setHex(hazard===2?0xfff0c9:0x62c9bc);}
+ releaseRibbon.visible=hazard>0||state.releaseHit&&state.action>0;
+ if(state.releaseHit&&state.action>0&&hero){const from=new T.Vector3();staff.localToWorld(from.set(0,1.25,0));const to=target.clone();to.y+=1.2;const p=releaseRibbon.geometry.attributes.position,progress=1-state.action/.85;for(let i=0;i<48;i++){const f=Math.max(0,Math.min(1,progress*1.8-i/47*.40));const v=from.clone().lerp(to,f);v.y+=Math.sin(f*Math.PI)*.65;const w=.04*Math.sin(i/47*Math.PI)+.01;p.setXYZ(i*2,v.x,v.y-w,v.z);p.setXYZ(i*2+1,v.x,v.y+w,v.z);}p.needsUpdate=true;releaseRibbon.material.color.setHex(0x62c9bc);}
+ else if(hazard>0){circleLine(releaseRibbon,target,hazard===1?1.6:2,state.t*2,.03);releaseRibbon.material.color.setHex(hazard===2?0xfff0c9:0x62c9bc);}
  if(state.t>captionUntil)$('#caption').style.opacity='0';
  }
- const portrait=camera.aspect<.85;const look=new T.Vector3((state.started?pos.x*.30:0),.9,(state.started?pos.z*.23:0));const distance=portrait?23:18.8;const offset=new T.Vector3(.615,.95,.788).normalize().multiplyScalar(distance);camera.position.copy(look).add(offset);camera.lookAt(look);
+ const portrait=camera.aspect<.85;const look=new T.Vector3((state.started?pos.x*(portrait?.80:.30):0),.9,(state.started?pos.z*(portrait?.80:.23):0));const distance=portrait?23:18.8;const offset=new T.Vector3(.615,.95,.788).normalize().multiplyScalar(distance);camera.position.copy(look).add(offset);camera.lookAt(look);
+ const markerPoint=(state.charged?target:source).clone();markerPoint.y+=1.2;markerPoint.project(camera);const mx=(markerPoint.x*.5+.5)*innerWidth,my=(-markerPoint.y*.5+.5)*innerHeight;const marker=$('#targetMarker');marker.hidden=!state.started||state.paused||state.restored;marker.style.left=Math.max(75,Math.min(innerWidth-75,mx))+'px';marker.style.top=Math.max(110,Math.min(innerHeight-280,my))+'px';marker.textContent=state.charged?'✧  Seed wheel':'◌  Wandering gust';
  renderer.render(scene,camera);window.__GAME__={pos:[pos.x,pos.z],fps,speed:state.speed,score:state.restored?1:0,over:false,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:state.charged,restored:state.restored,paused:state.paused,started:state.started};}
 requestAnimationFrame(frame);
 try {
  const terrace=await asset('terrace');scene.add(terrace);objects.push(terrace);
- const tree=await asset('tree');tree.position.set(-3.5,.55,-2.9);tree.scale.setScalar(1.0);scene.add(tree);
+ const tree=await asset('tree');tree.position.set(-3.5,.985,-2.9);tree.scale.setScalar(1.0);scene.add(tree);
  hero=await asset('hero',{keepHierarchy:true});joints=hero.userData.joints;hipBase=joints.hips.position.y;rootScale=hero.children[0].scale.x;hero.position.copy(pos);scene.add(hero);
  staff=await asset('staff');const grip=hero.userData.grip||joints.rightHand;staff.position.set(0,-.365,.0);grip.add(staff);
  wheel=await asset('wheel',{keepHierarchy:true});wheel.position.copy(target);scene.add(wheel);rotor=wheel.userData.rotor;
@@ -80,9 +86,9 @@ try {
  for(let i=0;i<15;i++){const t=i/15*Math.PI*2;const o=await asset('foliage');o.position.set(Math.cos(t)*6.45,.53,Math.sin(t)*4.9);o.scale.setScalar(.60+(i%3)*.12);o.rotation.y=t;scene.add(o);foliage.push(o);}
  for(const [x,z,s] of [[-11,-13,1.2],[5,-18,1.3],[13,-15,.9]]){const w=await asset('windworks');w.position.set(x,-.8,z);w.scale.setScalar(s);scene.add(w);}
  // Distant reused tree silhouettes anchor depth without new mesh sources.
- for(const [x,z,s] of [[-14,-15,3.8],[0,-26,4.1],[17,-20,4.4],[-18,0,3.7]]){const t=await asset('tree');t.position.set(x,-23,z);t.scale.setScalar(s);scene.add(t);}
+ for(const [x,z,s] of [[-25,-24,5.5],[0,-38,6.0],[26,-30,6.0]]){const t=await asset('tree');t.position.set(x,-35,z);t.scale.setScalar(s);scene.add(t);}
  // Grouped planting around the tree and outer bank creates deliberate density, leaving the action route open.
- for(let i=0;i<19;i++){const angle=i*2.3999;const radius=.7+(i%4)*.6;const o=await asset('foliage');o.position.set(-3.6+Math.cos(angle)*radius,.55,-2.9+Math.sin(angle)*radius*.65);o.scale.setScalar(.7+(i%3)*.2);o.rotation.y=angle;scene.add(o);foliage.push(o);}
+ for(let i=0;i<19;i++){const angle=i*2.3999;const radius=.7+(i%4)*.6;const o=await asset('foliage');o.position.set(-3.35+Math.cos(angle)*radius*.80,.985,-2.45+Math.sin(angle)*radius*.60);o.scale.setScalar(.7+(i%3)*.2);o.rotation.y=angle;scene.add(o);foliage.push(o);}
  // A smaller reused terrace holds distant windworks, so its architecture is visibly supported.
  for(const [x,z,s] of [[-11,-13,.40],[5,-18,.43],[13,-15,.32]]){const bank=await asset('terrace');bank.position.set(x,-1.05,z);bank.scale.setScalar(s);scene.add(bank);}
  window.__READY__=true;$('#startb').disabled=false;$('#startb').textContent='Enter the terrace';updateUI();

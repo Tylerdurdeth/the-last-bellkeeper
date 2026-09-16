@@ -15,3 +15,5 @@ Inspected original pilot reference and all three independent candidate sheets pe
 | windworks | B | Curved roofs and architectural bridges, richer distant silhouette |
 
 Wheel and gate mechanisms are original interpretations: image is too small to establish detailed construction. These are provisional gameplay-study selections, not final-art acceptance. Runtime uses recipe ASSET loader with hierarchy for hero/wheel/gate. Public candidate evidence includes original code and unmodified render reports; private reference retained in setup evidence.
+
+First review repair: selected terraceC revised in code with paired curved copper channels, elevated tree garden and a carved rear arch; removed long parallel floor stripes. This is a documented repair to the selected candidate, not another independent candidate. Runtime verifier rerun required. Forest composition, fog, portrait camera and magic ribbon width are integration changes. No generation charges.

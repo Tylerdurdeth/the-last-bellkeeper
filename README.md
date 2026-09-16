@@ -1,21 +1,21 @@
 # The Last Bellkeeper
 
-An original fantasy adventure planned for the 404 Game Jam.
+An original woodland adventure in development. The current build is a small playable terrace study, not the complete game or a submission-ready entry.
 
-Status: infrastructure setup only. Game production has not started.
+[Play the study](https://tylerdurdeth.github.io/the-last-bellkeeper/)
 
-## Project direction
+Move with WASD/arrows or the touch joystick. Find the wandering gust, press Space or Catch wind, carry it toward the copper seed wheel and release it. A pressure puff is harmless; the bell retains its wind. Escape/pause opens sound, gentle-motion and restart controls.
 
-A complete 12–15-minute 3D adventure with a fixed elevated camera and painterly cel shading. An apprentice restores the forest wind by learning to capture and redirect gusts.
+## Development
 
-## Hosting
+Node22 or later. Run `npm ci`, `npm run build`, then `npm run serve`. Open http://127.0.0.1:4173/the-last-bellkeeper/. Source is in `game/`; `docs/` is the self-contained published output. It includes Three.js locally and needs no API keys, account or remote generation at runtime.
 
-Public setup page: https://tylerdurdeth.github.io/the-last-bellkeeper/
+`tools/test-scene.mjs` is the development real-input regression driver. Its Puppeteer dependency path points to the separate local recipe checkout used for development; change that import to a local Puppeteer installation when reproducing elsewhere. It does not change game state to complete the puzzle.
 
-GitHub Pages publishes the `docs/` directory from `main`. No paid hosting or custom domain is required.
+## Provenance
 
-## Development record
+Every object is authored as Three.js geometry through the 404 recipe's reference → three independent code candidates → multi-view render → visual selection process. All candidate sources/reports are outside the runtime in `evidence/geometry/`. Selection reasoning is in `evidence/provenance/geometry.md`.
 
-Commits record work as it happens. The initial commits establish the source repository and a minimal hosting smoke test; they do not represent a playable game or a passed competition gate.
+Three.js0.180.0 is MIT licensed; its license is included in the build. `assetlib.js` and `surfaces.js` are copied from the 404 recipe at4effad311c5e137bca316257259fe5bffd6737de, following its explicit copy/use instructions. Original project geometry, game code, design and synthesized audio are developed for this entry. Atlas created one concept reference and one pilot SFX. The SFX has not been downloaded/listening-approved and is not shipped; current sound is clearly labelled provisional synthesized feedback.
 
-Private account configuration and credentials do not belong in this repository.
+The complete planned adventure remains12–15 minutes. No full-route, physical-phone, final-art or submission-readiness claim is made by this prototype.
