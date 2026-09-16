@@ -23,9 +23,9 @@ export default function(T){
   const y=t=>.025+lift*Math.sin(t*Math.PI*.82);
   curve(leafDark,[[0,y(0),0],[0,y(.3),length*.3],[0,y(.65),length*.65],[0,y(1),length]],.009,.16,g,9,4);
   for(let j=1;j<=9;j++)for(const side of [-1,1]){
-   const t=(j+(side>0?.16:0))/10,span=(.035+.19*Math.sin(t*Math.PI))*(1-.24*t),width=span*.48;
+   const t=(j+(side>0?.16:0))/10,span=(.035+.19*Math.sin(t*Math.PI))*(1-.24*t),width=span*.28;
    const shape=new T.Shape();shape.moveTo(0,0);shape.quadraticCurveTo(span*.44,width,span,0);shape.quadraticCurveTo(span*.43,-width*.72,0,0);
-   const geo=new T.ShapeGeometry(shape,3),positions=geo.attributes.position;
+   const geo=new T.ShapeGeometry(shape,2),positions=geo.attributes.position;
    for(let k=0;k<positions.count;k++){
     const u=positions.getX(k),v=positions.getY(k),f=u/span;
     positions.setXYZ(k,side*u,y(t)+Math.sin(f*Math.PI)*.026-f*.035,t*length+v+u*.32);

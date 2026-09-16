@@ -15,7 +15,24 @@ export default function(T){
  const leafSpray=(x,y,z,angle,count=11,size=.4,parent=root)=>{const g=new T.Group();g.position.set(x,y,z);g.rotation.set(.25,angle,-.2);parent.add(g);for(let i=0;i<count;i++){const a=i*2.39996;const r=Math.sqrt(i/count)*size;const l=blade(i%3===0?leafLight:i%3===1?leaf:leafDark,size*(.65+(i%4)*.12),size*.22,g);l.position.set(Math.cos(a)*r,Math.sin(a)*r*.55,Math.sin(a*1.3)*r);l.rotation.set(-.6+(i%3)*.35,a,Math.sin(a)*.6);}return g;};
 
 
- for(let i=0;i<8;i++){const a=i*2.399, len=.65+(i%3)*.17;const g=new T.Group();g.rotation.y=a;root.add(g);curve(leafDark,[[0,.03,0],[0,.35,.20],[0,.46,len*.65],[0,.33,len]],.009,.2,g,9,4);for(let j=1;j<8;j++)for(const s of [-1,1]){const t=j/8;const l=blade(j%3?leaf:leafLight,.20*Math.sin(t*Math.PI)+.06,.105,g);l.position.set(0,.03+Math.sin(t*1.8)*.43,t*len);l.rotation.set(.9,s*.25,-s*(1.1+t*.22));}}
+ // Repair the selected pinnate construction: leaflets grow from the arching
+ // rachis in its local plane instead of making disconnected upright shards.
+ for(let i=0;i<7;i++){
+  const angle=i*2.39996,length=.76+.16*Math.sin(i*1.7),lift=.30+.08*Math.cos(i*2.1);
+  const g=new T.Group();g.rotation.y=angle;root.add(g);
+  const y=t=>.025+lift*Math.sin(t*Math.PI*.82);
+  curve(leafDark,[[0,y(0),0],[0,y(.3),length*.3],[0,y(.65),length*.65],[0,y(1),length]],.009,.16,g,9,4);
+  for(let j=1;j<=9;j++)for(const side of [-1,1]){
+   const t=(j+(side>0?.16:0))/10,span=(.035+.19*Math.sin(t*Math.PI))*(1-.24*t),width=span*.48;
+   const shape=new T.Shape();shape.moveTo(0,0);shape.quadraticCurveTo(span*.44,width,span,0);shape.quadraticCurveTo(span*.43,-width*.72,0,0);
+   const geo=new T.ShapeGeometry(shape,3),positions=geo.attributes.position;
+   for(let k=0;k<positions.count;k++){
+    const u=positions.getX(k),v=positions.getY(k),f=u/span;
+    positions.setXYZ(k,side*u,y(t)+Math.sin(f*Math.PI)*.026-f*.035,t*length+v+u*.32);
+   }
+   geo.computeVertexNormals();mesh(geo,i%3===1?leafLight:i%3===2?leafDark:leaf,0,0,0,g);
+  }
+ }
 
  root.name="fern candidate a"; root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),center=bounds.getCenter(new T.Vector3());for(const child of root.children){child.position.x-=center.x;child.position.y-=bounds.min.y;child.position.z-=center.z;}root.updateMatrixWorld(true);const size=bounds.getSize(new T.Vector3()),uniform=1.4/(Math.max(size.x,size.z));for(const child of root.children){child.position.multiplyScalar(uniform);child.scale.multiplyScalar(uniform);}root.updateMatrixWorld(true);return root;
 }

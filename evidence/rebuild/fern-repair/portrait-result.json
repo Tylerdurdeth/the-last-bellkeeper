@@ -1,0 +1,152 @@
+{
+  "kind": "Actual keyboard/touch input with read-only telemetry; known-route scripted regression, not a natural discovery playtest",
+  "startedAt": "2026-09-16T19:24:43.998Z",
+  "errors": [],
+  "requests": [],
+  "checks": {
+    "porch-story": {
+      "pos": [
+        -6.515636219252852,
+        10.993219943212504
+      ],
+      "y": 0.06963437121535725,
+      "fps": 59.995167280488694,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 242,
+      "tris": 648020,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 8.929559215454901,
+      "context": null
+    },
+    "porchStory": {
+      "pass": true
+    }
+  },
+  "waypoints": [
+    {
+      "label": "first-bend",
+      "target": [
+        -5,
+        13
+      ],
+      "actual": [
+        -4.979057962911674,
+        12.901629797114818
+      ],
+      "time": 1789586687760,
+      "travel": 6.467324098719519
+    },
+    {
+      "label": "porch-note",
+      "target": [
+        -6.5,
+        11
+      ],
+      "actual": [
+        -6.515636219252852,
+        10.993219943212504
+      ],
+      "time": 1789586688430,
+      "travel": 8.929559215454901
+    },
+    {
+      "label": "cottage",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.355717457782483,
+        8.128764112532778
+      ],
+      "time": 1789586693091,
+      "travel": 12.88610926826648
+    },
+    {
+      "label": "roots",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -10.033431534116058,
+        4.824474230674846
+      ],
+      "time": 1789586698161,
+      "travel": 20.163109418637173
+    },
+    {
+      "label": "west-path",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -15.113078512880401,
+        0.2064715226206752
+      ],
+      "time": 1789586701371,
+      "travel": 27.912973732612663
+    },
+    {
+      "label": "upper-bend",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -16.163891585464583,
+        -6.995781423314968
+      ],
+      "time": 1789586704609,
+      "travel": 35.9505254123436
+    },
+    {
+      "label": "garden-approach",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.129164847487392,
+        -9.902983887700067
+      ],
+      "time": 1789586707607,
+      "travel": 43.07133221079499
+    },
+    {
+      "label": "chimes",
+      "target": [
+        -8,
+        -15
+      ],
+      "actual": [
+        -8.220020280319623,
+        -14.970378152669475
+      ],
+      "time": 1789586709051,
+      "travel": 49.04787245113107
+    }
+  ],
+  "screenshots": [
+    "/tmp/bellkeeper-fern-repair/B-phone/runtime-arrival.png",
+    "/tmp/bellkeeper-fern-repair/B-phone/runtime-porch.png",
+    "/tmp/bellkeeper-fern-repair/B-phone/runtime-cottage.png",
+    "/tmp/bellkeeper-fern-repair/B-phone/runtime-roots.png",
+    "/tmp/bellkeeper-fern-repair/B-phone/runtime-west-path.png",
+    "/tmp/bellkeeper-fern-repair/B-phone/runtime-upper-bend.png",
+    "/tmp/bellkeeper-fern-repair/B-phone/runtime-chimes.png"
+  ],
+  "pass": true,
+  "finishedAt": "2026-09-16T19:25:10.389Z"
+}

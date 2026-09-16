@@ -1,0 +1,40 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 133,
+  "tris": 1008,
+  "materials": 3,
+  "size": [
+   1.185,
+   0.351,
+   1.399
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   -0.002,
+   0.001
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.0529,
+    "edgeDensity": 0.3612
+   },
+   "right": {
+    "coverage": 0.0547,
+    "edgeDensity": 0.3756
+   },
+   "back": {
+    "coverage": 0.0612,
+    "edgeDensity": 0.3774
+   },
+   "left": {
+    "coverage": 0.0598,
+    "edgeDensity": 0.3764
+   }
+  },
+  "error": null,
+  "name": "fern",
+  "problems": []
+ }
+]
