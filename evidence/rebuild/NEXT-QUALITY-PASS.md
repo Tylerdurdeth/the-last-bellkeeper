@@ -2,7 +2,7 @@
 
 The high-bar goal is active, not achieved. Last completed turns made verified progress: root/stride repair, fern form repair, and footfall synchronization. No genuine blocked-turn sequence has been established. Atlas rebuild25settled,0reserved,375remaining; latest verified Atlas account1959. Never spend merely to exhaust the cap.
 
-Use current STATUS.md and Git/log/live gate as authority. Keep original scope and four separate review categories. Account-wide included Codex usage last observed99%; available account credits are not authorization for paid overage. Check actual allowance before substantial new work. Master brief authorizes substantial included usage and requires release/continuation headroom; no purchases, paid API or resets.
+Use current STATUS.md and Git/log/live gate as authority. Keep original scope and four separate review categories. Account-wide included Codex usage last observed100%; available account credits are not authorization for paid overage. Check actual allowance before substantial new work. Master brief authorizes substantial included usage and requires release/continuation headroom; no purchases, paid API or resets.
 
 ## Next decisions grounded in observed images
 
@@ -16,3 +16,5 @@ Use current STATUS.md and Git/log/live gate as authority. Keep original scope an
 Human sound/feel/discovery and actual iPhone performance remain unverified. A previous optional user question requested iPhone feedback and has no answer yet. Do not repeatedly ask it or pretend emulation is a device result. First-exposure agent completion3m51 supports discoverability only. Full touch/keyboard route tests are known-route mechanical evidence. No proof establishes Zelda/Diablo parity, premium acting, or full aesthetic acceptance.
 
 Publish only selected, independently reviewed, tested improvements. Preserve rejected candidates and exact comparison limits. The current milestone is one rich first scene, not the complete12–15-minute adventure or a competition submission. No submission/message to others is authorized here.
+
+Current capacity checkpoint: included meter100%, available Codex credits2500. User authorization question pending for at most250credits or waiting for included reset. Do not start further paid production without an affirmative answer. First observation of this blocker; do not mark blocked until the goal’s three-consecutive-turn rule is satisfied.

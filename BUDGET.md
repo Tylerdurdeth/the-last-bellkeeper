@@ -71,3 +71,5 @@ At unified-root/stride checkpoint, included weekly account usage is97% consumed/
 During fern silhouette repair, included weekly account usage is98% consumed/2% remaining (16September2026; reset19September11:39:18UTC). Atlas unchanged25settled,0reserved,375available. Existing Atlas woodland reference reused; no new generation or paid compute.
 
 Footfall synchronization checkpoint: included account meter99%used/1%remaining, weekly reset19September11:39:18UTC. The account now reports2500Codex credits; no authorization to use paid overage is inferred, and no purchase/reset/API call was made. Atlas unchanged25settled/0reserved/375remaining.
+
+After publishing029722e, the included weekly meter reports100%used; account Codex credit balance2500unchanged. No further production started. A user question requests either waiting for the19September11:39:18UTC included reset or authorization for up to250Codex credits. No response/authorization yet. This is the first observed included-quota blocker, following a turn with real production progress; broader goal is not complete.
