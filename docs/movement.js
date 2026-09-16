@@ -65,7 +65,7 @@ export function createMovement(THREE, {
   on(jumpButton, 'click', e => { if (e.detail === 0) jump(); });
   on(runButton, 'click', () => { if (active) { runToggle = !runToggle; runButton.setAttribute('aria-pressed', String(runToggle)); } });
 
-  function integrate(dt, actionSlow) {
+  function integrate(dt, actionSlow, faceTarget) {
     const x = stickX + (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
     const y = -stickY + (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
     const rawMagnitude = Math.hypot(x, y), magnitude = Math.min(1, rawMagnitude);
@@ -76,9 +76,14 @@ export function createMovement(THREE, {
     const tx = (.788 * x - .615 * y) * scale, tz = (-.615 * x - .788 * y) * scale;
     const blend = 1 - Math.exp(-(grounded ? intent ? 23 : 30 : 8) * dt);
     velocity.x += (tx - velocity.x) * blend; velocity.z += (tz - velocity.z) * blend;
-    if (intent) {
-      const targetYaw = Math.atan2(tx, tz), delta = Math.atan2(Math.sin(targetYaw - yaw), Math.cos(targetYaw - yaw));
-      yaw += delta * (1 - Math.exp(-20 * dt));
+    const facingX = faceTarget?.x - position.x, facingZ = faceTarget?.z - position.z;
+    const facingAction = Number.isFinite(facingX) && Number.isFinite(facingZ) && Math.hypot(facingX, facingZ) > .03;
+    if (facingAction || intent) {
+      // Action anticipation faces its real subject without snapping, freezing
+      // translation, or leaving a separate render yaw that pops on completion.
+      const targetYaw = facingAction ? Math.atan2(facingX, facingZ) : Math.atan2(tx, tz);
+      const delta = Math.atan2(Math.sin(targetYaw - yaw), Math.cos(targetYaw - yaw));
+      yaw += delta * (1 - Math.exp(-(facingAction ? 14 : 20) * dt));
     }
     if (grounded) coyote = .11; else coyote = Math.max(0, coyote - dt);
     if (bufferedJump > 0 && coyote > 0 && !actionSlow) {
@@ -122,7 +127,7 @@ export function createMovement(THREE, {
       recovered = true; clearInput(); position.copy(checkpoint); velocity.set(0, 0, 0); grounded = true; bufferedJump = 0; coyote = 0;
     }
   }
-  function update(dt, { enabled = true, actionSlow = false } = {}) {
+  function update(dt, { enabled = true, actionSlow = false, faceTarget = null } = {}) {
     if (disposed) return;
     recovered = false;
     active = enabled;
@@ -130,7 +135,7 @@ export function createMovement(THREE, {
     const elapsed = Math.max(0, Math.min(.05, Number.isFinite(dt) ? dt : 0));
     const oldX = position.x, oldZ = position.z;
     const steps = Math.ceil(elapsed / (1 / 120));
-    for (let i = 0; i < steps; i++) integrate(elapsed / steps, actionSlow);
+    for (let i = 0; i < steps; i++) integrate(elapsed / steps, actionSlow, faceTarget);
     speed = elapsed && !recovered ? Math.hypot(position.x - oldX, position.z - oldZ) / elapsed : 0;
     mode = !grounded ? velocity.y > .1 ? 'jump' : 'fall' : speed > 2.7 ? 'run' : speed > .08 ? 'walk' : 'idle';
   }

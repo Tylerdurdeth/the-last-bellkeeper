@@ -60,5 +60,21 @@ pointer('pointercancel',2);assert.equal(stick.capture,1); // another finger cann
 pointer('pointercancel',1);touch.tick(.3);assert(touch.m.speed<.01);assert.equal(stick.capture,null);
 pointer('pointerdown',3);touch.tick(.1);touch.m.update(.01,{enabled:false});assert.equal(stick.capture,null);assert.equal(stick.knob.style.transform,'');touch.m.update(.01);touch.tick(.2);assert.equal(touch.m.speed,0);
 const slope=fixture({sampleGround:(x,z)=>x*.25});slope.key('KeyD');slope.tick(1);assert(slope.m.grounded);assert(Math.abs(slope.m.position.y-slope.m.position.x*.25)<1e-8);
+// Facing an action subject uses the short arc, retains translation, and keeps
+// the same yaw after the action ends instead of snapping back to old intent.
+const facing=fixture(), angularError=(a,b)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)));
+const subject=new THREE.Vector3(0,0,-10);
+facing.m.update(1/60,{faceTarget:subject});assert(facing.m.yaw>0 && facing.m.yaw<1); // smooth 180-degree anticipation
+for(let i=0;i<30;i++)facing.m.update(1/60,{faceTarget:subject});assert(angularError(facing.m.yaw,Math.PI)<.003);
+const acrossSeam=new THREE.Vector3(-.1,0,-10), beforeSeam=facing.m.yaw;
+facing.m.update(1/60,{faceTarget:acrossSeam});assert(Math.abs(facing.m.yaw-beforeSeam)<.01); // no full spin across ±pi
+const heldYaw=facing.m.yaw;facing.tick(.2);assert.equal(facing.m.yaw,heldYaw);
+facing.key('KeyD');for(let i=0;i<30;i++)facing.m.update(1/60,{actionSlow:true,faceTarget:subject});
+assert(facing.m.position.x>.3);assert(facing.m.speed>1 && facing.m.speed<1.11);
+assert(angularError(facing.m.yaw,Math.atan2(subject.x-facing.m.position.x,subject.z-facing.m.position.z))<.02);
+facing.tick(.4);assert(angularError(facing.m.yaw,Math.atan2(.788,-.615))<.01); // player direction resumes
+const turning=[];for(const hz of [30,60,120]){const f=fixture();for(let i=0;i<hz*.2;i++)f.m.update(1/hz,{faceTarget:subject});turning.push(f.m.yaw);f.m.dispose();}
+assert(Math.max(...turning)-Math.min(...turning)<1e-10);
+facing.m.dispose();
 for(const f of [a,wall,ledge,gap,edge,touch,slope,shallowVoid,lowerFloor])f.m.dispose();
-console.log('PASS: walk/run, screen axes, stop, jump, landing, buffered jump, pause/reset, wall slide, ledge, gap, coyote, recovery, frame rate, blur/dispose');
+console.log('PASS: walk/run, screen axes, stop, jump, landing, buffered jump, pause/reset, wall slide, ledge, gap, coyote, recovery, frame rate, blur/dispose, smooth target-facing and retained intent');

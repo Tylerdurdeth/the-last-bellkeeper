@@ -16,7 +16,7 @@ export function createArtDirection(T, renderer) {
   floor.colorSpace = T.SRGBColorSpace;
   floor.wrapS = floor.wrapT = T.RepeatWrapping;
   floor.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
-  // World-scaled sampling below makes one painted tile span seven metres.
+  // World-scaled sampling below makes one painted tile span eleven metres.
 
   function material(source, character, terrain, vertexColors, wood=false) {
     if (!source || owned.has(source)) return source;
@@ -46,6 +46,7 @@ export function createArtDirection(T, renderer) {
     const priorCompile = source.onBeforeCompile;
     m.onBeforeCompile = (shader, context) => {
       priorCompile?.call(m, shader, context);
+      if (terrain) shader.uniforms.bkBankStone = { value: stone };
       shader.uniforms.bkWindTime = windTime;
       shader.uniforms.bkWindMotion = windMotion;
       shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vBkWorld;\nuniform float bkWindTime;\nuniform float bkWindMotion;');
@@ -87,27 +88,38 @@ export function createArtDirection(T, renderer) {
 #endif`);}
       if(wood&&source.name==='timber'){shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP\n diffuseColor.rgb *= mix(vec3(1.0), .5 + 1.7 * texture2D(map,vMapUv).rgb,.5);\n#endif`);}
       if (terrain) {
+        shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D bkBankStone;');
         shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
           #ifdef USE_MAP
-            vec4 bkGround = texture2D(map, vBkWorld.xz / 7.0);
+            vec4 bkGround = texture2D(map, vBkWorld.xz / 11.0);
             float bkGroundValue = dot(bkGround.rgb, vec3(.2126, .7152, .0722));
-            vec3 bkQuietGround = mix(vec3(bkGroundValue), bkGround.rgb, .30);
-            // Retain brush detail without letting the generated grass/soil islands
-            // overwrite the continuous pale authored path.
-            float bkGroundStrength=.65;
-            #if defined(USE_COLOR)
-              bkGroundStrength=mix(.65,.22,smoothstep(.25,.50,vColor.r));
+            vec3 bkAuthored = vec3(.12,.22,.085);
+            #if defined(USE_COLOR) || defined(USE_COLOR_ALPHA)
+              bkAuthored = vColor.rgb;
             #endif
-            diffuseColor.rgb *= mix(vec3(1.0), .20 + 1.25 * bkQuietGround, bkGroundStrength);
+            float bkPath = smoothstep(.23, .50, bkAuthored.r);
+            // The painted tile supplies off-path albedo directly, rather than multiplying green.
+            vec3 bkPaint = vec3(.025) + bkGround.rgb * 1.65;
+            vec3 bkFaceNormal = normalize(cross(dFdx(vBkWorld),dFdy(vBkWorld)));
+            float bkUp = smoothstep(.50,.85,abs(bkFaceNormal.y));
+            vec3 bkBankWeights = pow(abs(bkFaceNormal), vec3(4.));
+            bkBankWeights /= max(.001, bkBankWeights.x + bkBankWeights.y + bkBankWeights.z);
+            vec3 bkBank = texture2D(bkBankStone, vBkWorld.zy / 5.).rgb * bkBankWeights.x
+                        + texture2D(bkBankStone, vBkWorld.xz / 5.).rgb * bkBankWeights.y
+                        + texture2D(bkBankStone, vBkWorld.xy / 5.).rgb * bkBankWeights.z;
+            // Coloured exposed strata remain the authored earth tone, never white boulders.
+            vec3 bkBankAlbedo = bkAuthored * (vec3(.45) + bkBank * 1.55);
+            vec3 bkFloorAlbedo = mix(bkAuthored, bkPaint, .70 * (1.0-bkPath) * bkUp);
+            bkFloorAlbedo = mix(bkBankAlbedo, bkFloorAlbedo, bkUp);
+            // Keep the continuous authored cream path and quiet texture amplitude on it.
+            bkFloorAlbedo *= mix(1.0, .95 + .12*bkGroundValue, bkPath);
+            diffuseColor.rgb *= bkFloorAlbedo;
             diffuseColor.a *= bkGround.a;
           #endif
         `);
         shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `
           #if defined(USE_COLOR_ALPHA)
-            diffuseColor.rgb *= vColor.rgb;
             diffuseColor.a *= vColor.a;
-          #elif defined(USE_COLOR)
-            diffuseColor.rgb *= vColor;
           #endif
         `);
       }
@@ -131,7 +143,7 @@ export function createArtDirection(T, renderer) {
       );
     };
     const priorKey = source.customProgramCacheKey();
-    m.customProgramCacheKey = () => `bellkeeper-painted-v4:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
+    m.customProgramCacheKey = () => `bellkeeper-painted-v6:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
     return m;
   }
 
