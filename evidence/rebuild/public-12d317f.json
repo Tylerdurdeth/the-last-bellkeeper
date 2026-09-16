@@ -1,0 +1,20 @@
+{
+  "runtime": "12d317f",
+  "files": [
+    {
+      "file": "animation.js",
+      "sha256": "91c8e01b9c53f28bed28f9fa29c6ee234a33387a1a1745af1d4283f741826d3e",
+      "matches": true
+    },
+    {
+      "file": "assets/tree.js",
+      "sha256": "24eb977d226099906f81ced6168b39a6b956dc6684bc59af9ac29631dfa3d114",
+      "matches": true
+    },
+    {
+      "file": "world.js",
+      "sha256": "c1c21ec809d55bceb5737c3068c1538f0c2d3a6cac977916e1491cc7d34b05ab",
+      "matches": true
+    }
+  ]
+}
