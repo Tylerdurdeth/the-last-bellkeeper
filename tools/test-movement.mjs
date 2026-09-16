@@ -26,6 +26,18 @@ const gap=fixture({sampleGround:(x,z)=>x>.8&&x<1.8?null:0});gap.key('KeyD');gap.
 const edge=fixture({sampleGround:(x,z)=>x<.8?0:null});edge.key('KeyD');edge.key('ShiftLeft');while(edge.m.grounded)edge.m.update(1/120);edge.m.jump();edge.m.update(1/120);assert(edge.m.verticalVelocity>5);
 edge.tick(2);assert(edge.m.position.y>=-4); // no unbounded fall / softlock
 edge.key('KeyD',false);edge.key('ShiftLeft',false);edge.tick(2);assert(edge.m.grounded);assert(edge.m.position.x<.8);
+// A true void returns before the avatar can descend 1.25m below its safe bank.
+// Observe every frame; recovery flag is a one-update event and does not teleport speed.
+const shallowVoid=fixture({sampleGround:(x,z)=>x<.8?0:null});
+shallowVoid.key('KeyD');shallowVoid.key('ShiftLeft');let lowest=0,recoveryCount=0;
+for(let i=0;i<180;i++){shallowVoid.m.update(1/120);lowest=Math.min(lowest,shallowVoid.m.position.y);if(shallowVoid.m.recovered){recoveryCount++;assert(shallowVoid.m.grounded);assert(shallowVoid.m.position.x<.8);assert.equal(shallowVoid.m.speed,0);}}
+assert.equal(recoveryCount,1);assert(lowest>=-1.25);assert(lowest<-.8);assert(!shallowVoid.m.recovered);
+shallowVoid.m.reset();assert(!shallowVoid.m.recovered);
+// A legitimate 2m lower floor is not a void: keep falling to it instead of
+// applying the shallow void cutoff to an ordinary traversable landing.
+const lowerFloor=fixture({sampleGround:(x,z)=>x<.8?0:-2});lowerFloor.key('KeyD');lowerFloor.key('ShiftLeft');let floorRecoveries=0;
+for(let i=0;i<120;i++){lowerFloor.m.update(1/120);if(lowerFloor.m.recovered)floorRecoveries++;}
+assert.equal(floorRecoveries,0);assert(lowerFloor.m.grounded);assert.equal(lowerFloor.m.position.y,-2);
 // Constant input with varied frame periods retains near-identical distance.
 const distances=[];for(const hz of [30,60,120]){const f=fixture();f.key('KeyW');f.key('ShiftLeft');f.tick(2,hz);distances.push(f.m.position.length());f.m.dispose();}
 assert(Math.max(...distances)-Math.min(...distances)<.015);
@@ -48,5 +60,5 @@ pointer('pointercancel',2);assert.equal(stick.capture,1); // another finger cann
 pointer('pointercancel',1);touch.tick(.3);assert(touch.m.speed<.01);assert.equal(stick.capture,null);
 pointer('pointerdown',3);touch.tick(.1);touch.m.update(.01,{enabled:false});assert.equal(stick.capture,null);assert.equal(stick.knob.style.transform,'');touch.m.update(.01);touch.tick(.2);assert.equal(touch.m.speed,0);
 const slope=fixture({sampleGround:(x,z)=>x*.25});slope.key('KeyD');slope.tick(1);assert(slope.m.grounded);assert(Math.abs(slope.m.position.y-slope.m.position.x*.25)<1e-8);
-for(const f of [a,wall,ledge,gap,edge,touch,slope])f.m.dispose();
+for(const f of [a,wall,ledge,gap,edge,touch,slope,shallowVoid,lowerFloor])f.m.dispose();
 console.log('PASS: walk/run, screen axes, stop, jump, landing, buffered jump, pause/reset, wall slide, ledge, gap, coyote, recovery, frame rate, blur/dispose');

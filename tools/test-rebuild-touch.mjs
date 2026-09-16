@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
 import fs from 'node:fs/promises';
-const out='evidence/rebuild/touch-round3';await fs.mkdir(out,{recursive:true});
+const out=process.argv[2]||'evidence/rebuild/touch-round3';await fs.mkdir(out,{recursive:true});
 const result={kind:'Phone-emulated full quest and keepsakes, real touch contacts only, read-only telemetry, known-route test',startedAt:new Date().toISOString(),errors:[],requests:[],waypoints:[],checks:{},jumps:[]};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const browser=await puppeteer.launch({headless:true});const page=await browser.newPage();await page.setViewport({width:430,height:932,deviceScaleFactor:1,isMobile:true,hasTouch:true});const client=await page.createCDPSession();page.on('pageerror',e=>result.errors.push(e.message));page.on('response',r=>{if(r.status()>=400)result.requests.push(r.url());});

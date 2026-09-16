@@ -31,7 +31,7 @@ export function createMovement(THREE, {
   }
   function jump() { if (active && !disposed) bufferedJump = .14; }
   function reset(next = start) {
-    clearInput(); position.set(...next); checkpoint.copy(position); velocity.set(0, 0, 0);
+    clearInput(); recovered = false; position.set(...next); checkpoint.copy(position); velocity.set(0, 0, 0);
     const g = groundAt(position.x, position.z);
     grounded = g !== null && Math.abs(position.y - g) <= stepHeight;
     if (grounded) position.y = g;
@@ -116,16 +116,19 @@ export function createMovement(THREE, {
         const g = groundAt(position.x + a, position.z + b); return g !== null && Math.abs(g - position.y) < stepHeight;
       })) checkpoint.copy(position);
     } else safeTime = 0;
-    if (position.y < checkpoint.y - 4) {
+    // Void banks return quickly, before the camera follows below the scenery.
+    // Real lower floors retain the wider fall budget for legitimate landings.
+    if (position.y < checkpoint.y - (ground === null ? 1.25 : 4)) {
       recovered = true; clearInput(); position.copy(checkpoint); velocity.set(0, 0, 0); grounded = true; bufferedJump = 0; coyote = 0;
     }
   }
   function update(dt, { enabled = true, actionSlow = false } = {}) {
     if (disposed) return;
+    recovered = false;
     active = enabled;
     if (!enabled) { clearInput(); velocity.x = velocity.z = 0; speed = 0; mode = 'idle'; return; }
     const elapsed = Math.max(0, Math.min(.05, Number.isFinite(dt) ? dt : 0));
-    const oldX = position.x, oldZ = position.z; recovered = false;
+    const oldX = position.x, oldZ = position.z;
     const steps = Math.ceil(elapsed / (1 / 120));
     for (let i = 0; i < steps; i++) integrate(elapsed / steps, actionSlow);
     speed = elapsed && !recovered ? Math.hypot(position.x - oldX, position.z - oldZ) / elapsed : 0;
@@ -133,5 +136,5 @@ export function createMovement(THREE, {
   }
   function dispose() { clearInput(); listeners.splice(0).forEach(off => off()); disposed = true; }
   reset();
-  return { position, velocity, get yaw() { return yaw; }, get speed() { return speed; }, get grounded() { return grounded; }, get mode() { return mode; }, get verticalVelocity() { return velocity.y; }, update, reset, jump, dispose };
+  return { position, velocity, get yaw() { return yaw; }, get speed() { return speed; }, get recovered() { return recovered; }, get grounded() { return grounded; }, get mode() { return mode; }, get verticalVelocity() { return velocity.y; }, update, reset, jump, dispose };
 }

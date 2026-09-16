@@ -73,6 +73,13 @@ export function createArtDirection(T, renderer) {
         #include <project_vertex>
       `);
       shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vBkWorld;');
+      if(wood){shader.fragmentShader=shader.fragmentShader.replace('#include <alphatest_fragment>',`
+        // Continuous near-camera clearance covers motion between object ray checks.
+        float bkNearCamera = smoothstep(2.5, 6.0, length(vViewPosition));
+        diffuseColor.a *= bkNearCamera * bkNearCamera;
+        if(diffuseColor.a < .002) discard;
+        #include <alphatest_fragment>
+      `);}
       if(source.name==='stone'){shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP
  vec3 bkNormal=abs(normalize(cross(dFdx(vBkWorld),dFdy(vBkWorld))));vec3 bkWeights=pow(bkNormal,vec3(4.));bkWeights/=max(.001,bkWeights.x+bkWeights.y+bkWeights.z);
  vec3 bkStone=texture2D(map,vBkWorld.zy/5.).rgb*bkWeights.x+texture2D(map,vBkWorld.xz/5.).rgb*bkWeights.y+texture2D(map,vBkWorld.xy/5.).rgb*bkWeights.z;
@@ -124,7 +131,7 @@ export function createArtDirection(T, renderer) {
       );
     };
     const priorKey = source.customProgramCacheKey();
-    m.customProgramCacheKey = () => `bellkeeper-painted-v3:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
+    m.customProgramCacheKey = () => `bellkeeper-painted-v4:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
     return m;
   }
 

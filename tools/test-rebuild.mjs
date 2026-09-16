@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
 import fs from 'node:fs/promises';
-const out='evidence/rebuild/story-garden-desktop';await fs.mkdir(out,{recursive:true});
+const out=process.argv[2]||'evidence/rebuild/runtime-current';await fs.mkdir(out,{recursive:true});
 const browser=await puppeteer.launch({headless:true});
 const result={kind:'Actual keyboard/touch input with read-only telemetry; known-route scripted regression, not a natural discovery playtest',startedAt:new Date().toISOString(),errors:[],requests:[],checks:{},waypoints:[],screenshots:[]};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -22,6 +22,8 @@ try{
  await action('chime','chimes-awakened');for(const [x,z,label]of [[-9,-19.5,'quiet-approach'],[-7,-19.5,'quiet-near'],[-7,-18.7,'quiet-bed']])await go(x,z,label);result.checks.quietPocket={pass:!(await read()).charged&&(await read()).context!=='capture'&&(await read()).quietObserved};await shot('quiet-pocket');for(const [x,z,label]of [[-9,-19.5,'current-trail'],[-11,-19.5,'current-bed-approach'],[-13.2,-17.5,'garden']])await go(x,z,label);await shot('responsive-pocket');await action('capture','captured');await shot('capture');
  for(const [x,z,label]of [[-11,-16,'return-around-root'],[-10,-13,'return-path'],[-10,-10,'return-garden'],[-16,-7,'return-upper'],[-15,0,'return-west'],[-10,5,'return-roots'],[-4,8,'return-cottage'],[0,6,'wheel-approach'],[4,4,'wheel-path'],[5,3.7,'wheel']])await go(x,z,label);
  await action('wheel','restored');await shot('restoration');await go(8,4,'wheel-around');await go(8,.1,'bridge-near');await go(8,-3.35,'bridge-deck');await shot('bridge');await go(8,-6.5,'bridge-far');await go(8,-10,'overlook');await action('finish','completed');await shot('overlook');result.checks.completion={pass:(await read()).score===1,scriptedSeconds:(Date.now()-startTime)/1000,travel:(await read()).travel};
+ // Replay the unbriefed reviewer's east-of-finish exploration; wind must return the player to readable ground.
+ await hold(['KeyD','ShiftLeft']);await sleep(2500);await hold([]);await sleep(120);const east=await read();result.checks.eastBoundary={pass:east.score===1&&east.grounded&&east.y>.8,state:east};await shot('east-edge');
  // Deliberately walk into the unrepaired crossing; observe gravity and automatic safe return.
  await page.keyboard.press('Escape');await page.click('#reset');await sleep(120);for(const [x,z,label]of [[-4,13,'fall-route-bend'],[-4,8,'fall-route-cottage'],[0,6,'fall-route-east'],[4,4,'fall-route-wheel'],[8,4,'fall-route-around-wheel'],[8,0,'fall-edge']])await go(x,z,label);
  let fell=false,recovered=false;await hold(['KeyW','KeyD','ShiftLeft']);for(let i=0;i<45;i++){await sleep(70);const g=await read();if(!g.grounded&&g.y<.5)fell=true;if(fell&&g.grounded&&g.y>.8){recovered=true;break;}}await hold([]);result.checks.fallRecovery={pass:fell&&recovered,fell,recovered,state:await read()};await shot('fall-recovery');

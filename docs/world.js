@@ -1,10 +1,11 @@
 import * as T from 'three';
+import {createBrook} from './brook.js';
 import {buildBackdrop} from './backdrop.js';
 import {ASSET,bakeStatic} from './assetlib.js';
 import {height,pathDistance,POINTS} from './world-layout.js';
 // Authored landmarks, then deterministic natural scatter. Geometry comes from reviewed recipe assets.
 export async function buildWorld(scene,art){
- const colliders=[],chunks=new Map(),animated=[],birds=[],lanterns=[],trees=[];let seed=419;const rnd=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);
+ const scatterRocks=[],colliders=[],chunks=new Map(),animated=[],birds=[],lanterns=[],trees=[];let seed=419;const rnd=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);
  const shortcutLine=[[-10,-9],[-3,2]];
  const shortcutDistance=(x,z)=>{const a=shortcutLine[0],b=shortcutLine[1],dx=b[0]-a[0],dz=b[1]-a[1],u=T.MathUtils.clamp(((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz),0,1);return Math.hypot(x-a[0]-u*dx,z-a[1]-u*dz);};
  const gardenClearance=(x,z)=>[POINTS.garden,POINTS.quietGarden].some(([gx,gz])=>Math.hypot(x-gx,z-gz)<1.6);
@@ -18,7 +19,7 @@ export async function buildWorld(scene,art){
   o.position.set(x,y,z);o.scale.multiplyScalar(scale);o.rotation.y=rotation;
   if(dynamic){scene.add(o);animated.push(o);}else{const key=Math.floor(x/10)+':'+Math.floor(z/10);if(!chunks.has(key))chunks.set(key,new T.Group());chunks.get(key).add(o);}return o;
  }
- const terrain=prototypes.terrain;terrain.position.y=-8;terrain.traverse(n=>{if(n.isMesh&&n.material.name==='ground'&&!n.geometry.attributes.color)n.visible=false;});scene.add(terrain);
+ const terrain=prototypes.terrain;terrain.position.y=-8;terrain.traverse(n=>{if(n.isMesh&&n.material.name==='ground'&&!n.geometry.attributes.color)n.visible=false;});scene.add(terrain);const brook=createBrook(T,terrain.getObjectByName('water'));
  const cottage=place('cottage',-8,9,1,.7,{dynamic:true});colliders.push({x:-8,z:9,r:2.25});const cottageMats=[];cottage.traverse(o=>{if(o.isMesh){o.material=o.material.clone();art.style(o);o.material.transparent=true;cottageMats.push(o.material);}});
  const wheel=place('wheel',6,2.5,1.2,-.45,{dynamic:true});colliders.push({x:6,z:2.5,r:.62});
  const bridge=place('bridge',8,-3.35,1,0,{dynamic:true,y:.9});bridge.visible=false;
@@ -38,14 +39,15 @@ export async function buildWorld(scene,art){
   const near=d<4.5||branch<4;
   const name=i%7===0?'rock':'fern';
   if(!near&&i%3)continue;
-  place(name,x,z,name==='rock'?.7+rnd()*.7:name==='fern'?.85+rnd()*.8:.7+rnd()*.8,rnd()*6.28);
-  if(name==='rock')colliders.push({x,z,r:.38});
+  const scatter=place(name,x,z,name==='rock'?.7+rnd()*.7:name==='fern'?.85+rnd()*.8:.7+rnd()*.8,rnd()*6.28);
+  if(name==='rock')scatterRocks.push({o:scatter,x,z,r:scatter.scale.x*1.1});
  }
  // Dense, deliberately grouped beds under the roots and around the listening garden.
  for(const [cx,cz] of [[-6,15],[-2,11],[-10,12],[-12,3],[-18,-3],[-14,-9],[-12,-17],[-7,-18],[0,6],[10,-10],[-2,21],[4,19],[-7,20],[2,16]])for(let i=0;i<16;i++){const angle=rnd()*6.28,r=.4+rnd()*2.2,x=cx+Math.cos(angle)*r,z=cz+Math.sin(angle)*r;if(gardenClearance(x,z)||shortcutDistance(x,z)<1.25||pathDistance(x,z)<1.65||Math.hypot(x+8,z-9)<2.7||Math.hypot(x+10,z+17)<1.8||Math.hypot(x-8,z+10)<2.3||Math.hypot(x+8,z+15)<2)continue;place(i%4?'fern':'flower',x,z,.8+rnd()*.8,angle);}
  for(const [x,z] of [[-3,15],[-9,5],[-16,-4],[-12,-15],[8,-11]]){const b=place('bird',x,z,1,0,{dynamic:true});birds.push({o:b,home:new T.Vector3(x,height(x,z),z),phase:rnd()*6.28,flight:0});}
  const backdrop=buildBackdrop(T,scene,{prototypes,art,height});
  const memoryRock=prototypes.rock.clone(true);memoryRock.position.set(-19,height(-19,-5),-5);memoryRock.scale.set(1.7,1.1,1.7);scene.add(memoryRock);memoryRock.updateMatrixWorld(true);const rockRay=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0));
+ function scatterGround(x,z){let top=null;rockRay.ray.origin.set(x,10,z);for(const r of scatterRocks){if(Math.hypot(x-r.x,z-r.z)>r.r)continue;const hit=rockRay.intersectObject(r.o,true)[0];if(hit)top=top===null?hit.point.y:Math.max(top,hit.point.y);}return top;}
  function rockGround(x,z){if(Math.hypot(x+19,z+5)>1.8)return null;rockRay.ray.origin.set(x,10,z);const hits=rockRay.intersectObject(memoryRock,true);return hits[0]?.point.y??null;}
  const keepsakePoint=new T.Vector3(-19,rockGround(-19,-5),-5);
  // The wind exposes a shorter route back toward the cottage over a low stone shelf.
@@ -57,9 +59,10 @@ export async function buildWorld(scene,art){
  let shortcutAwake=0;
  const chunkList=[];for(const g of chunks.values()){const baked=bakeStatic(g);scene.add(baked);const center=new T.Box3().setFromObject(baked).getCenter(new T.Vector3());chunkList.push({o:baked,center});}
  let restored=false,bridgeLift=0,cottageOpacity=1,occlusionTimer=0;const cameraRay=new T.Raycaster();
- function ground(x,z){const shelfY=shelfGround(x,z);if(shelfY!==null)return Math.max(height(x,z),shelfY);const rockY=rockGround(x,z);if(rockY!==null)return Math.max(height(x,z),rockY);if(Math.abs(x)>35||Math.abs(z)>35)return null;if(restored&&Math.abs(x-8)<1.1&&z> -6.2&&z<.2)return 1.2-.15*Math.cos(Math.min(1,Math.abs(z+3.35)/2.5)*Math.PI/2);const h=height(x,z);return h< -2?null:h;}
+ function ground(x,z){if(x>2&&z< -13&&height(x,z)<.95)return null;const shelfY=shelfGround(x,z);if(shelfY!==null)return Math.max(height(x,z),shelfY);const rockY=rockGround(x,z);if(rockY!==null)return Math.max(height(x,z),rockY);const scatterY=scatterGround(x,z);if(scatterY!==null)return Math.max(height(x,z),scatterY);if(Math.abs(x)>35||Math.abs(z)>35)return null;if(restored&&Math.abs(x-8)<1.1&&z> -6.2&&z<.2)return 1.2-.15*Math.cos(Math.min(1,Math.abs(z+3.35)/2.5)*Math.PI/2);const h=height(x,z);if(x>2&&x<31&&z> -5.5&&z< -1.2&&h<-.35)return null;return h< -2?null:h;}
  function blocked(x,z,r){return colliders.some(c=>Math.hypot(x-c.x,z-c.z)<c.r+r);}
  function update(dt,t,pos,isRestored,gentle,camera,charged=false){
+  brook.update(t,gentle);
   shortcutAwake=T.MathUtils.damp(shortcutAwake,charged||isRestored?1:0,3,dt);for(const f of shortcutFlowers){f.o.rotation.z=Math.sin(t*3-f.phase)*.16*shortcutAwake*(gentle?.2:1);for(const m of f.mats)m.emissiveIntensity=shortcutAwake*(.55+.3*Math.sin(t*2-f.phase));}
   backdrop.update?.(dt,t,pos);restored=isRestored;bridgeLift=T.MathUtils.damp(bridgeLift,restored?1:0,7,dt);bridge.visible=restored;bridge.position.y=.9-(1-bridgeLift)*3.6;
   const cdx=cottage.position.x-pos.x,cdz=cottage.position.z-pos.z,front=cdx*.615+cdz*.788,side=Math.abs(cdx*.788-cdz*.615);cottageOpacity=T.MathUtils.damp(cottageOpacity,front> -1&&front<12&&side<3.4?.16:1,12,dt);for(const m of cottageMats){m.opacity=cottageOpacity;m.depthWrite=cottageOpacity>.98;}
