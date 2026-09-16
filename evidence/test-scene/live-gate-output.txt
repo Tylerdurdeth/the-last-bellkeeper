@@ -1,0 +1,28 @@
+screenshots     /Users/seb/Documents/Codex/the-last-bellkeeper/evidence/test-scene/live-gate/loaded.png
+                /Users/seb/Documents/Codex/the-last-bellkeeper/evidence/test-scene/live-gate/started.png
+                /Users/seb/Documents/Codex/the-last-bellkeeper/evidence/test-scene/live-gate/moving.png
+verdict.json    /Users/seb/Documents/Codex/the-last-bellkeeper/evidence/test-scene/live-gate/verdict.json
+held            #stick dragged up and held 6 s
+path length     8.2 m over the run
+wire bytes      0.5 MB compressed, 17 responses
+renderer        ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Pro, Unspecified Version)
+
+=== 404 JAM VERDICT ===
+url             https://tylerdurdeth.github.io/the-last-bellkeeper/
+utc             2026-09-16T14:17:54.495Z
+commit          7c551c7f5e7b2067b6f9dd130941a2ae6045fad5
+viewport        390x844 @3x phone, real touch, Android Chrome UA
+network         4G: 4 Mbps down, 1 Mbps up, 60 ms latency, CPU 2x slower
+ready           2.5 s   budget 20 s   PASS
+weight          2.1 MB   budget 10 MB   PASS
+started         yes (tap on #startb)
+moved           7.8 m   needs 1 m   PASS
+peak draws      219   budget 900   PASS
+peak tris       138,056   budget 1,500,000   PASS
+median fps      59.9920620869685 (ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Pro, Unspecified Version))
+errors          0   PASS
+404s            0   PASS
+external deps   none
+outside folder  none, every file came from the game folder
+RESULT: PASS
+=== END ===

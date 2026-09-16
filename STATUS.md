@@ -11,3 +11,5 @@ Independent visual reviews still reject the rich final-scene target: architectur
 Atlas settled pilot cost16; no subsequent paid jobs, no reservations. First-scene allocation remaining484; protected repair800 unchanged. Pilot image downloaded; Atlas SFX retrieval blocked by Chrome, not listening-approved, not shipped. Sound here is provisional original synthesis.
 
 Next bounded work: user playtest and final targeted floor/feedback check; address concrete composition and motion observations within this same scene. No new paid references are justified by the existing camera/layout defects.
+
+Delivery verification: public runtime7c551c7 byte-matched and passed unmodified live phone gate (2.5s ready,2.1MB body,7.8m touch movement,219draws/138056tris,zero errors/404s). Final independent floor and pending-feedback repair checks PASS; rich visual milestone still unapproved. See evidence/test-scene/delivery.md.
