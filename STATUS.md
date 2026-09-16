@@ -1,11 +1,13 @@
 # Status
 
-Stage: limited first-scene production, authorized16 September2026. Full-game expansion not underway.
+Stage: first playable terrace study. Full adventure expansion and final visual approval remain outstanding.
 
-Hosting smoke page verified; no playable scene deployed yet. Contract independently reviewed and omissions fixed. Recipe selftest and synthetic recording capability passed.
+Runtime build7c551c7: main character, tree terrace, source→capture→carry→release→seed wheel and gate restoration; safe pressure puff; desktop/touch movement, pause/reset, sound/motion switches. Deployed infrastructure uses GitHub Pages docs/. Public prototype is explicitly labelled a study.
 
-Atlas pilot: agent attempt failed, cost2. Direct image node succeeded5; direct SFX succeeded9. Total16, reservations0, first-scene allocation remaining484. Image downloaded and visually reviewed. Audio retrieval blocked by Chrome; no listening pass. Do not regenerate to fix retrieval. Details in evidence/process/pilot-lessons.md; original evidence retained privately.
+All27 original code candidates passed the unmodified recipe verifier; visual selection and repair history retained. Runtime real-input regressions pass capture/miss/retention/restoration/pause/reset and touch movement with no errors. Independent f9c57fb runtime retest passed closed/open/reset gate on keyboard+touch, transfer at phone scale, safe hazard reaction/charge retention/evasion and eased turning. Latest change corrects floor coplanarity, pending objective and garden collision. See evidence/test-scene reports for exact builds/limits.
 
-Active: three independent articulated hero code candidates from the inspected reference, 404 recipe path B, zero extra Atlas credits. Compare actual multi-view renders, then test selected rig in a camera/animation viewer before integrating terrace and wind mechanic. Hero reference labels and invented name rejected.
+Independent visual reviews still reject the rich final-scene target: architecture and foliage remain too simple compared with the concept. Do not expand geography or certify this as final art. Physical iPhone test and actual listening remain pending. No slopes/full route/full opening/end/release certification.
 
-Current published site is infrastructure only, not gameplay. No first-scene acceptance or full-game release claimed.
+Atlas settled pilot cost16; no subsequent paid jobs, no reservations. First-scene allocation remaining484; protected repair800 unchanged. Pilot image downloaded; Atlas SFX retrieval blocked by Chrome, not listening-approved, not shipped. Sound here is provisional original synthesis.
+
+Next bounded work: user playtest and final targeted floor/feedback check; address concrete composition and motion observations within this same scene. No new paid references are justified by the existing camera/layout defects.
