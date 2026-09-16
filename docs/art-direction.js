@@ -86,7 +86,7 @@ export function createArtDirection(T, renderer) {
  vec3 bkStone=texture2D(map,vBkWorld.zy/5.).rgb*bkWeights.x+texture2D(map,vBkWorld.xz/5.).rgb*bkWeights.y+texture2D(map,vBkWorld.xy/5.).rgb*bkWeights.z;
  diffuseColor.rgb*=mix(vec3(1.),.42+1.6*bkStone,.85);
 #endif`);}
-      if(wood&&source.name==='timber'){shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP\n diffuseColor.rgb *= mix(vec3(1.0), .5 + 1.7 * texture2D(map,vMapUv).rgb,.5);\n#endif`);}
+      if(wood&&source.name==='timber'){shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP\n diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.025) + 1.7 * texture2D(map,vMapUv.yx).rgb,.38);\n#endif`);}
       if (terrain) {
         shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D bkBankStone;');
         shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
@@ -143,7 +143,7 @@ export function createArtDirection(T, renderer) {
       );
     };
     const priorKey = source.customProgramCacheKey();
-    m.customProgramCacheKey = () => `bellkeeper-painted-v6:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
+    m.customProgramCacheKey = () => `bellkeeper-painted-v7:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
     return m;
   }
 
