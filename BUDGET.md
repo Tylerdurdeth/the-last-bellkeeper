@@ -63,3 +63,5 @@ Included compute checkpoint during final physical-contact and brook repair:82% c
 At runtime release d7eb5a0:84% included weekly compute consumed/16% remaining. Atlas unchanged25/400 rebuild spending; reservations0. The visual goal remains active; this is a tested checkpoint, not a claim of complete aesthetic acceptance.
 
 At painted-surface/target-facing release c858e35, account-wide included weekly usage is90% consumed/10% remaining. This is the shared account meter, not an attribution of all usage to this project. Atlas rebuild remains25 settled/0reserved/375available; no new generation occurred in the surface-translation studies.
+
+At bark refinement c6ebc2c, included weekly account usage is92% consumed/8% remaining. Atlas unchanged25 rebuild credits,375 under cap available,1,959 account balance at last billing check. No reservations or new generations.
