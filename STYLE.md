@@ -44,3 +44,7 @@ Shoulders/hips lead turns; feet plant at idle; stride speed matches travel. Walk
 Pilot image should show the apprentice full-body in a small style board beside the terrace composition and three-quarter views of copper wheel/bell/seed lantern/tree kit. Inspect that this remains useful; do not claim tiny sheet objects are adequate references. Additional isolated references only when the sheet lacks required readable structure, within remaining budget. Prioritise hero, tree, terrace, wheel, bell, lantern and foliage kit; instance/reuse accepted assets.
 
 Art lock is provisional until the pilot reference is inspected. Keep accepted reference files and candidate sheets in private evidence, not runtime payload. Record changes to this lock before dispatching later assets.
+
+## Pilot refinement — 16 September 2026
+
+Pilot inspected: retain the coral practical coat, swept hair, copper staff and layered ivory/tree composition. Generated headings, labels and invented character name are rejected. Use isolated object portraits for future modelling references; avoid the word board. Current hero image is sufficient for candidate exploration; mechanical parts need clearer isolated forms before production. Character candidates must be compared in multi-view sheets, then animated at actual camera distance. Art lock remains provisional until the scene is reviewed.

@@ -1,13 +1,11 @@
 # Status
 
-Stage: first-scene launch preparation; explicitly authorized by user on 16 September 2026. Full-game expansion is not underway.
+Stage: limited first-scene production, authorized16 September2026. Full-game expansion not underway.
 
-Known-good deployed infrastructure commit: b284d028aaa926068f9b915a1dae6a9478ec14e9. Public page is a hosting test only, not a playable game.
+Hosting smoke page verified; no playable scene deployed yet. Contract independently reviewed and omissions fixed. Recipe selftest and synthetic recording capability passed.
 
-Completed: approved repository/hosting, initial pushes and live page interaction; recipe selftest; user confirmation of Astra Standard; authenticated Atlas identity in the separate connected session; audio/physical-phone tester available.
+Atlas pilot: agent attempt failed, cost2. Direct image node succeeded5; direct SFX succeeded9. Total16, reservations0, first-scene allocation remaining484. Image downloaded and visually reviewed. Audio retrieval blocked by Chrome; no listening pass. Do not regenerate to fix retrieval. Details in evidence/process/pilot-lessons.md; original evidence retained privately.
 
-Completed launch preparation: style lock and acceptance contract; independent omission review and all three fixes retested PASS. Synthetic browser motion recording and frame extraction demonstrated. Remaining blocker: bounded Atlas pilot configuration and dispatch in the connected session.
+Active: three independent articulated hero code candidates from the inspected reference, 404 recipe path B, zero extra Atlas credits. Compare actual multi-view renders, then test selected rig in a camera/animation viewer before integrating terrace and wind mechanic. Hero reference labels and invented name rejected.
 
-Blocking asset generation: lead desktop task does not expose Atlas tools or ATLAS_API_KEY; connected session has authenticated access but remote dispatch returned active-writer lock. User has been asked to request only the pilot-plan artifact from that existing session. No credential retrieval, duplication or spending attempted. Actual configured pilot quote and download test remain pending.
-
-Next: resolve bounded Atlas pilot plan; perform pilot with reserved cost after technical blockers resolved; inspect references before any recipe asset production. No game geometry has been produced yet. Keep original master/briefing private outside source; public brief is sanitized.
+Current published site is infrastructure only, not gameplay. No first-scene acceptance or full-game release claimed.

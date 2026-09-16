@@ -5,3 +5,5 @@ node_modules/
 !.env.example
 .private/
 *.log
+node_modules/
+.DS_Store

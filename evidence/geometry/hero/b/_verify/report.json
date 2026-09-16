@@ -1,0 +1,40 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 48,
+  "tris": 7632,
+  "materials": 11,
+  "size": [
+   0.515,
+   1.35,
+   0.356
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1982,
+    "edgeDensity": 0.1276
+   },
+   "right": {
+    "coverage": 0.1225,
+    "edgeDensity": 0.1109
+   },
+   "back": {
+    "coverage": 0.196,
+    "edgeDensity": 0.0551
+   },
+   "left": {
+    "coverage": 0.1302,
+    "edgeDensity": 0.0858
+   }
+  },
+  "error": null,
+  "name": "hero",
+  "problems": []
+ }
+]
