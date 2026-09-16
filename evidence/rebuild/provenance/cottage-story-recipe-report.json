@@ -1,0 +1,40 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 285,
+  "tris": 11441,
+  "materials": 15,
+  "size": [
+   5.253,
+   6.017,
+   5.135
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   -0.016,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.2501,
+    "edgeDensity": 0.1469
+   },
+   "right": {
+    "coverage": 0.2559,
+    "edgeDensity": 0.088
+   },
+   "back": {
+    "coverage": 0.2418,
+    "edgeDensity": 0.0993
+   },
+   "left": {
+    "coverage": 0.255,
+    "edgeDensity": 0.0695
+   }
+  },
+  "error": null,
+  "name": "cottage",
+  "problems": []
+ }
+]

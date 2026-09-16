@@ -26,7 +26,22 @@ export default function(T){
  for(const side of [-1,1]){box(wood,side*1.88,1.3,0,.13,2.6,.15);const win=box(dark,side*1.94,1.75,0,.07,.85,1.0);box(woodLight,side*2.01,1.75,0,.09,.09,1.1);box(woodLight,side*2.01,1.75,0,.09,.95,.08);box(woodLight,side*2.06,1.22,0,.38,.12,1.28);}
  box(wood,0,1.65,-1.52,2.5,.14,.12);box(dark,.6,1.8,-1.53,.7,.8,.04);box(woodLight,.6,1.8,-1.6,.055,.8,.06);
  box(stone,0,.12,1.9,3.6,.24,1.2);box(stone,-.4,.04,2.55,1.7,.08,.5);pot(1.0,.24,2,.65);pot(1.65,.24,1.75,.4);box(woodLight,-1.65,.85,1.85,.65,.10,.65);rod(wood,[-1.85,.2,1.8],[-1.85,.8,1.8],.05);rod(wood,[-1.45,.2,1.8],[-1.45,.8,1.8],.05);pot(-1.65,.9,1.85,.25);
- for(let i=0;i<3;i++){rod(wood,[.85+i*.22,1.6,1.63],[.85+i*.22,2.4,1.63],.025);ring(copper,.85+i*.22,1.65,1.67,.07,.018);}
+ // Two work pegs tell the same small story as the porch note: one absent keeper,
+ // one waiting apprentice's bell. A bare projecting peg must remain visibly empty.
+ box(wood,1.04,2.14,1.52,1.08,.20,.085);
+ for(const x of [.70,1.38]){
+  rod(woodLight,[x,2.15,1.55],[x,2.18,1.86],.038,.030);
+  ell(woodLight,x,2.19,1.86,.043,.052,.038);
+  box(copper,x,2.07,1.575,.14,.033,.008);
+ }
+ // Only the right peg carries a tool; broad bell lip and dark mouth read at play scale.
+ ring(rope,1.38,2.10,1.87,.090,.018);
+ rod(woodLight,[1.38,2.065,1.90],[1.38,1.76,1.90],.029,.037);
+ const bellProfile=[[.16,0],[.158,.025],[.121,.055],[.105,.135],[.065,.215],[.025,.23],[0,.23]].map(([r,h])=>new T.Vector2(r,h));
+ mesh(new T.LatheGeometry(bellProfile,12),copper,1.38,1.50,1.90);
+ const bellMouth=mesh(new T.CircleGeometry(.143,12),dark,1.38,1.501,1.90);bellMouth.rotation.x=Math.PI/2;
+ ring(copper,1.38,1.518,1.90,.156,.014).rotation.x=Math.PI/2;
+ ell(copper,1.38,1.483,1.90,.034,.041,.034);
  ring(copper,.04,5.60,1.97,.24,.055);curve(copper,[[.04,5.6,1.98],[-.02,5.88,1.98],[.2,5.96,1.98],[.32,5.73,1.98]],.04,.7);
 
  // Inhabited detail is attached to construction: windows, eaves, pegs and threshold.
@@ -73,6 +88,20 @@ export default function(T){
  shape(ivory,[[-.55,0],[.43,.01],[.64,.05],[.38,.12],[-.44,.1]],.014,-.32,.248,1.96).rotation.x=-Math.PI/2;
  box(copper,-.12,1.08,1.81,.28,.07,.05);rod(dark,[-.24,1.09,1.85],[.02,1.09,1.85],.022);for(const x of [-.24,.01])ell(copper,x,1.09,1.87,.028,.028,.012);
  for(const y of [.44,1.3]){box(dark,-.77,y,1.76,.20,.06,.025);ell(copper,-.72,y,1.79,.021,.021,.01);}
+
+ // Cream folded paper sits on a dark backing beside the door, above the little
+ // porch table. Bold ink marks and a bell glyph imply handwriting without fake text.
+ const note=new T.Group();note.name='Mara pinned porch note';note.position.set(-1.43,1.76,1.54);root.add(note);
+ box(wood,-1.43,1.76,1.50,.59,.76,.055);
+ shape(ivory,[[-.235,-.30],[.235,-.30],[.235,.19],[.135,.30],[-.235,.30]],.014,0,0,0,note,.002);
+ shape(rope,[[.135,.30],[.135,.19],[.235,.19]],.008,0,0,.018,note,0);
+ ell(copper,-.035,.257,.028,.023,.023,.012,note);
+ for(const [x,y,w]of [[-.012,.064,.29],[-.027,-.013,.26],[-.050,-.090,.22]]){
+  const ink=box(dark,x,y,.023,w,.014,.006,note);ink.rotation.z=.018;
+ }
+ curve(dark,[[-.060,.134,.026],[-.053,.194,.026],[0,.219,.026],[.056,.193,.026],[.063,.134,.026]],.009,1,note,8,4);
+ rod(dark,[-.075,.130,.026],[.077,.130,.026],.009,.009,note,4);
+ ell(dark,0,.115,.026,.013,.014,.007,note);
 
  root.name="Bellkeeper inhabited copper-roof cottage"; root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),center=bounds.getCenter(new T.Vector3());for(const child of root.children){child.position.x-=center.x;child.position.y-=bounds.min.y;child.position.z-=center.z;}root.updateMatrixWorld(true);return root;
 }
