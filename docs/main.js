@@ -3,7 +3,10 @@ import {ASSET} from './assetlib.js';
 import {createWaterfall} from './waterfall.js';
 import {createSoundscape} from './audio.js';
 import {createMovement} from './movement.js';
-import {createAnimator} from './animation.js';
+import {loadCodeCharacter} from './code-character.js';
+import buildApprovedHero from './assets/hero-study-a.js';
+import {createAdventureMotion} from './adventure-motion.js';
+import {createWoodlandDiscoveries} from './woodland-discoveries.js';
 import {createArtDirection} from './art-direction.js';
 import {buildWorld} from './world.js';
 import {createGarden} from './garden.js';
@@ -14,7 +17,8 @@ const scene=new T.Scene();scene.background=new T.Color('#8caea1');scene.fog=new 
 const camera=new T.PerspectiveCamera(42,1,.1,100);scene.add(new T.HemisphereLight(0xffefcd,0x274d54,1.8));
 const sun=new T.DirectionalLight(0xffe1ae,2.4);sun.position.set(-9,20,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,near:.5,far:65});sun.shadow.bias=-.0003;sun.shadow.normalBias=.025;scene.add(sun,sun.target);
 const state={started:false,paused:false,t:0,charged:false,awakened:false,restored:false,complete:false,porchRead:false,recoveryUntil:0,keepsakes:new Set(),action:null,actionTime:0,muted:localStorage.getItem('bellkeeper-muted')==='1',gentle:localStorage.getItem('bellkeeper-gentle')==='1'};
-let hero,movement,animator,world,garden,staff,staffHand,captionEnd=0,context=null,travel=0,visited=new Set(),fps=60,audio;
+let cameraYaw=Math.atan2(.615,.788),cameraDrag=null;
+let hero,movement,animator,world,garden,discoveries,staff,staffHand,captionEnd=0,context=null,travel=0,visited=new Set(),fps=60,audio;
 const art=createArtDirection(T,renderer);const waterfall=createWaterfall(T,scene);
 const point=([x,z],offset=0)=>new T.Vector3(x,height(x,z)+offset,z);
 const source=point(POINTS.garden,.55),wheelPoint=point(POINTS.wheel),chimePoint=point(POINTS.chime),finish=point(POINTS.overlook),porchPoint=point(POINTS.porch),quietPoint=point(POINTS.quietGarden);
@@ -32,8 +36,10 @@ function start(){if(!movement)return;state.started=true;state.paused=false;$('#t
 function pause(on){if(!state.started)return;state.paused=on;soundscape.setPaused(on);$('#pausePanel').hidden=!on;}
 function beginAction(kind,callback){state.action=kind;state.actionTime=0;state.actionTarget=(context?.kind==='wheel'?wheelPoint:context?.kind==='capture'?source:chimePoint).clone();state.actionCallback=callback;sound(kind);}
 function action(){if(!state.started||state.paused||state.action)return;if(!context){caption('Listen. Watch the leaves. There is still a little wind here.',3);return;}
+ if(context.kind==='discovery'){discoveries.interact(context.id,state);updateUI();return;}
+ if(context.kind==='bound'){caption('Three stone voices beside the chime hold the current. Smallest first, then let the song climb.',5);sound('chime');return;}
  if(context.kind==='porch'){state.porchRead=true;caption('Mara’s note: “Answer the far-bank bell at dawn.” My teacher’s peg is empty. Mine is waiting.',7);sound('chime');}
- if(context.kind==='chime'){beginAction('release',()=>{state.awakened=true;caption('The note slips into the garden. Some flowers answer. Others stay still.',4);});}
+ if(context.kind==='chime'){beginAction('release',()=>{state.awakened=true;caption(discoveries.telemetry().echoSolved?'The stones answer the chime. A current slips free into the flowers.':'The chime wakes three stone voices beside the path. Their song is unfinished.',4);});}
  if(context.kind==='capture')beginAction('capture',()=>{state.charged=true;caption('There you are. Mara said the wind always leans toward a listening bell.',4);});
  if(context.kind==='wheel'){if(state.charged)beginAction('release',()=>{state.charged=false;state.restored=true;sound('restore');caption('Wood unfolds over the water. Beyond it, the canopy is opening.',5);});else caption('The wheel turns once, then stops. Its copper bell is empty.',4);}
  if(context.kind==='memory'){state.keepsakes.add(context.index);caption(memories[context.index].text,5);sound('chime');}
@@ -41,7 +47,7 @@ function action(){if(!state.started||state.paused||state.action)return;if(!conte
  updateUI();}
 $('#startb').onclick=start;$('#action').onclick=action;$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>pause(false);
 $('#sound').onclick=()=>{state.muted=!state.muted;soundscape.setMuted(state.muted);localStorage.setItem('bellkeeper-muted',state.muted?'1':'0');updateUI();};$('#motion').onclick=()=>{state.gentle=!state.gentle;localStorage.setItem('bellkeeper-gentle',state.gentle?'1':'0');updateUI();};
-$('#reset').onclick=()=>{Object.assign(state,{charged:false,awakened:false,restored:false,complete:false,porchRead:false,recoveryUntil:0,action:null,actionCallback:null});state.keepsakes.clear();visited.clear();movement.reset(START);animator.reset();travel=0;pause(false);updateUI();caption('Another morning. The woods are listening.',4);};
+$('#reset').onclick=()=>{Object.assign(state,{charged:false,awakened:false,restored:false,complete:false,porchRead:false,recoveryUntil:0,action:null,actionCallback:null});state.keepsakes.clear();visited.clear();discoveries?.reset();cameraYaw=Math.atan2(.615,.788);movement.reset(START);animator.reset();travel=0;pause(false);updateUI();caption('Another morning. The woods are listening.',4);};
 addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(!e.repeat)action();}if(e.code==='Escape')pause(!state.paused);});// Touch browsers can blur the window during native gestures while still visible.
 // Actual backgrounding is handled by visibilitychange on every device.
 addEventListener('blur',()=>{if(!matchMedia('(any-pointer: coarse)').matches&&state.started)pause(true);});
@@ -65,11 +71,11 @@ function poseStaff(){
  const grip=new T.Vector3(0,.39,-.012).multiply(staff.scale).applyQuaternion(staff.quaternion);
  staff.position.set(0,-.054,.026).sub(grip);
 }
-function findContext(){const p=movement.position;context=null;
+function findContext(){const p=movement.position;context=discoveries?.context(p,state)||null;
  if(!state.porchRead&&p.distanceTo(porchPoint)<1.55)context={kind:'porch',label:'Read the keeper’s note'};
  for(let i=0;i<memories.length;i++)if(!state.keepsakes.has(i)&&p.distanceTo(memories[i].p)<(i===0?.72:1.4)&&Math.abs(p.y-memories[i].p.y)<(i<2?.25:2))context={kind:'memory',index:i,label:'Keep the memory'};
  if(!state.awakened&&p.distanceTo(chimePoint)<2.1)context={kind:'chime',label:'Ring the chimes'};
- if(state.awakened&&!state.charged&&!state.restored&&p.distanceTo(source)<1.8)context={kind:'capture',label:'Catch the current'};
+ if(state.awakened&&!state.charged&&!state.restored&&p.distanceTo(source)<1.8)context=discoveries.telemetry().echoSolved?{kind:'capture',label:'Catch the current'}:{kind:'bound',label:'Listen to the tangled current'};
  if(!state.restored&&p.distanceTo(wheelPoint)<2.2)context={kind:'wheel',label:state.charged?'Give the wind':'Listen to the wheel'};
  if(state.restored&&!state.complete&&p.distanceTo(finish)<2.2)context={kind:'finish',label:'Answer the morning'};
  $('#action').disabled=!context||!!state.action;$('#action').innerHTML=(context?.label||'Listen & explore')+' <span>SPACE</span>';
@@ -77,23 +83,29 @@ function findContext(){const p=movement.position;context=null;
  const areas=[['cottage',point(POINTS.cottage),5,'Mara’s cottage. She left fresh ribbons by our tool pegs.'],['crossing',wheelPoint,4,state.restored?'The crossing sings again.':state.charged?'The wheel answers the current in your bell.':'The far bank is out of reach. A path curls back into the roots.'],['garden',source,6,'You hear a faint chime beneath the leaves.']];for(const [id,pnt,d,text] of areas)if(!visited.has(id)&&p.distanceTo(pnt)<d){visited.add(id);caption(text,4);}
 }
 function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
+// Drag empty scenery to look around; movement remains relative to the camera.
+canvas.addEventListener('pointerdown',e=>{if(!state.started||state.paused)return;cameraDrag={id:e.pointerId,x:e.clientX};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(cameraDrag?.id!==e.pointerId)return;cameraYaw-=(e.clientX-cameraDrag.x)*.006;cameraDrag.x=e.clientX;});
+for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>cameraDrag=null);
+addEventListener('keydown',e=>{if(state.started&&!state.paused&&['KeyQ','KeyE'].includes(e.code)){cameraYaw+=(e.code==='KeyQ'?-1:1)*.13;e.preventDefault();}});
 const cameraTarget=new T.Vector3(...START);let vista=0,last=performance.now(),wasGrounded=true,lastMode='idle';
-function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;last=now;const dt=Math.min(.05,elapsed);fps=T.MathUtils.lerp(fps,1/Math.max(.001,elapsed),.03);
- if(hero&&movement){if(!state.paused){state.t+=dt;waterfall.update(state.t);art.update?.(state.t,state.gentle);movement.update(dt,{enabled:state.started,actionSlow:!!state.action,faceTarget:state.action?state.actionTarget:null});if(movement.recovered){state.recoveryUntil=state.t+.9;caption('A little current catches you and carries you back.',3);sound('capture');}const p=movement.position;travel+=movement.speed*dt;hero.position.copy(p);hero.rotation.y=state.started?movement.yaw:.35;
+function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;last=now;const dt=Math.max(0,Math.min(.05,elapsed));fps=T.MathUtils.lerp(fps,1/Math.max(.001,elapsed),.03);
+ if(hero&&movement){if(!state.paused){state.t+=dt;waterfall.update(state.t);art.update?.(state.t,state.gentle,movement.position);movement.update(dt,{enabled:state.started,actionSlow:!!state.action,faceTarget:state.action?state.actionTarget:null});if(movement.recovered){state.recoveryUntil=state.t+.9;caption('A little current catches you and carries you back.',3);sound('capture');}const p=movement.position;travel+=movement.speed*dt;hero.position.copy(p);hero.rotation.y=state.started?movement.yaw:.35;
  if(state.action){state.actionTime+=dt;if(state.actionTime>.38&&state.actionCallback){state.actionCallback();state.actionCallback=null;updateUI();}if(state.actionTime>.68)state.action=null;}
- animator.update(dt,{time:state.t,action:state.action,actionProgress:state.actionTime/.68,charged:state.charged});poseStaff();garden.update(dt,state.t,p,state);soundscape.update(dt,{position:p,speed:movement.speed,grounded:movement.grounded,charged:state.charged,restored:state.restored,gardenDistance:p.distanceTo(source),waterDistance:waterDistance(p)});
+ animator.update(dt,{time:state.t,action:state.action,actionProgress:state.actionTime/.68,charged:state.charged});poseStaff();discoveries?.update(dt,state.t,p,state);garden.update(dt,state.t,p,{...state,awakened:state.awakened&&discoveries.telemetry().echoSolved});soundscape.update(dt,{position:p,speed:movement.speed,grounded:movement.grounded,charged:state.charged,restored:state.restored,gardenDistance:p.distanceTo(source),waterDistance:waterDistance(p)});
  if(state.started){findContext();for(const foot of animator.footfalls)sound('step');if(wasGrounded&&!movement.grounded&&movement.verticalVelocity>0)sound('jump');if(!wasGrounded&&movement.grounded)sound('land');}wasGrounded=movement.grounded;lastMode=movement.mode;
- winds.forEach((o,i)=>{o.visible=state.awakened&&!state.charged;swirl(o,state.restored?finish:source,(state.restored?1.1:.5)+i*.12,state.t*(.8+i*.12)+i*2);});held.visible=state.charged||state.t<state.recoveryUntil;swirl(held,p,.45,state.t*2);
+ winds.forEach((o,i)=>{o.visible=state.awakened&&!state.charged&&(discoveries.telemetry().echoSolved||state.restored);swirl(o,state.restored?finish:source,(state.restored?1.1:.5)+i*.12,state.t*(.8+i*.12)+i*2);});held.visible=state.charged||state.t<state.recoveryUntil;swirl(held,p,.45,state.t*2);
  transfer.visible=state.action==='release';if(transfer.visible){const from=staff.localToWorld(new T.Vector3(0,1.15,0)),to=state.actionTarget.clone().add(new T.Vector3(0,.85,0)),a=transfer.geometry.attributes.position;for(let i=0;i<48;i++){const f=T.MathUtils.clamp(state.actionTime/.68*1.6-i/47*.45,0,1),v=from.clone().lerp(to,f);v.y+=Math.sin(f*Math.PI)*.7;const width=.065*Math.sin(i/47*Math.PI);a.setXYZ(i*2,v.x,v.y-width,v.z);a.setXYZ(i*2+1,v.x,v.y+width,v.z);}a.needsUpdate=true;}
 
  for(let i=0;i<memoryGlows.length;i++){memoryGlows[i].visible=!state.keepsakes.has(i)&&(i!==1||state.charged||state.restored);memoryGlows[i].rotation.y+=dt;memoryGlows[i].position.y=memories[i].p.y+.4+Math.sin(state.t*2+i)*.08;}
  motes.rotation.y=state.gentle?0:Math.sin(state.t*.025)*.08;if(state.t>captionEnd)$('#caption').style.opacity='0';
  }
- const pos=movement.position;vista=T.MathUtils.damp(vista,state.restored?1-T.MathUtils.smoothstep(pos.distanceTo(finish),2,7):0,3,dt);const ahead=1.4+vista*1.5;cameraTarget.lerp(new T.Vector3(pos.x-.615*ahead,pos.y+.9+vista*.6,pos.z-.788*ahead),1-Math.exp(-dt*7));const portrait=camera.aspect<.85;const distance=(portrait?13.2:14.2)+vista*2.5;camera.position.copy(cameraTarget).add(new T.Vector3(.615,.72-vista*.30,.788).normalize().multiplyScalar(distance));camera.lookAt(cameraTarget);sun.position.set(pos.x-9,pos.y+20,pos.z+8);sun.target.position.copy(pos);camera.updateMatrixWorld(true);if(!state.paused)world.update(dt,state.t,pos,state.restored,state.gentle,camera,state.charged);
- renderer.render(scene,camera);window.__READY__=true;window.__GAME__={pos:[pos.x,pos.z],y:pos.y,fps,speed:movement.speed,mode:movement.mode,grounded:movement.grounded,score:state.complete?1:0,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:state.charged,awakened:state.awakened,restored:state.restored,paused:state.paused,started:state.started,porchRead:state.porchRead,quietObserved:visited.has('quiet-pocket'),keepsakes:state.keepsakes.size,travel,context:context?.kind||null};
+ const pos=movement.position;vista=T.MathUtils.damp(vista,state.restored?1-T.MathUtils.smoothstep(pos.distanceTo(finish),2,7):0,3,dt);const ahead=.8+vista*1.5,sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw);cameraTarget.lerp(new T.Vector3(pos.x-sx*ahead,pos.y+1+vista*.6,pos.z-sz*ahead),1-Math.exp(-dt*7));const portrait=camera.aspect<.85;const distance=(portrait?11.5:10.8)+vista*2.5;camera.position.copy(cameraTarget).add(new T.Vector3(sx,.48-vista*.13,sz).normalize().multiplyScalar(distance));camera.lookAt(cameraTarget);sun.position.set(pos.x-9,pos.y+20,pos.z+8);sun.target.position.copy(pos);camera.updateMatrixWorld(true);if(!state.paused)world.update(dt,state.t,pos,state.restored,state.gentle,camera,state.charged,state.complete);
+ renderer.render(scene,camera);window.__READY__=true;window.__GAME__={pos:[pos.x,pos.z],y:pos.y,fps,speed:movement.speed,mode:movement.mode,grounded:movement.grounded,score:state.complete?1:0,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:state.charged,awakened:state.awakened,restored:state.restored,paused:state.paused,started:state.started,porchRead:state.porchRead,quietObserved:visited.has('quiet-pocket'),keepsakes:state.keepsakes.size,travel,context:context?.kind||null,discoveryId:context?.id||null,discoveries:discoveries?.telemetry(),heroVersion:'approved-D',cameraYaw};
  }else renderer.render(scene,camera);
 }
-try{await art.ready;world=await buildWorld(scene,art);garden=await createGarden(scene,art);memories[0].p.copy(world.keepsakePoint);if(world.shortcutPoint)memories[1].p.copy(world.shortcutPoint);hero=await ASSET('./assets/hero.js',{keepHierarchy:true});art.style(hero,{character:true});scene.add(hero);staff=await ASSET('./assets/staff.js');art.style(staff);staff.scale.setScalar(.83);staffHand=hero.userData.joints.rightHand;staffHand.add(staff);
- movement=createMovement(T,{start:START,sampleGround:world.ground,blocked:world.blocked,stickElement:$('#stick'),jumpButton:$('#jump'),runButton:$('#run')});animator=createAnimator(T,hero,movement);hero.position.copy(movement.position);$('#startb').disabled=false;$('#startb').textContent='Step into the woods';updateUI();window.__START__=start;
+try{await art.ready;world=await buildWorld(scene,art);garden=await createGarden(scene,art);memories[0].p.copy(world.keepsakePoint);if(world.shortcutPoint)memories[1].p.copy(world.shortcutPoint);const character=await loadCodeCharacter(buildApprovedHero);hero=character.root;hero.userData.joints=hero.children[0].userData.joints;scene.add(hero);staff=await ASSET('./assets/staff.js');art.style(staff);staff.scale.setScalar(.73);staffHand=hero.userData.joints.rightHand;staffHand.add(staff);
+ discoveries=await createWoodlandDiscoveries(scene,art,{caption,sound});
+ movement=createMovement(T,{start:START,sampleGround:world.ground,blocked:world.blocked,stickElement:$('#stick'),jumpButton:$('#jump'),runButton:$('#run'),walkSpeed:1.65,runSpeed:5.8,acceleration:12,deceleration:16,turnResponse:12,cameraYaw:()=>cameraYaw});animator=createAdventureMotion(character,movement);hero.position.copy(movement.position);$('#startb').disabled=false;$('#startb').textContent='Step into the woods';updateUI();window.__START__=start;
 }catch(e){console.error(e);$('#error').hidden=false;$('#error').textContent='The woodland could not load. '+e.message;}
 requestAnimationFrame(frame);

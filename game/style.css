@@ -9,3 +9,5 @@
 /* Game gestures must not start native selection or long-press callouts. */
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
 #controls,#controls button{touch-action:none}
+
+@media(min-width:701px){#action{width:185px;min-height:72px;padding:10px 12px;font-size:14px}#hint{color:#fff1cd;text-shadow:0 1px 4px #173c32}}

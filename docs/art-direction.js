@@ -4,6 +4,7 @@ export function createArtDirection(T, renderer) {
   const owned = new WeakSet();
   const windTime = { value: 0 };
   const windMotion = { value: 1 };
+  const playerPosition={value:new T.Vector3(999,999,999)};
   const loader = new T.TextureLoader();let stoneResolve,stoneReject;const stoneReady=new Promise((r,j)=>{stoneResolve=r;stoneReject=j;});const stone=loader.load(new URL('./textures/stone.png',import.meta.url).href,stoneResolve,undefined,stoneReject);stone.colorSpace=T.SRGBColorSpace;stone.wrapS=stone.wrapT=T.RepeatWrapping;stone.anisotropy=4;
   let resolveTexture, rejectTexture;let barkResolve,barkReject;const barkReady=new Promise((r,j)=>{barkResolve=r;barkReject=j;});const bark=loader.load(new URL('./textures/bark.png',import.meta.url).href,barkResolve,undefined,barkReject);bark.colorSpace=T.SRGBColorSpace;bark.wrapS=bark.wrapT=T.RepeatWrapping;bark.anisotropy=4;
   const ready = new Promise((resolve, reject) => { resolveTexture = resolve; rejectTexture = reject; });
@@ -47,9 +48,10 @@ export function createArtDirection(T, renderer) {
     m.onBeforeCompile = (shader, context) => {
       priorCompile?.call(m, shader, context);
       if (terrain) shader.uniforms.bkBankStone = { value: stone };
+      shader.uniforms.bkPlayer = playerPosition;
       shader.uniforms.bkWindTime = windTime;
       shader.uniforms.bkWindMotion = windMotion;
-      shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vBkWorld;\nuniform float bkWindTime;\nuniform float bkWindMotion;');
+      shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vBkWorld;\nuniform float bkWindTime;\nuniform float bkWindMotion;\nuniform vec3 bkPlayer;');
       shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', `
         vec4 bkWorldPosition = vec4(transformed, 1.0);
         #ifdef USE_BATCHING
@@ -70,6 +72,11 @@ export function createArtDirection(T, renderer) {
           #endif
           transformed.x += bkSway * bkWindMotion / max(.001, bkScale);
           transformed.z += bkSway * .35 * bkWindMotion / max(.001, bkScale);
+          vec2 bkAway=vBkWorld.xz-bkPlayer.xz;
+          float bkPush=(1.-smoothstep(.15,1.25,length(bkAway)))*smoothstep(.03,.5,vBkWorld.y-bkPlayer.y)*(1.-smoothstep(1.4,2.,vBkWorld.y-bkPlayer.y));
+          vec3 bkWorldPush=vec3(normalize(bkAway+vec2(.001))*.24*bkPush,0.).xzy;
+          transformed += transpose(mat3(modelMatrix))*bkWorldPush / max(.001,bkScale*bkScale);
+
         ` : ''}
         #include <project_vertex>
       `);
@@ -162,9 +169,10 @@ export function createArtDirection(T, renderer) {
     });
     return root;
   }
-  function update(time, gentle = false) {
+  function update(time, gentle = false, player) {
     windTime.value = Number.isFinite(time) ? time : 0;
     windMotion.value = gentle ? .20 : 1;
+    if(player)playerPosition.value.copy(player);
   }
   return { style, ready:Promise.all([ready,barkReady,stoneReady]), update };
 }

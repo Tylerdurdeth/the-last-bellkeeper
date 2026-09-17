@@ -58,6 +58,9 @@ export async function buildWorld(scene,art){
  // Dense, deliberately grouped beds under the roots and around the listening garden.
  for(const [cx,cz] of [[-6,15],[-2,11],[-10,12],[-12,3],[-18,-3],[-14,-9],[-12,-17],[-7,-18],[0,6],[10,-10],[-2,21],[4,19],[-7,20],[2,16]])for(let i=0;i<16;i++){const angle=rnd()*6.28,r=.4+rnd()*2.2,x=cx+Math.cos(angle)*r,z=cz+Math.sin(angle)*r;if(gardenClearance(x,z)||shortcutDistance(x,z)<1.25||pathDistance(x,z)<1.65||Math.hypot(x+8,z-9)<2.7||Math.hypot(x+10,z+17)<1.8||Math.hypot(x-8,z+10)<2.3||Math.hypot(x+8,z+15)<2)continue;place(i%4?'fern':'flower',x,z,.8+rnd()*.8,angle);}
  for(const [x,z] of [[-3,15],[-9,5],[-16,-4],[-12,-15],[8,-11]]){const b=place('bird',x,z,1,0,{dynamic:true});birds.push({o:b,home:new T.Vector3(x,height(x,z),z),phase:rnd()*6.28,flight:0});}
+ // Distinct garden backdrop and a tighter fern-framed western passage.
+ for(const [cx,cz] of [[-17.8,-.5],[-13.2,-2],[-18,-6],[-14,-8.8],[-15.2,-17.7],[-14.5,-19.4]])for(let i=0;i<9;i++){const a=i*2.4,r=.4+Math.sqrt(i/9)*1.1,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;if(pathDistance(x,z)<1.25||gardenClearance(x,z))continue;place(i%3?'fern':'flower',x,z,1.1+(i%3)*.18,a);}
+ for(const [x,z,s] of [[-15.4,-18.8,1.8],[-13.7,-20,1.4],[-17.2,-17.1,1.2]]){const o=place('rock',x,z,s,.6);scatterRocks.push({o,x,z,r:s*1.1});}
  const backdrop=buildBackdrop(T,scene,{prototypes,art,height});
  const memoryRock=prototypes.rock.clone(true);memoryRock.position.set(-19,height(-19,-5),-5);memoryRock.scale.set(1.7,1.1,1.7);scene.add(memoryRock);memoryRock.updateMatrixWorld(true);const rockRay=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0));
  function scatterGround(x,z){let top=null;rockRay.ray.origin.set(x,10,z);for(const r of scatterRocks){if(Math.hypot(x-r.x,z-r.z)>r.r)continue;const hit=rockRay.intersectObject(r.o,true)[0];if(hit)top=top===null?hit.point.y:Math.max(top,hit.point.y);}return top;}
@@ -70,15 +73,30 @@ export async function buildWorld(scene,art){
  const shortcutPoint=new T.Vector3(-7,shelfGround(-7,-5),-5),shortcutFlowers=[];
  for(let i=0;i<14;i++){const u=i/13,x=-10+u*7+(i%2?-.65:.65),z=-9+u*11;const o=place('flower',x,z,.9,Math.sin(i)*2,{dynamic:true});const mats=[];o.traverse(n=>{if(n.isMesh){n.material=n.material.clone();art.style(n);if(n.material.color.r>n.material.color.g){mats.push(n.material);n.material.emissive.setHex(0xe8ad51);}}});shortcutFlowers.push({o,mats,phase:i*.8});}
  let shortcutAwake=0;
+ // The far-bank destination is an overgrown bell sanctuary, assembled from
+ // reviewed moss-rock and chime geometry rather than an invisible finish point.
+ const sanctuary=new T.Group();sanctuary.name='Far-bank bell sanctuary';scene.add(sanctuary);
+ const sanctuaryY=height(8,-11.2),sanctuaryFlowers=[],bloomMaterials=new Map();
+ function ruinRock(x,y,z,sx,sy,sz,angle=0){const o=prototypes.rock.clone(true);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.rotation.z=angle;sanctuary.add(o);return o;}
+ for(const side of [-1,1])for(let i=0;i<4;i++)ruinRock(8+side*1.35,sanctuaryY+i*.60,-11.6,.52,1.6,.65,(i%2?.025:-.025)*side);
+ for(let i=0;i<7;i++){const a=i/6*Math.PI;ruinRock(8+Math.cos(a)*1.3,sanctuaryY+2.25+Math.sin(a)*.95,-11.6,.54,1.25,.63,a-Math.PI/2);}
+ const sanctuaryBell=prototypes.chimes.clone(true);sanctuaryBell.position.set(8,sanctuaryY,-11.3);sanctuaryBell.scale.setScalar(1.6);sanctuary.add(sanctuaryBell);
+ for(let i=0;i<52;i++){const a=i*2.39996,r=1.8+Math.sqrt(i/52)*2.2,x=8+Math.cos(a)*r,z=-9.8+Math.sin(a)*r;if(z< -12.5||Math.abs(x-8)<.7&&z> -10)continue;const f=place('flower',x,z,.8+(i%4)*.12,a,{dynamic:true});f.traverse(n=>{if(n.isMesh&&n.material.name==='foliage'){const key=n.material.uuid+':'+(i%3?0:1);if(!bloomMaterials.has(key)){const m=n.material.clone();if(m.color.r>m.color.g*.85||m.color.b>m.color.g*.8){m.color.setHex(i%3?0x86c9d7:0xe4bb82);m.emissive.setHex(0x75d8c0);}bloomMaterials.set(key,m);}n.material=bloomMaterials.get(key);}});sanctuaryFlowers.push(f);}
+ const bloomGroup=new T.Group();for(const f of sanctuaryFlowers)bloomGroup.add(f);const blooms=bakeStatic(bloomGroup);scene.add(blooms);
+ const pulseGeo=new T.RingGeometry(.96,1,64),pulse=new T.Mesh(pulseGeo,new T.MeshBasicMaterial({color:0xc0ffe0,transparent:true,opacity:0,side:T.DoubleSide,depthWrite:false}));pulse.rotation.x=-Math.PI/2;pulse.position.set(8,sanctuaryY+.09,-9.8);scene.add(pulse);let wakeAge=99,wasComplete=false;
  const chunkList=[];for(const g of chunks.values()){const baked=bakeStatic(g);scene.add(baked);const center=new T.Box3().setFromObject(baked).getCenter(new T.Vector3());chunkList.push({o:baked,center});}
  let restored=false,bridgeLift=0,cottageOpacity=1,occlusionTimer=0;const cameraRay=new T.Raycaster();
  function ground(x,z){if(x>2&&z< -13&&height(x,z)<.95)return null;const shelfY=shelfGround(x,z);if(shelfY!==null)return Math.max(height(x,z),shelfY);const rockY=rockGround(x,z);if(rockY!==null)return Math.max(height(x,z),rockY);const scatterY=scatterGround(x,z);if(scatterY!==null)return Math.max(height(x,z),scatterY);if(Math.abs(x)>35||Math.abs(z)>35)return null;if(restored&&Math.abs(x-8)<1.1&&z> -6.2&&z<.2)return 1.2-.15*Math.cos(Math.min(1,Math.abs(z+3.35)/2.5)*Math.PI/2);const h=height(x,z);if(x>2&&x<31&&z> -5.5&&z< -1.2&&h<-.35)return null;return h< -2?null:h;}
  function blocked(x,z,r){return colliders.some(c=>Math.hypot(x-c.x,z-c.z)<c.r+r);}
- function update(dt,t,pos,isRestored,gentle,camera,charged=false){
+ function update(dt,t,pos,isRestored,gentle,camera,charged=false,complete=false){
   brook.update(t,gentle);
   shortcutAwake=T.MathUtils.damp(shortcutAwake,charged||isRestored?1:0,3,dt);for(const f of shortcutFlowers){f.o.rotation.z=Math.sin(t*3-f.phase)*.16*shortcutAwake*(gentle?.2:1);for(const m of f.mats)m.emissiveIntensity=shortcutAwake*(.55+.3*Math.sin(t*2-f.phase));}
-  backdrop.update?.(dt,t,pos);restored=isRestored;bridgeLift=T.MathUtils.damp(bridgeLift,restored?1:0,7,dt);bridge.visible=restored;bridge.position.y=.9-(1-bridgeLift)*3.6;
-  const cdx=cottage.position.x-pos.x,cdz=cottage.position.z-pos.z,front=cdx*.615+cdz*.788,side=Math.abs(cdx*.788-cdz*.615);cottageOpacity=T.MathUtils.damp(cottageOpacity,front> -1&&front<12&&side<3.4?.025:1,12,dt);for(const m of cottageMats){m.opacity=cottageOpacity;m.depthWrite=cottageOpacity>.98;}
+  backdrop.update?.(dt,t,pos);if(isRestored&&!restored){wakeAge=0;pulse.position.set(6,height(6,2.5)+.08,2.5);}if(complete&&!wasComplete){wakeAge=0;pulse.position.set(8,sanctuaryY+.09,-9.8);}wasComplete=complete;if(!isRestored)wakeAge=99;wakeAge+=dt;
+  pulse.visible=wakeAge<3.2;pulse.scale.setScalar(1+wakeAge*4);pulse.material.opacity=Math.max(0,.5*(1-wakeAge/3.2));
+  sanctuaryBell.rotation.z=gentle?0:Math.sin(t*(isRestored?2:1))*(isRestored?.07:.012);
+  for(const m of bloomMaterials.values())m.emissiveIntensity=isRestored?.24:0;
+  restored=isRestored;bridgeLift=T.MathUtils.damp(bridgeLift,restored?1:0,7,dt);bridge.visible=restored;bridge.position.y=.9-(1-bridgeLift)*3.6;
+  const view=camera?camera.position.clone().sub(pos).setY(0).normalize():new T.Vector3(.615,0,.788),cdx=cottage.position.x-pos.x,cdz=cottage.position.z-pos.z,front=cdx*view.x+cdz*view.z,side=Math.abs(cdx*view.z-cdz*view.x);cottageOpacity=T.MathUtils.damp(cottageOpacity,front> -1&&front<12&&side<3.4?.025:1,12,dt);for(const m of cottageMats){m.opacity=cottageOpacity;m.depthWrite=cottageOpacity>.98;}
   const rotor=wheel.userData.rotor||wheel.getObjectByName('rotor');if(rotor?.rotation)rotor.rotation.z+=dt*(restored?1.4:.05);
   chimes.rotation.z=gentle?0:Math.sin(t*1.7)*.055;
   // Keep fade materials transparent from their first shader compilation so alpha is honored during transitions.

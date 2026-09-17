@@ -82,6 +82,7 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     else if(kind==='release'){hiss(t,.36,.09,1700,.15,'bandpass',.09);modal(t+.12,330,.075,1.7,-.08);}
     else if(kind==='restore'){modal(t,220,.085,2.3,-.28);modal(t+.31,587,.035,2.7,.4);hiss(t+.10,1.1,.055,1800,.2,'bandpass',.3);bird(t+1.2);}
     else if(kind==='chime'||kind==='start')modal(t,kind==='start'?465:523,.045,1.9,(random()-.5)*.7);
+    else if(/^stone-[012]$/.test(kind))modal(t,[262,330,392][Number(kind.slice(-1))],.065,2.2,0);
     else if(kind==='bird')bird(t);
     else if(kind==='hazard')hiss(t,.5,.13,600,-.1,'bandpass',.09);
   }
