@@ -16,4 +16,5 @@ for name,geom in variants.items():
  s=s.replace("const cape=pivot('cape',hips,0,.325,-.007);", "const cape=pivot('cape',hips,0,.325,-.007);cape.scale.set(.89,.80,.94);")
  s=s.replace(' // Separate chest articulation', " lathe(hips,copper,[[.019,0],[.017,.007],[.011,.027],[0,.034]],.028,.185,.132);stroke(hips,leather,[[.028,.225,.131],[.028,.245,.126]],.0025);\n // Separate chest articulation")
  if name=='a':s=s.replace('taper(hips,skin,0,.391,-.003,.065,.068,.070','taper(hips,skin,0,.391,-.003,.045,.068,.070')
+ if name=='a':s=Path('tools/body-study-template.txt').read_text().replace(' HEAD_STUDY',snippet)
  Path('game/assets/hero-study-'+name+'.js').write_text(s)

@@ -11,14 +11,20 @@ export default function(THREE) {
  const stroke=(p,m,points,r=.006)=>mesh(p,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),10,r,5,false),m);
  const lathe=(p,m,points,x,y,z,sx=1,sz=1)=>mesh(p,new THREE.LatheGeometry(points.map(v=>new THREE.Vector2(...v)),12),m,x,y,z,sx,1,sz);
 
- // A: carved tapered solids; shoulder chest and waist are independently shaped masses.
+ // Curved cloth sections retain a soft silhouette and a few broad folds under cel light.
+ function garment(parent,material,sections,fold=.003,open=false){const g=new THREE.CylinderGeometry(1,1,1,20,sections.length>3?9:4,open),p=g.attributes.position,low=sections[0][0],high=sections.at(-1)[0];for(let i=0;i<p.count;i++){const t=p.getY(i)+.5,y=low+(high-low)*t,x=p.getX(i),z=p.getZ(i),a=Math.atan2(z,x),r=Math.hypot(x,z);let rx=sections[0][1],rz=sections[0][2];for(let j=1;j<sections.length;j++)if(y>=sections[j-1][0]&&y<=sections[j][0]){const A=sections[j-1],B=sections[j],u=(y-A[0])/(B[0]-A[0]);rx=THREE.MathUtils.lerp(A[1],B[1],u);rz=THREE.MathUtils.lerp(A[2],B[2],u);}const f=fold*.35*Math.sin(t*Math.PI)*Math.sin(a*6+.3);p.setXYZ(i,Math.cos(a)*(rx+f)*r,y,Math.sin(a)*(rz+f)*r);}g.computeVertexNormals();const result=mesh(parent,g,material);result.receiveShadow=false;return result;}
+ // Fitted tunic, with waist gathers and a softer shoulder line.
  const hips=pivot('hips',root,0,.78,0);
  ell(hips,teal,0,0,-.005,.126,.105,.076);
- taper(hips,coral,0,.180,0,.169,.105,.330,.60,10);
- ell(hips,coral,0,.296,.005,.168,.086,.086);
+ garment(hips,coral,[[.022,.111,.072],[.075,.122,.078],[.16,.137,.088],[.25,.153,.092],[.30,.164,.085],[.365,.098,.060]],.004).userData.chestPiece=true;
  taper(hips,skin,0,.391,-.003,.045,.068,.070,.80,10);
- taper(hips,leather,0,.039,0,.119,.119,.034,.70);box(hips,copper,.016,.040,.089,.036,.035,.011);
+ garment(hips,leather,[[.024,.122,.085],[.057,.122,.085]],0);
+ // Framed buckle shows the belt through its centre.
+ for(const side of [-1,1])box(hips,copper,.009+side*.024,.041,.091,.006,.035,.009);
+ for(const y of [.026,.056])box(hips,copper,.009,y,.091,.050,.006,.009);
+ box(hips,copper,.009,.041,.096,.030,.004,.006);
  const head=pivot('head',hips,0,.394,0);
+
  // Continuous face with a cheek/jaw profile; all contours are authored functions.
  const faceProfile=[[.012,0,0],[.027,.017,.044],[.038,.033,.065],[.069,.073,.083],[.100,.089,.086],[.139,.107,.092],[.170,.102,.093],[.207,.099,.094],[.251,.094,.084],[.285,.060,.058],[.300,0,0]];
  function radius(y,k){for(let i=1;i<faceProfile.length;i++)if(y<=faceProfile[i][0]){const a=faceProfile[i-1],b=faceProfile[i],prev=faceProfile[Math.max(0,i-2)],next=faceProfile[Math.min(faceProfile.length-1,i+1)],h=b[0]-a[0],u=THREE.MathUtils.clamp((y-a[0])/h,0,1),m0=(b[k]-prev[k])/(b[0]-prev[0]),m1=(next[k]-a[k])/(next[0]-a[0]);return Math.max(0,(2*u*u*u-3*u*u+1)*a[k]+(u*u*u-2*u*u+u)*h*m0+(-2*u*u*u+3*u*u)*b[k]+(u*u*u-u*u)*h*m1);}return 0;}
@@ -80,19 +86,30 @@ export default function(THREE) {
  strand([[.038,.287,-.041],[.065,.302,-.044],[.084,.298,-.057],[.096,.288,-.069]],.017,.006,hairShadow);
  root.userData.faceStudy=true;
 
+
  for(const side of [-1,1]){
   const pre=side<0?'left':'right';const leg=pivot(pre+'UpperLeg',hips,side*.075,-.025,0);
-  taper(leg,teal,0,-.155,0,.077,.056,.31,.90,10);
+  garment(leg,teal,[[-.33,.054,.049],[-.27,.062,.052],[-.15,.077,.061],[-.04,.078,.061],[.005,.070,.058]],.0025);
   const knee=pivot(pre+'LowerLeg',leg,0,-.335,0);ell(knee,teal,0,0,.007,.055,.052,.05);
-  taper(knee,teal,0,-.130,0,.054,.038,.26,.88,9);
+  garment(knee,teal,[[-.215,.033,.031],[-.19,.043,.038],[-.12,.057,.047],[-.035,.056,.050],[.015,.053,.048]],.003);
+  // Inner boot tongue bridges ankle flexion without exposing a gap under the trousers.
+  taper(knee,leather,0,-.240,0,.029,.027,.14,.9,12);
   const foot=pivot(pre+'Foot',knee,0,-.300,.012);
-  taper(foot,leather,0,.028,-.013,.049,.047,.16,.9,10);
-  ell(foot,leather,0,-.040,.027,.053,.050,.104);ell(foot,copper,0,-.041,.094,.048,.031,.044);
-  for(let j=0;j<2;j++){const wrap=taper(foot,cream,0,.007+j*.05,-.012,.051,.051,.022,.95,10);wrap.rotation.z=side*(j?.14:-.18);}
+  garment(foot,leather,[[-.045,.046,.043],[.015,.044,.042],[.09,.055,.045],[.12,.056,.046]],.0018).position.z=-.010;
+  ell(foot,leather,0,-.040,.032,.051,.044,.098);
+  const sole=ell(foot,mat(0x342d29),0,-.073,.032,.052,.014,.099);
+  garment(foot,mat(0x88705a),[[.084,.057,.048],[.118,.059,.050]],.001).position.z=-.010;
+  for(const x of [-.022,.022])stroke(foot,mat(0xa48b68),[[x,-.045,.110],[x,-.025,.091],[x,.008,.047],[x,.060,.034]],.0014);
+  const buckle=box(foot,copper,side*.053,.085,.008,.006,.018,.019);
+  for(let j=0;j<3;j++)stroke(foot,mat(0xb39b79),[[-.019,-.019+j*.018,.075-j*.015],[.019,-.012+j*.018,.075-j*.015]],.0018);
   const arm=pivot(pre+'UpperArm',hips,side*.155,.286,0);arm.rotation.z=side*.20;
-  taper(arm,coral,0,-.098,0,.065,.047,.210,.90,10);
+  garment(arm,coral,[[-.196,.049,.046],[-.14,.061,.052],[-.07,.069,.058],[.025,.060,.051]],.0035);
+  garment(arm,cream,[[-.208,.052,.049],[-.19,.057,.051],[-.171,.054,.049]],.0015);
   const fore=pivot(pre+'LowerArm',arm,0,-.217,0);fore.rotation.x=-.13;
-  taper(fore,skin,0,-.083,0,.047,.035,.168,.9,10);taper(fore,cream,0,-.170,0,.043,.042,.050,.95,10);
+  ell(fore,skin,0,-.012,0,.044,.036,.042);
+  garment(fore,skin,[[-.183,.031,.030],[-.12,.037,.034],[-.055,.045,.039],[.004,.044,.040]],0);
+  garment(fore,leather,[[-.187,.035,.033],[-.138,.040,.037]],0);
+  stroke(fore,mat(0xa48b68),[[side*.035,-.178,.012],[side*.039,-.148,.014]],.0015);
   const hand=pivot(pre+'Hand',fore,0,-.196,.005);
   ell(hand,leather,0,-.026,0,.037,.044,.025);
   if(side>0){
@@ -107,19 +124,25 @@ export default function(THREE) {
    for(let j=0;j<3;j++)ell(hand,skin,(j-1)*.018,-.065,.004,.009,.021,.014);
   }
   const coat=pivot(side<0?'coatLeft':'coatRight',hips,side*.064,.050,-.041);
-  profile(coat,coral,[[-.06,0],[.05,.015],[.098,-.164],[.086,-.363],[-.059,-.242]],0,0,0,.03).rotation.y=side*.21;
-  stroke(coat,lining,[[.077,-.339,.020],[.081,-.17,.025],[.031,-.011,.025]],.004);
+  profile(coat,coral,[[-.075,0],[.059,.015],[.095,-.075],[.090,-.173],[-.071,-.157]],0,0,0,.014).rotation.y=side*.21;
+  stroke(coat,lining,[[-.063,-.150,.015],[.030,-.159,.015],[.084,-.164,.015]],.002);
  }
 
+ // A continuous rear tunic panel covers the seat and joins the shorter side tails.
+ const rearCloth=new THREE.PlaneGeometry(1,1,32,6),rp=rearCloth.attributes.position;
+ for(let row=0;row<=6;row++)for(let col=0;col<=32;col++){const t=col/32,u=row/6,a=Math.PI*.5+t*Math.PI,r=THREE.MathUtils.lerp(.122,.146,u),bottom=-.115-.025*Math.sin(t*Math.PI);rp.setXYZ(row*33+col,Math.sin(a)*r,THREE.MathUtils.lerp(.033,bottom,u),Math.cos(a)*r*.67-.004);}
+ rearCloth.computeVertexNormals();const rearMaterial=coral.clone();rearMaterial.side=THREE.DoubleSide;mesh(hips,rearCloth,rearMaterial).receiveShadow=false;
+ const rearHem=[];for(let i=0;i<=32;i++){const t=i/32,a=Math.PI*.5+t*Math.PI;rearHem.push([Math.sin(a)*.146,-.115-.025*Math.sin(t*Math.PI),Math.cos(a)*.146*.67-.004]);}stroke(hips,lining,rearHem,.0018);
+
  // Diagonal cape is an articulated shoulder garment, not a rigid neck ring.
- const cape=pivot('cape',hips,0,.325,-.007);cape.scale.set(.89,.80,.94);
+ const cape=pivot('cape',hips,0,.325,-.007);cape.scale.set(.89,.64,.94);
  // A closed shoulder drape: shared curved surface from neckline over both
  // shoulders to its diagonal hem; inner shell gives the cloth a real edge.
  const segments=64,rings=12,verts=[],indices=[];
  function drape(u,a,inside=false){
   const sn=Math.sin(a),cs=Math.cos(a),ease=Math.sin(u*Math.PI/2);
   const rx=.069+.155*ease+.025*ease**4,rz=.061+.076*ease;
-  const low=-.060-.097*Math.max(0,-sn)*(.65+.35*Math.max(0,cs))-.040*Math.max(0,-cs);
+  const low=-.045-.085*Math.max(0,-sn)*(.65+.35*Math.max(0,cs))-.040*Math.max(0,-cs);
   const fold=(Math.sin(a*5+.6)*.005+Math.sin(a*9)*.002)*Math.sin(u*Math.PI);
   const y=.055+(low-.055)*u*u+.042*Math.sin(u*Math.PI)+fold;
   const radialFold=.008*Math.sin(u*11+a*2)*Math.sin(u*Math.PI)*Math.max(0,cs);
@@ -135,15 +158,15 @@ export default function(THREE) {
  stroke(cape,cream,[[-.185,-.066,.070],[-.121,-.021,.117],[-.045,.006,.125],[.067,.010,.104]],.0045);
  stroke(cape,cream,[[-.165,-.094,.083],[-.108,-.061,.131],[-.026,-.037,.143],[.077,-.011,.112]],.0038);
  ell(cape,copper,.080,-.013,.119,.024,.030,.009);ell(cape,gem,.080,-.011,.129,.015,.023,.007);
- const strap=box(hips,leather,-.025,.166,.107,.024,.353,.016);strap.rotation.z=-.43;
- ell(hips,leather,-.163,-.022,-.008,.080,.095,.055);
- profile(hips,leather,[[-.071,.034],[.066,.034],[.061,-.013],[0,-.038],[-.063,-.017]],-.16,0,.042,.018);
- box(hips,copper,-.162,-.009,.060,.022,.025,.009);
+ const strap=box(hips,leather,-.025,.192,.109,.022,.285,.012);strap.rotation.z=-.43;
+ ell(hips,leather,-.143,-.014,-.008,.057,.071,.047);
+ profile(hips,leather,[[-.052,.028],[.050,.028],[.045,-.011],[0,-.030],[-.049,-.013]],-.143,0,.033,.012);
+ box(hips,copper,-.143,-.009,.049,.017,.021,.007);
  for(let i=0;i<3;i++)ell(hips,copper,.052,.102+i*.059,.106,.009,.009,.005);
 
  lathe(hips,copper,[[.019,0],[.017,.007],[.011,.027],[0,.034]],.028,.185,.132);stroke(hips,leather,[[.028,.225,.131],[.028,.245,.126]],.0025);
  // Separate chest articulation gives purposeful upper-body effort without tilting planted legs.
- const upperChildren=hips.children.filter(o=>['head','cape','leftUpperArm','rightUpperArm'].includes(o.name)||(o.isMesh&&o.position.y>=.075));
+ const upperChildren=hips.children.filter(o=>['head','cape','leftUpperArm','rightUpperArm'].includes(o.name)||(o.isMesh&&(o.position.y>=.075||o.userData.chestPiece)));
  const chest=pivot('chest',hips,0,.065,0);
  root.updateMatrixWorld(true);for(const child of upperChildren)chest.attach(child);
  // Retain selected-A rig origin and scale exactly; polish must not move grips or joints.

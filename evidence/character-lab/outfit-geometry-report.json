@@ -1,0 +1,40 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 148,
+  "tris": 58604,
+  "materials": 90,
+  "size": [
+   0.608,
+   1.599,
+   0.315
+  ],
+  "groundOffset": 0.003,
+  "centreOffset": [
+   0.001,
+   -0.009
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1436,
+    "edgeDensity": 0.1556
+   },
+   "right": {
+    "coverage": 0.0807,
+    "edgeDensity": 0.1677
+   },
+   "back": {
+    "coverage": 0.1381,
+    "edgeDensity": 0.111
+   },
+   "left": {
+    "coverage": 0.0815,
+    "edgeDensity": 0.1681
+   }
+  },
+  "error": null,
+  "name": "hero-study-a",
+  "problems": []
+ }
+]

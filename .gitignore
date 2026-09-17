@@ -46,3 +46,6 @@ evidence/character-lab/atlas-face-*/
 evidence/character-lab/link-benchmark-*/
 evidence/character-lab/head-*/
 evidence/character-lab/review-repair-*/
+
+# Body look-development captures; selected proof is explicitly versioned.
+evidence/character-lab/body-*/
