@@ -8,7 +8,7 @@ import {height} from './world-layout.js';
 export async function createWoodlandDiscoveries(scene,art,{caption=()=>{},sound}={}){
  const root=new T.Group();root.name='Woodland discoveries';scene.add(root);
  const prototypes={};
- for(const name of ['flower','rock','lantern','bird']){
+ for(const name of ['flower','rock','lantern','bird','chimes']){
   prototypes[name]=await ASSET('./assets/'+name+'.js',{keepHierarchy:name==='bird'});
   art.style(prototypes[name]);
  }
@@ -31,13 +31,13 @@ export async function createWoodlandDiscoveries(scene,art,{caption=()=>{},sound}
   const x=-16+(i%3-1)*.48,z=-4+Math.floor(i/3)*.55;
   const o=place('bird',x,z,1.35);birds.push({o,home:o.position.clone(),left:o.getObjectByName('leftWing'),right:o.getObjectByName('rightWing')});
  }
- // Heights supply the physical clue: follow the rising stepping-stone line.
- // Kept on the east verge of the route, with no new collision obstacles.
+ // Three clear listening bells make the melody puzzle readable from a distance.
+ // Their rising sizes and lanterns show the intended low-to-high order.
  const stones=[];
  for(let i=0;i<3;i++){
-  const x=-8.8+i*.83,z=-11.5-i*.23,o=place('rock',x,z,.25);
-  o.scale.set(.31,.24+i*.17,.34);o.rotation.y=.4+i*.85;
-  const box=new T.Box3().setFromObject(o),lantern=place('lantern',x,z,.22,box.max.y+.015);
+  const x=-8.8+i*.83,z=-11.5-i*.23,o=place('chimes',x,z,.52+i*.08);
+  o.rotation.y=.4+i*.85;
+  const box=new T.Box3().setFromObject(o),lantern=place('lantern',x,z,.24,box.max.y+.05);
   const marks=[];for(let k=0;k<=i;k++)marks.push(place('flower',x+(k-i*.5)*.22,z+.42,.57));
   stones.push({o,lantern,home:o.position.clone(),top:lantern.position.y,glow:glow(lantern,0x8befce),marks});
  }
@@ -51,7 +51,7 @@ export async function createWoodlandDiscoveries(scene,art,{caption=()=>{},sound}
   const candidates=[];
   if(nearPoint(player,-3,height(-3,12),12,2.2)&&elapsed-flowerTime>1.9)candidates.push({id:'flowers',label:flowerFound?'Stir the bellflowers':'Brush the bellflowers',d:distance(player,-3,12)});
   if(nearPoint(player,-16,height(-16,-4),-4,3.3)&&elapsed-birdTime>2.7)candidates.push({id:'birds',label:'Whistle to the birds',d:distance(player,-16,-4)});
-  for(let i=0;i<3;i++){const s=stones[i];if(nearPoint(player,s.home.x,s.home.y,s.home.z,1.05)&&elapsed-stoneFlash>.48&&elapsed-wrongFlash>.65)candidates.push({id:'stone-'+i,label:stoneSolved?'Sound the awakened stone':'Sound the '+['low','middle','high'][i]+' stone',d:distance(player,s.home.x,s.home.z)});}
+  for(let i=0;i<3;i++){const s=stones[i];if(nearPoint(player,s.home.x,s.home.y,s.home.z,1.2)&&elapsed-stoneFlash>.48&&elapsed-wrongFlash>.65)candidates.push({id:'stone-'+i,label:stoneSolved?'Ring the awakened bell':'Ring the '+['low','middle','high'][i]+' bell',d:distance(player,s.home.x,s.home.z)});}
   candidates.sort((a,b)=>a.d-b.d);const c=candidates[0];return c?{kind:'discovery',id:c.id,label:c.label}:null;
  }
  function interact(id){
@@ -65,8 +65,8 @@ export async function createWoodlandDiscoveries(scene,art,{caption=()=>{},sound}
   }else if(id.startsWith('stone-')){
    const i=Number(id.slice(6));stoneFlash=elapsed;
    if(stoneSolved){emit('chime');return true;}
-   if(i===stoneStep){stoneStep++;emit('stone-'+i);if(stoneStep===3){stoneSolved=true;emit('restore');caption('Three rising notes. The old trail lights answer together.',4);}else caption(stoneStep===1?'The low stone holds its note.':'A second note joins it, higher.',2.5);}
-   else {wrongFlash=elapsed;stoneStep=0;emit('hazard');caption('The notes scatter. The smallest stone hums on its own.',3);}
+   if(i===stoneStep){stoneStep++;emit('stone-'+i);if(stoneStep===3){stoneSolved=true;emit('restore');caption('Three bells rise from low to high. The current is free in the listening garden.',4);}else caption(stoneStep===1?'The low bell holds its note.':'The next bell joins it, higher.',2.5);}
+   else {wrongFlash=elapsed;stoneStep=0;emit('hazard');caption('The melody breaks. Start again with the lowest bell.',3);}
   }else return false;
   return true;
  }
@@ -103,7 +103,7 @@ export async function createWoodlandDiscoveries(scene,art,{caption=()=>{},sound}
   if(near&&!birdNear&&birdMode==='rest'){birdTime=elapsed;birdMode='startled';birdStartles++;emit('bird');}
   birdNear=near;
   if(birdMode!=='rest'&&elapsed-birdTime>(birdMode==='called'?7:5))birdMode='rest';
-  if(!stoneClue&&nearPoint(player,-8,height(-8,-11.7),-11.7,3.1)){stoneClue=true;caption('Small, middle, tall. The smallest trail stone gives a quiet hum.',4);}
+  if(!stoneClue&&nearPoint(player,-8,height(-8,-11.7),-11.7,3.1)){stoneClue=true;caption('Three listening bells wait beneath the roots. Ring them from low to high to free the wind.',4);}
   applyVisuals(state.gentle);
  }
  function reset(){

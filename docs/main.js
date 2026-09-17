@@ -10,8 +10,9 @@ import {createWoodlandDiscoveries} from './woodland-discoveries.js';
 import {createArtDirection} from './art-direction.js';
 import {buildWorld} from './world.js';
 import {createGarden} from './garden.js';
-import {START,height,POINTS} from './world-layout.js';
+import {START,height,POINTS,PATH} from './world-layout.js';
 const $=s=>document.querySelector(s),canvas=$('#world');
+const mapCanvas=$('#map'),mapCtx=mapCanvas?.getContext('2d');
 const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 const scene=new T.Scene();scene.background=new T.Color('#94b4ae');scene.fog=new T.FogExp2('#94b4ae',.030);
 const camera=new T.PerspectiveCamera(42,1,.1,100);scene.add(new T.HemisphereLight(0xffefcd,0x274d54,1.8));
@@ -29,20 +30,20 @@ const soundscape=createSoundscape();soundscape.setMuted(state.muted);
 function sound(kind){soundscape.cue(kind);}
 function updateUI(){
  const echoSolved=discoveries?.telemetry().echoSolved;
- $('#objective').textContent=state.complete?'The morning has a voice again':state.restored?'Follow the wind across the water':state.charged?'Bring the wind home':state.awakened&&!echoSolved?'Play the rising stone notes':'Wake the sleeping crossing';
+ $('#objective').textContent=state.complete?'The morning has a voice again':state.restored?'Cross the new bridge to the far bell':state.charged?'Carry the wind to the wheel':state.awakened&&echoSolved?'Catch the freed wind in the garden':state.awakened?'Ring the three listening bells':state.porchRead?'Follow the chime beneath the roots':'Read Mara’s note at the cottage';
  $('#chargeText').textContent=(state.charged?'Wind held in the bell':'Bell empty')+(state.keepsakes.size?' · '+state.keepsakes.size+'/3 keepsakes':'');$('#chargeIcon').textContent=state.charged?'✧':'◌';
  $('#sound').textContent='Sound: '+(state.muted?'off':'on');$('#motion').textContent='Gentle motion: '+(state.gentle?'on':'off');
 }
-function start(){if(!movement)return;state.started=true;state.paused=false;$('#title').hidden=true;for(const id of ['hud','charge','controls','hint'])$('#'+id).hidden=false;caption('The crossing has fallen quiet. Somewhere beyond the roots, leaves are still dancing.',6);soundscape.start().then(()=>sound('start')).catch(()=>{$('#audioUnlock').hidden=false;});if(matchMedia('(any-pointer: coarse)').matches)$('#audioUnlock').hidden=false;updateUI();}
+function start(){if(!movement)return;state.started=true;state.paused=false;$('#title').hidden=true;for(const id of ['hud','charge','controls','hint','map'])$('#'+id).hidden=false;caption('Mara’s note is at the cottage. Read it to learn why the crossing fell silent.',6);soundscape.start().then(()=>sound('start')).catch(()=>{$('#audioUnlock').hidden=false;});if(matchMedia('(any-pointer: coarse)').matches)$('#audioUnlock').hidden=false;updateUI();}
 function pause(on){if(!state.started)return;state.paused=on;soundscape.setPaused(on);$('#pausePanel').hidden=!on;}
 function beginAction(kind,callback){state.action=kind;state.actionTime=0;state.actionTarget=(context?.kind==='wheel'?wheelPoint:context?.kind==='capture'?source:chimePoint).clone();state.actionCallback=callback;sound(kind);}
 function action(){if(!state.started||state.paused||state.action)return;if(!context){caption('Listen. Watch the leaves. There is still a little wind here.',3);return;}
  if(context.kind==='discovery'){discoveries.interact(context.id,state);updateUI();return;}
- if(context.kind==='bound'){caption('Three stone voices beside the chime hold the current. Smallest first, then let the song climb.',5);sound('chime');return;}
- if(context.kind==='porch'){state.porchRead=true;caption('Mara’s note: “Answer the far-bank bell at dawn.” My teacher’s peg is empty. Mine is waiting.',7);sound('chime');}
- if(context.kind==='chime'){beginAction('release',()=>{state.awakened=true;caption(discoveries.telemetry().echoSolved?'The stones answer the chime. A current slips free into the flowers.':'The chime wakes three stone voices beside the path. Their song is unfinished.',4);});}
- if(context.kind==='capture')beginAction('capture',()=>{state.charged=true;caption('There you are. Mara said the wind always leans toward a listening bell.',4);});
- if(context.kind==='wheel'){if(state.charged)beginAction('release',()=>{state.charged=false;state.restored=true;sound('restore');caption('Wood unfolds over the water. Beyond it, the canopy is opening.',5);});else caption('The wheel turns once, then stops. Its copper bell is empty.',4);}
+ if(context.kind==='bound'){caption('The current is trapped in the listening bells. Ring the low, middle, then high bell to free it.',5);sound('chime');return;}
+ if(context.kind==='porch'){state.porchRead=true;caption('Mara’s note: “The far bell cannot answer while the crossing is down. Wake the root chime, then follow its rising song.”',7);sound('chime');}
+ if(context.kind==='chime'){beginAction('release',()=>{state.awakened=true;caption(discoveries.telemetry().echoSolved?'The bells answer the root chime. A current slips free into the garden.':'The root chime wakes three listening bells beneath the roots. Follow their rising notes.',4);});}
+ if(context.kind==='capture')beginAction('capture',()=>{state.charged=true;caption('The freed wind gathers in your bell. Carry it back to the wheel and the crossing will open.',4);});
+ if(context.kind==='wheel'){if(state.charged)beginAction('release',()=>{state.charged=false;state.restored=true;sound('restore');caption('The wheel has opened the crossing. The bridge reaches a new bank and the far bell.',5);});else caption('The wheel is empty. Wake the root chime, ring the three bells, then carry their wind here.',4);}
  if(context.kind==='memory'){state.keepsakes.add(context.index);caption(memories[context.index].text,5);sound('chime');}
  if(context.kind==='finish'){state.complete=true;caption(state.keepsakes.size?'The far bell answers. I know that note, Mara. I can take the morning watch.':state.porchRead?'The far bell answers. Your apprentice made it, Mara.':'A bell answers from the far bank. Someone once listened for this morning.',7);sound('restore');}
  updateUI();}
@@ -86,6 +87,14 @@ function findContext(){const p=movement.position;context=discoveries?.context(p,
  if(state.awakened&&!state.charged&&!state.restored&&p.distanceTo(quietPoint)<1.7&&!visited.has('quiet-pocket')){visited.add('quiet-pocket');caption('The roots shelter this pocket. The current doesn’t linger.',3);}
  const areas=[['cottage',point(POINTS.cottage),5,'Mara’s cottage. She left fresh ribbons by our tool pegs.'],['crossing',wheelPoint,4,state.restored?'The crossing sings again.':state.charged?'The wheel answers the current in your bell.':'The far bank is out of reach. A path curls back into the roots.'],['garden',source,6,'You hear a faint chime beneath the leaves.']];for(const [id,pnt,d,text] of areas)if(!visited.has(id)&&p.distanceTo(pnt)<d){visited.add(id);caption(text,4);}
 }
+function drawMap(){if(!mapCtx||!state.started)return;const w=mapCanvas.width,h=mapCanvas.height;mapCtx.clearRect(0,0,w,h);mapCtx.fillStyle='#193f3bd9';mapCtx.fillRect(0,0,w,h);const mx=x=>12+(x+22)/38*(w-24),my=z=>8+(20-z)/42*(h-16);
+ mapCtx.fillStyle='#6d9f83';mapCtx.globalAlpha=.42;mapCtx.beginPath();mapCtx.roundRect(mx(-20),my(17),mx(4)-mx(-20),my(-2)-my(17),8);mapCtx.fill();mapCtx.globalAlpha=1;
+ mapCtx.strokeStyle='#68c8b5';mapCtx.lineWidth=5;mapCtx.beginPath();mapCtx.moveTo(mx(2),my(-1.2));mapCtx.lineTo(mx(16),my(-4.5));mapCtx.stroke();
+ mapCtx.strokeStyle=state.restored?'#f4e0a0':'#8cae9d';mapCtx.lineWidth=2;mapCtx.setLineDash(state.restored?[]:[4,3]);mapCtx.beginPath();PATH.forEach(([x,z],i)=>i?mapCtx.lineTo(mx(x),my(z)):mapCtx.moveTo(mx(x),my(z)));mapCtx.stroke();mapCtx.setLineDash([]);
+ if(!state.restored){mapCtx.fillStyle='#e8c77a';mapCtx.font='9px system-ui';mapCtx.fillText('LOCKED',mx(8)-18,my(-9));}
+ const poi=[['C',POINTS.cottage,'#f5d99a'],['W',POINTS.wheel,'#f5d99a'],['B',POINTS.chime,'#8ce1c8'],['G',POINTS.garden,'#d5ec9b'],['F',POINTS.overlook,state.restored?'#f5d99a':'#71877e']];for(const [label,[x,z],color] of poi){mapCtx.fillStyle=color;mapCtx.beginPath();mapCtx.arc(mx(x),my(z),3.5,0,Math.PI*2);mapCtx.fill();mapCtx.fillStyle='#fff0c9';mapCtx.font='9px system-ui';mapCtx.fillText(label,mx(x)+5,my(z)+3);}
+ mapCtx.fillStyle='#fff0c9';mapCtx.beginPath();mapCtx.arc(mx(movement.position.x),my(movement.position.z),3,0,Math.PI*2);mapCtx.fill();mapCtx.font='8px system-ui';mapCtx.fillText('YOU',mx(movement.position.x)+5,my(movement.position.z)+3);
+}
 function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
 // Drag empty scenery to look around; movement remains relative to the camera.
 canvas.addEventListener('pointerdown',e=>{if(!state.started||state.paused)return;cameraDrag={id:e.pointerId,x:e.clientX};canvas.setPointerCapture(e.pointerId);});
@@ -97,7 +106,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  if(hero&&movement){if(!state.paused){state.t+=dt;waterfall.update(state.t);art.update?.(state.t,state.gentle,movement.position);movement.update(dt,{enabled:state.started,actionSlow:!!state.action,faceTarget:state.action?state.actionTarget:null});if(movement.recovered){state.recoveryUntil=state.t+.9;caption('A little current catches you and carries you back.',3);sound('capture');}const p=movement.position;travel+=movement.speed*dt;hero.position.copy(p);hero.rotation.y=state.started?movement.yaw:.35;
  if(state.action){state.actionTime+=dt;if(state.actionTime>.38&&state.actionCallback){state.actionCallback();state.actionCallback=null;updateUI();}if(state.actionTime>.68)state.action=null;}
  animator.update(dt,{time:state.t,action:state.action,actionProgress:state.actionTime/.68,charged:state.charged});poseStaff();discoveries?.update(dt,state.t,p,state);garden.update(dt,state.t,p,{...state,awakened:state.awakened&&discoveries.telemetry().echoSolved});soundscape.update(dt,{position:p,speed:movement.speed,grounded:movement.grounded,charged:state.charged,restored:state.restored,gardenDistance:p.distanceTo(source),waterDistance:waterDistance(p)});
- if(state.started){findContext();for(const foot of animator.footfalls)sound('step');if(wasGrounded&&!movement.grounded&&movement.verticalVelocity>0)sound('jump');if(!wasGrounded&&movement.grounded)sound('land');}wasGrounded=movement.grounded;lastMode=movement.mode;
+ if(state.started){findContext();drawMap();for(const foot of animator.footfalls)sound('step');if(wasGrounded&&!movement.grounded&&movement.verticalVelocity>0)sound('jump');if(!wasGrounded&&movement.grounded)sound('land');}wasGrounded=movement.grounded;lastMode=movement.mode;
  winds.forEach((o,i)=>{o.visible=state.awakened&&!state.charged&&(discoveries.telemetry().echoSolved||state.restored);swirl(o,state.restored?finish:source,(state.restored?1.1:.5)+i*.12,state.t*(.8+i*.12)+i*2);});held.visible=state.charged||state.t<state.recoveryUntil;swirl(held,p,.45,state.t*2);
  transfer.visible=state.action==='release';if(transfer.visible){const from=staff.localToWorld(new T.Vector3(0,1.15,0)),to=state.actionTarget.clone().add(new T.Vector3(0,.85,0)),a=transfer.geometry.attributes.position;for(let i=0;i<48;i++){const f=T.MathUtils.clamp(state.actionTime/.68*1.6-i/47*.45,0,1),v=from.clone().lerp(to,f);v.y+=Math.sin(f*Math.PI)*.7;const width=.065*Math.sin(i/47*Math.PI);a.setXYZ(i*2,v.x,v.y-width,v.z);a.setXYZ(i*2+1,v.x,v.y+width,v.z);}a.needsUpdate=true;}
 
