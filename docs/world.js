@@ -57,7 +57,7 @@ export async function buildWorld(scene,art){
  }
  // Dense, deliberately grouped beds under the roots and around the listening garden.
  for(const [cx,cz] of [[-6,15],[-2,11],[-10,12],[-12,3],[-18,-3],[-14,-9],[-12,-17],[-7,-18],[0,6],[10,-10],[-2,21],[4,19],[-7,20],[2,16]])for(let i=0;i<16;i++){const angle=rnd()*6.28,r=.4+rnd()*2.2,x=cx+Math.cos(angle)*r,z=cz+Math.sin(angle)*r;if(gardenClearance(x,z)||shortcutDistance(x,z)<1.25||pathDistance(x,z)<1.65||Math.hypot(x+8,z-9)<2.7||Math.hypot(x+10,z+17)<1.8||Math.hypot(x-8,z+10)<2.3||Math.hypot(x+8,z+15)<2)continue;place(i%4?'fern':'flower',x,z,.8+rnd()*.8,angle);}
- for(const [x,z] of [[-3,15],[-9,5],[-16,-4],[-12,-15],[8,-11]]){const b=place('bird',x,z,1,0,{dynamic:true});birds.push({o:b,home:new T.Vector3(x,height(x,z),z),phase:rnd()*6.28,flight:0});}
+ for(const [x,z] of [[-3,15],[-9,5],[-16,-4],[-12,-15],[8,-11],[-6,13],[2,3],[6,-10]]){const b=place('bird',x,z,.82,0,{dynamic:true});birds.push({o:b,home:new T.Vector3(x,height(x,z),z),phase:rnd()*6.28,flight:0});}
  // Distinct garden backdrop and a tighter fern-framed western passage.
  for(const [cx,cz] of [[-17.8,-.5],[-13.2,-2],[-18,-6],[-14,-8.8],[-15.2,-17.7],[-14.5,-19.4]])for(let i=0;i<9;i++){const a=i*2.4,r=.4+Math.sqrt(i/9)*1.1,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;if(pathDistance(x,z)<1.25||gardenClearance(x,z))continue;place(i%3?'fern':'flower',x,z,1.1+(i%3)*.18,a);}
  for(const [x,z,s] of [[-15.4,-18.8,1.8],[-13.7,-20,1.4],[-17.2,-17.1,1.2]]){const o=place('rock',x,z,s,.6);scatterRocks.push({o,x,z,r:s*1.1});}

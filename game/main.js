@@ -13,7 +13,7 @@ import {createGarden} from './garden.js';
 import {START,height,POINTS} from './world-layout.js';
 const $=s=>document.querySelector(s),canvas=$('#world');
 const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
-const scene=new T.Scene();scene.background=new T.Color('#8caea1');scene.fog=new T.Fog('#8caea1',22,44);
+const scene=new T.Scene();scene.background=new T.Color('#8caea1');scene.fog=new T.FogExp2('#8caea1',.018);
 const camera=new T.PerspectiveCamera(42,1,.1,100);scene.add(new T.HemisphereLight(0xffefcd,0x274d54,1.8));
 const sun=new T.DirectionalLight(0xffe1ae,2.4);sun.position.set(-9,20,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,near:.5,far:65});sun.shadow.bias=-.0003;sun.shadow.normalBias=.025;scene.add(sun,sun.target);
 const state={started:false,paused:false,t:0,charged:false,awakened:false,restored:false,complete:false,porchRead:false,recoveryUntil:0,keepsakes:new Set(),action:null,actionTime:0,muted:localStorage.getItem('bellkeeper-muted')==='1',gentle:localStorage.getItem('bellkeeper-gentle')==='1'};
@@ -28,11 +28,12 @@ const waterDistance=p=>Math.min(Math.hypot(Math.max(2-p.x,0,p.x-31),p.z+3.35),Ma
 const soundscape=createSoundscape();soundscape.setMuted(state.muted);
 function sound(kind){soundscape.cue(kind);}
 function updateUI(){
- $('#objective').textContent=state.complete?'The morning has a voice again':state.restored?'Follow the wind across the water':state.charged?'Bring the wind home':'Wake the sleeping crossing';
+ const echoSolved=discoveries?.telemetry().echoSolved;
+ $('#objective').textContent=state.complete?'The morning has a voice again':state.restored?'Follow the wind across the water':state.charged?'Bring the wind home':state.awakened&&!echoSolved?'Play the rising stone notes':'Wake the sleeping crossing';
  $('#chargeText').textContent=(state.charged?'Wind held in the bell':'Bell empty')+(state.keepsakes.size?' · '+state.keepsakes.size+'/3 keepsakes':'');$('#chargeIcon').textContent=state.charged?'✧':'◌';
  $('#sound').textContent='Sound: '+(state.muted?'off':'on');$('#motion').textContent='Gentle motion: '+(state.gentle?'on':'off');
 }
-function start(){if(!movement)return;state.started=true;state.paused=false;$('#title').hidden=true;for(const id of ['hud','charge','controls','hint'])$('#'+id).hidden=false;caption('The crossing has fallen quiet. Somewhere beyond the roots, leaves are still dancing.',6);soundscape.start().then(()=>sound('start'));updateUI();}
+function start(){if(!movement)return;state.started=true;state.paused=false;$('#title').hidden=true;for(const id of ['hud','charge','controls','hint'])$('#'+id).hidden=false;caption('The crossing has fallen quiet. Somewhere beyond the roots, leaves are still dancing.',6);soundscape.start().then(()=>sound('start')).catch(()=>{$('#audioUnlock').hidden=false;});if(matchMedia('(any-pointer: coarse)').matches)$('#audioUnlock').hidden=false;updateUI();}
 function pause(on){if(!state.started)return;state.paused=on;soundscape.setPaused(on);$('#pausePanel').hidden=!on;}
 function beginAction(kind,callback){state.action=kind;state.actionTime=0;state.actionTarget=(context?.kind==='wheel'?wheelPoint:context?.kind==='capture'?source:chimePoint).clone();state.actionCallback=callback;sound(kind);}
 function action(){if(!state.started||state.paused||state.action)return;if(!context){caption('Listen. Watch the leaves. There is still a little wind here.',3);return;}
@@ -46,6 +47,8 @@ function action(){if(!state.started||state.paused||state.action)return;if(!conte
  if(context.kind==='finish'){state.complete=true;caption(state.keepsakes.size?'The far bell answers. I know that note, Mara. I can take the morning watch.':state.porchRead?'The far bell answers. Your apprentice made it, Mara.':'A bell answers from the far bank. Someone once listened for this morning.',7);sound('restore');}
  updateUI();}
 $('#startb').onclick=start;$('#action').onclick=action;$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>pause(false);
+$('#audioUnlock').onclick=()=>soundscape.resume().then(()=>{$('#audioUnlock').hidden=true;sound('start');}).catch(()=>{});
+for(const id of ['controls','world'])$('#'+id).addEventListener('pointerdown',()=>{if(state.started)soundscape.resume().then(()=>$('#audioUnlock').hidden=true).catch(()=>{});},{passive:true});
 $('#sound').onclick=()=>{state.muted=!state.muted;soundscape.setMuted(state.muted);localStorage.setItem('bellkeeper-muted',state.muted?'1':'0');updateUI();};$('#motion').onclick=()=>{state.gentle=!state.gentle;localStorage.setItem('bellkeeper-gentle',state.gentle?'1':'0');updateUI();};
 $('#reset').onclick=()=>{Object.assign(state,{charged:false,awakened:false,restored:false,complete:false,porchRead:false,recoveryUntil:0,action:null,actionCallback:null});state.keepsakes.clear();visited.clear();discoveries?.reset();cameraYaw=Math.atan2(.615,.788);movement.reset(START);animator.reset();travel=0;pause(false);updateUI();caption('Another morning. The woods are listening.',4);};
 addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(!e.repeat)action();}if(e.code==='Escape')pause(!state.paused);});// Touch browsers can blur the window during native gestures while still visible.
@@ -58,6 +61,7 @@ function ribbon(color){const g=new T.BufferGeometry(),p=new Float32Array(48*6),i
 const winds=[ribbon(0xffedb0),ribbon(0x84ebcf),ribbon(0xdae4a6)],held=ribbon(0x92e4cd),transfer=ribbon(0xffefb5);
 function swirl(o,c,r,t){const p=o.geometry.attributes.position;for(let i=0;i<48;i++){const a=i/47*5+t,w=.035*Math.sin(i/47*Math.PI),x=c.x+Math.cos(a)*r,y=c.y+.6+Math.sin(a*1.5+t)*.2,z=c.z+Math.sin(a)*r;p.setXYZ(i*2,x,y-w,z);p.setXYZ(i*2+1,x,y+w,z);}p.needsUpdate=true;}
 const particleGeo=new T.BufferGeometry(),particles=new Float32Array(170*3);for(let i=0;i<170;i++){particles[i*3]=Math.sin(i*98.7)*25;particles[i*3+1]=1+(i%17)*.27;particles[i*3+2]=Math.cos(i*52.4)*25;}particleGeo.setAttribute('position',new T.BufferAttribute(particles,3));const motes=new T.Points(particleGeo,new T.PointsMaterial({color:0xffe5a7,size:.055,transparent:true,opacity:.65,depthWrite:false}));scene.add(motes);
+const insectGeo=new T.BufferGeometry(),insectPositions=new Float32Array(54*3),insectHomes=[[-3,12,1.1],[-11,-14.5,.8],[8,-9,.9]];for(let i=0;i<54;i++){const h=insectHomes[i%insectHomes.length],a=i*2.39996,r=.35+(i%9)*.08;insectPositions[i*3]=h[0]+Math.cos(a)*r;insectPositions[i*3+1]=height(h[0],h[1])+.5+(i%6)*.11;insectPositions[i*3+2]=h[1]+Math.sin(a)*r;}insectGeo.setAttribute('position',new T.BufferAttribute(insectPositions,3));const insects=new T.Points(insectGeo,new T.PointsMaterial({color:0xffd98a,size:.075,transparent:true,opacity:.78,blending:T.AdditiveBlending,depthWrite:false}));scene.add(insects);
 const memoryGlows=memories.map(m=>{const o=new T.Mesh(new T.OctahedronGeometry(.10),new T.MeshBasicMaterial({color:0xffd78d}));o.position.copy(m.p).y+=.35;scene.add(o);return o;});
 function poseStaff(){
  if(!staffHand)return;
@@ -99,6 +103,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
 
  for(let i=0;i<memoryGlows.length;i++){memoryGlows[i].visible=!state.keepsakes.has(i)&&(i!==1||state.charged||state.restored);memoryGlows[i].rotation.y+=dt;memoryGlows[i].position.y=memories[i].p.y+.4+Math.sin(state.t*2+i)*.08;}
  motes.rotation.y=state.gentle?0:Math.sin(state.t*.025)*.08;if(state.t>captionEnd)$('#caption').style.opacity='0';
+ for(let i=0;i<54;i++){const h=insectHomes[i%insectHomes.length],a=i*2.39996+state.t*(.7+(i%3)*.12),r=.35+(i%9)*.08+Math.sin(state.t*1.7+i)*.06;insectPositions[i*3]=h[0]+Math.cos(a)*r;insectPositions[i*3+1]=height(h[0],h[1])+.52+(i%6)*.11+Math.sin(state.t*2.1+i)*.12;insectPositions[i*3+2]=h[1]+Math.sin(a)*r;}insectGeo.attributes.position.needsUpdate=true;
  }
  const pos=movement.position;vista=T.MathUtils.damp(vista,state.restored?1-T.MathUtils.smoothstep(pos.distanceTo(finish),2,7):0,3,dt);const ahead=.8+vista*1.5,sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw);cameraTarget.lerp(new T.Vector3(pos.x-sx*ahead,pos.y+1+vista*.6,pos.z-sz*ahead),1-Math.exp(-dt*7));const portrait=camera.aspect<.85;const distance=(portrait?11.5:10.8)+vista*2.5;camera.position.copy(cameraTarget).add(new T.Vector3(sx,.48-vista*.13,sz).normalize().multiplyScalar(distance));camera.lookAt(cameraTarget);sun.position.set(pos.x-9,pos.y+20,pos.z+8);sun.target.position.copy(pos);camera.updateMatrixWorld(true);if(!state.paused)world.update(dt,state.t,pos,state.restored,state.gentle,camera,state.charged,state.complete);
  renderer.render(scene,camera);window.__READY__=true;window.__GAME__={pos:[pos.x,pos.z],y:pos.y,fps,speed:movement.speed,mode:movement.mode,grounded:movement.grounded,score:state.complete?1:0,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:state.charged,awakened:state.awakened,restored:state.restored,paused:state.paused,started:state.started,porchRead:state.porchRead,quietObserved:visited.has('quiet-pocket'),keepsakes:state.keepsakes.size,travel,context:context?.kind||null,discoveryId:context?.id||null,discoveries:discoveries?.telemetry(),heroVersion:'approved-D',cameraYaw};

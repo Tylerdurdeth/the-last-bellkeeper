@@ -10,9 +10,9 @@ export function createBrook(T, waterMesh) {
     shader.uniforms.bkBrookTime = clock;
     shader.uniforms.bkBrookMotion = motion;
     shader.vertexShader = shader.vertexShader.replace('#include <common>',
-      '#include <common>\nvarying vec2 vBkBrookUV;');
+      '#include <common>\nvarying vec2 vBkBrookUV;\nuniform float bkBrookTime;\nuniform float bkBrookMotion;');
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>',
-      '#include <begin_vertex>\nvBkBrookUV = uv;');
+      '#include <begin_vertex>\nvBkBrookUV = uv;\nfloat bkFlow = bkBrookTime * bkBrookMotion;\ntransformed.y += sin(uv.x * 38.0 - bkFlow * 2.4 + sin(uv.y * 12.0)) * 0.012;');
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>',
       '#include <common>\nvarying vec2 vBkBrookUV;\nuniform float bkBrookTime;\nuniform float bkBrookMotion;');
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `

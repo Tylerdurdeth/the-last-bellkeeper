@@ -55,6 +55,11 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     const lfo=context.createOscillator(),lfoGain=gain(.014);lfo.frequency.value=.085;lfoGain.connect(wind.gain);lfo.connect(lfoGain);lfo.start();continuous.push(lfo,lfoGain);
     started=true;if(context.state==='suspended'&&!('startRendering'in context))await context.resume();
   }
+  async function resume(){
+    if(!context){await start();return;}
+    if(context.state==='suspended'&&context.resume)await context.resume();
+    volume();
+  }
   function volume(){if(master)master.gain.setTargetAtTime(muted||paused?0:.65,context.currentTime,.04);}
   function setMuted(v){muted=!!v;volume();}
   function setPaused(v){paused=!!v;volume();}
@@ -87,5 +92,5 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     else if(kind==='hazard')hiss(t,.5,.13,600,-.1,'bandpass',.09);
   }
   function dispose(){if(disposed)return;disposed=true;for(const source of voices){try{source.stop();}catch{}}voices.clear();for(const node of continuous){try{node.stop?.();}catch{}node.disconnect();}continuous.length=0;buffers.clear();if(context&&!suppliedContext)context.close().catch(()=>{});}
-  return {start,setMuted,setPaused,update,cue,dispose};
+  return {start,resume,setMuted,setPaused,update,cue,dispose};
 }
