@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {loadCodeCharacter} from './code-character.js';
-import studyA from './assets/hero-study-a.js';
+import studyA from './assets/hero-study-a.js?v=hand-options-1';
 import studyB from './assets/hero-study-b.js';
 import studyC from './assets/hero-study-c.js';
 import buildHero from './assets/hero.js';
@@ -16,13 +16,27 @@ const grid=new T.GridHelper(200,200,0x8c9f9f,0xb1bfbf);grid.position.y=.002;scen
 const hero=buildHero(T);scene.add(hero);
 const candidates={};for(const [key,build]of Object.entries({character:studyA,profile:studyB,sculpt:studyC})){candidates[key]=await loadCodeCharacter(build);scene.add(candidates[key].root);candidates[key].root.visible=false;}
 let authored=candidates.character;
+// Keep original geometry references: switching options must never accumulate transforms.
+const handRoot=candidates.character.root;
+const handShapes=['left','right'].map(side=>handRoot.getObjectByName(side+'HandShape'));
+const handParents=handShapes.map(shape=>shape.parent);
+function chooseHands(){
+ const option=$('handOption').value,swap=option==='C'||option==='D',turn=option==='B'||option==='D';
+ handShapes.forEach((shape,i)=>{handParents[swap?1-i:i].add(shape);shape.rotation.set(0,Math.PI+(turn?Math.PI:0),0);});
+ $('handNote').textContent='Hand comparison · Option '+option;
+ const url=new URL(location.href);url.searchParams.set('hand',option);history.replaceState(null,'',url);
+ reset();
+}
+
 let usingAuthored=!!authored,wasGrounded=true,landUntil=0,airTime=0;
 const makeMotor=()=>createMovement(T,{sampleGround:()=>0,stickElement:$('stick'),jumpButton:$('jump'),runButton:$('run'),...(usingAuthored?{walkSpeed:authored.nominal.Walk_Loop,runSpeed:authored.nominal.Sprint_Loop,acceleration:12,deceleration:16,turnResponse:12}:{})});
 let movement=makeMotor();
 const preview={speed:0,yaw:0,grounded:true,verticalVelocity:0};let animator=createAnimator(T,hero,preview);
 const camera=new T.PerspectiveCamera(35,1,.05,100);let time=0,frozen=false,clip='idle';
 function reset(){authored?.reset();wasGrounded=true;landUntil=0;airTime=0;time=0;movement.reset();Object.assign(preview,{speed:0,yaw:0,grounded:true,verticalVelocity:0});hero.position.set(0,0,0);hero.rotation.y=0;animator.reset();animator=createAnimator(T,hero,clip==='free'?movement:preview);}
-$('source').onchange=()=>{if(authored)authored.root.visible=false;authored=candidates[$('source').value]||null;usingAuthored=$('source').value!=='baseline'&&!!authored;movement.dispose();movement=makeMotor();hero.visible=!usingAuthored;if(authored)authored.root.visible=usingAuthored;$('sourceNote').textContent=usingAuthored?'Code-built geometry · CC0 animation tracks.':'Original procedural Bellkeeper baseline.';for(const o of $('clip').options)o.disabled=usingAuthored&&['capture','release'].includes(o.value);if(usingAuthored&&['capture','release'].includes(clip)){clip='idle';$('clip').value=clip;}reset();};$('source').onchange();
+$('source').onchange=()=>{if(authored)authored.root.visible=false;authored=candidates[$('source').value]||null;usingAuthored=$('source').value!=='baseline'&&!!authored;movement.dispose();movement=makeMotor();hero.visible=!usingAuthored;if(authored)authored.root.visible=usingAuthored;$('handOption').disabled=$('source').value!=='character';$('handNote').hidden=$('source').value!=='character';$('sourceNote').textContent=usingAuthored?'Code-built geometry · CC0 animation tracks.':'Original procedural Bellkeeper baseline.';for(const o of $('clip').options)o.disabled=usingAuthored&&['capture','release'].includes(o.value);if(usingAuthored&&['capture','release'].includes(clip)){clip='idle';$('clip').value=clip;}reset();};$('source').onchange();
+$('handOption').onchange=chooseHands;
+const requestedHand=new URLSearchParams(location.search).get('hand');if(['A','B','C','D'].includes(requestedHand))$('handOption').value=requestedHand;chooseHands();
 $('clip').onchange=()=>{clip=$('clip').value;$('play').hidden=clip!=='free';reset();};
 const requestedClip=new URLSearchParams(location.search).get('clip');if(['transitions','jump','turn','free'].includes(requestedClip)){$('clip').value=requestedClip;$('clip').onchange();}
 $('view').onchange=()=>{$('orbit').value={three:25,front:0,side:90,back:180,face:0,profileFace:90,hands:0}[$('view').value];};
@@ -70,7 +84,7 @@ function render(){
  camera.position.copy(target).add(new T.Vector3(Math.sin(angle)*d,face?.03:.28,Math.cos(angle)*d));camera.lookAt(target);
  light.position.copy(base).add(new T.Vector3(-3,7,5));light.target.position.copy(base);
  renderer.render(scene,camera);$('status').textContent=`${clip==='free'?(usingAuthored&&authored.clip==='Jump_Land'?'landing':movement.mode):clip} · ${frozen?'frozen':$('rate').value+'×'} · ${time.toFixed(2)}s`;
- window.__LAB__={source:usingAuthored?$('source').value:'baseline',authoredClip:authored?.clip,clip,time,frozen,grounded:clip==='free'?movement.grounded:preview.grounded,position:hero.position.toArray(),speed:clip==='free'?movement.speed:preview.speed,yaw:hero.rotation.y,motion:usingAuthored?authored.motionState:null,draws:renderer.info.render.calls};
+ window.__LAB__={handOption:$('handOption').value,source:usingAuthored?$('source').value:'baseline',authoredClip:authored?.clip,clip,time,frozen,grounded:clip==='free'?movement.grounded:preview.grounded,position:hero.position.toArray(),speed:clip==='free'?movement.speed:preview.speed,yaw:hero.rotation.y,motion:usingAuthored?authored.motionState:null,draws:renderer.info.render.calls};
 }
 
 let last=performance.now();function frame(now){const dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;if(!frozen&&!document.hidden)advance(dt*Number($('rate').value));render();requestAnimationFrame(frame);}requestAnimationFrame(frame);
