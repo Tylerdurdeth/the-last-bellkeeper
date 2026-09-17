@@ -25,12 +25,14 @@
 
  // Each lock has its own swept ridge, tapered tip and silhouette. Close cropped underlayer bridges the partings.
  const hairShadow=mat(0x492c20),hairMid=mat(0x5d3826),hairSun=mat(0x744c30);
+ // Subtle crown lift and side fullness, fading out before the fringe tips and nape.
+ function hairVolume(g){const p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),w=THREE.MathUtils.smoothstep(y,.17,.29)*(1-THREE.MathUtils.smoothstep(z,.025,.075));p.setXYZ(i,x*(1+.07*w),y+.012*w,(z+.014)*(1+.05*w)-.014);}}
  function strand(control,width,thickness,material){
   const path=new THREE.CatmullRomCurve3(control.map(p=>new THREE.Vector3(...p))),g=new THREE.PlaneGeometry(1,1,8,20),p=g.attributes.position;let previousAcross=null;
   for(let row=0;row<=20;row++){const t=row/20,c=path.getPoint(t),tangent=path.getTangent(t).normalize(),normal=new THREE.Vector3(c.x*.8,(c.y-.18)*.65,c.z+.015).normalize(),across=new THREE.Vector3().crossVectors(tangent,normal).normalize();if(previousAcross){if(across.dot(previousAcross)<0)across.negate();across.lerp(previousAcross,.35).normalize();}previousAcross=across.clone();
    const taper=Math.pow(Math.max(0,1-t),.65)*(1+.12*Math.sin(t*Math.PI))*THREE.MathUtils.smoothstep(t,0,.09);
    for(let col=0;col<=8;col++){const v=col/4-1,ridge=Math.pow(Math.max(0,1-v*v),.75)*thickness*.25*taper;const pos=c.clone().addScaledVector(across,v*width*taper).addScaledVector(normal,ridge);p.setXYZ(row*9+col,pos.x,pos.y,pos.z);}
-  }g.computeVertexNormals();const c=[];for(let row=0;row<=20;row++)for(let col=0;col<=8;col++){const t=row/20,v=col/4-1,streak=.018*Math.sin(v*17+t*3),tone=.94+.06*(1-v*v)+streak;c.push(tone,tone*.985,tone*.95);}g.setAttribute('color',new THREE.Float32BufferAttribute(c,3));const m=material.clone();m.side=THREE.DoubleSide;m.vertexColors=true;mesh(head,g,m).receiveShadow=false;
+  }hairVolume(g);g.computeVertexNormals();const c=[];for(let row=0;row<=20;row++)for(let col=0;col<=8;col++){const t=row/20,v=col/4-1,streak=.018*Math.sin(v*17+t*3),tone=.94+.06*(1-v*v)+streak;c.push(tone,tone*.985,tone*.95);}g.setAttribute('color',new THREE.Float32BufferAttribute(c,3));const m=material.clone();m.side=THREE.DoubleSide;m.vertexColors=true;mesh(head,g,m).receiveShadow=false;
  }
  // Occipital layers overlap toward a broken nape, never ending in a straight rim.
  for(let i=0;i<11;i++){const a=-Math.PI*.82+i/10*Math.PI*1.64,s=Math.sin(a),c=-Math.cos(a);strand([[s*.026,.285,c*.025-.018],[s*.083,.264,c*.081-.015],[s*.111,.204,c*.095-.012],[s*(.113+(i%3)*.005),.080+.055*s*s+(c>0?.020:0)+(i%3)*.005,c*.077-.017]],.034,.009,i%3===0?hairMid:hairShadow);}
