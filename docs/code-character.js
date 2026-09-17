@@ -15,7 +15,7 @@ export async function loadCodeCharacter(build){
  for(const l of links){l.inverse=l.src.getWorldQuaternion(new T.Quaternion()).invert();l.rest=l.dst.getWorldQuaternion(new T.Quaternion());if(/Arm|Hand/.test(l.dst.name)){const child=l.src.children[0];if(child){const direction=child.getWorldPosition(new T.Vector3()).sub(l.src.getWorldPosition(new T.Vector3())).normalize();const down=new T.Vector3(0,-1,0).applyQuaternion(l.rest);l.rest.premultiply(new T.Quaternion().setFromUnitVectors(down,direction));}}}
  const pelvisRest=nodes.get('pelvis').position.clone(),hipRest=joints.hips.position.clone();
  const ramp=new T.DataTexture(new Uint8Array([140,185,245]),3,1,T.RedFormat);ramp.needsUpdate=true;ramp.minFilter=ramp.magFilter=T.NearestFilter;
- model.traverse(n=>{if(n.isMesh){const convert=m=>new T.MeshToonMaterial({color:m.color,gradientMap:ramp,side:m.side});n.material=Array.isArray(n.material)?n.material.map(convert):convert(n.material);}});
+ model.traverse(n=>{if(n.isMesh){const convert=m=>{const mat=new T.MeshToonMaterial({color:m.color,gradientMap:ramp,side:m.side});if(m.name==='faceSkin'){return new T.MeshStandardMaterial({color:m.color,emissive:m.color,emissiveIntensity:.32,roughness:1,vertexColors:!!n.geometry.attributes.color});}return mat;};n.material=Array.isArray(n.material)?n.material.map(convert):convert(n.material);}});
 
  // Preserve authored flight height while grounding the different-sized procedural boots.
  const sourceFeet=[nodes.get('foot_l'),nodes.get('foot_r')];

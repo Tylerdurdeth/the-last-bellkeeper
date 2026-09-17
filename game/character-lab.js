@@ -25,6 +25,7 @@ function reset(){authored?.reset();wasGrounded=true;landUntil=0;time=0;movement.
 $('source').onchange=()=>{if(authored)authored.root.visible=false;authored=candidates[$('source').value]||null;usingAuthored=$('source').value!=='baseline'&&!!authored;movement.dispose();movement=makeMotor();hero.visible=!usingAuthored;if(authored)authored.root.visible=usingAuthored;$('sourceNote').textContent=usingAuthored?'Code-built geometry · CC0 animation tracks.':'Original procedural Bellkeeper baseline.';for(const o of $('clip').options)o.disabled=usingAuthored&&['capture','release'].includes(o.value);if(usingAuthored&&['capture','release'].includes(clip)){clip='idle';$('clip').value=clip;}reset();};$('source').onchange();
 $('clip').onchange=()=>{clip=$('clip').value;$('play').hidden=clip!=='free';reset();};
 $('view').onchange=()=>{$('orbit').value={three:25,front:0,side:90,back:180,face:0}[$('view').value];};
+if(new URLSearchParams(location.search).get('view')==='face'){$('view').value='face';$('view').onchange();}
 $('freeze').onclick=()=>{frozen=!frozen;$('freeze').textContent=frozen?'Play':'Freeze';$('freeze').setAttribute('aria-pressed',String(frozen));};
 $('step').onclick=()=>{frozen=true;$('freeze').textContent='Play';$('freeze').setAttribute('aria-pressed','true');advance(1/60);};
 $('reset').onclick=reset;

@@ -1,27 +1,30 @@
- // Atlas R06 study: continuous facial surface, swept tapered hair and inset eyes.
- const faceGeo=HEAD_GEOMETRY;
- const fp=faceGeo.attributes.position;
- for(let i=0;i<fp.count;i++){
-  let x=fp.getX(i),y=fp.getY(i),z=fp.getZ(i);
-  if(z>0){const front=Math.min(1,z/.045);const nose=.030*Math.exp(-((x/.017)**2)-(((y-.126)/.032)**2));const tip=.012*Math.exp(-((x/.019)**2)-(((y-.111)/.011)**2));const socket=.008*Math.exp(-(((Math.abs(x)-.043)/.030)**2)-(((y-.166)/.023)**2));z+=front*(nose+tip-socket);}
-  fp.setXYZ(i,x,y,z);
- }faceGeo.computeVertexNormals();const face=mesh(head,faceGeo,skin);face.receiveShadow=false;
- const surface=(x,y)=>{const ny=(y-.15)/.145,jaw=ny<0?1-.20*(-ny):1;const z=.10*Math.sqrt(Math.max(.01,1-(x/(.115*jaw))**2-ny*ny));return z+Math.min(1,z/.045)*(.030*Math.exp(-((x/.017)**2)-(((y-.126)/.032)**2))+.012*Math.exp(-((x/.019)**2)-(((y-.111)/.011)**2))-.008*Math.exp(-(((Math.abs(x)-.043)/.030)**2)-(((y-.166)/.023)**2)));};
+ // Continuous face with a cheek/jaw profile; all contours are authored functions.
+ const faceProfile=[[.012,.012,.030],[.032,.033,.055],[.067,.069,.077],[.112,.098,.089],[.16,.108,.093],[.207,.110,.094],[.251,.095,.084],[.285,.060,.058],[.300,0,0]];
+ function radius(y,k){for(let i=1;i<faceProfile.length;i++)if(y<=faceProfile[i][0]){const a=faceProfile[i-1],b=faceProfile[i],prev=faceProfile[Math.max(0,i-2)],next=faceProfile[Math.min(faceProfile.length-1,i+1)],h=b[0]-a[0],u=THREE.MathUtils.clamp((y-a[0])/h,0,1),m0=(b[k]-prev[k])/(b[0]-prev[0]),m1=(next[k]-a[k])/(next[0]-a[0]);return Math.max(0,(2*u*u*u-3*u*u+1)*a[k]+(u*u*u-2*u*u+u)*h*m0+(-2*u*u*u+3*u*u)*b[k]+(u*u*u-u*u)*h*m1);}return 0;}
+ const features=(x,y)=>.012*Math.exp(-((x/.014)**2)-(((y-.143)/.028)**2))+.009*Math.exp(-((x/.018)**2)-(((y-.124)/.017)**2))-.004*Math.exp(-(((Math.abs(x)-.044)/.028)**2)-(((y-.173)/.019)**2))+.003*Math.exp(-(((Math.abs(x)-.065)/.029)**2)-(((y-.133)/.028)**2));
+ const surface=(x,y)=>radius(y,2)*Math.pow(Math.max(.001,1-(x/Math.max(.001,radius(y,1)))**2),.43)+features(x,y);
+ const faceGeo=new THREE.SphereGeometry(1,96,80),fp=faceGeo.attributes.position;
+ for(let i=0;i<fp.count;i++){const ny=fp.getY(i),y=.156+ny*.144,s=Math.sqrt(Math.max(.000001,1-ny*ny)),x=fp.getX(i)/s*radius(y,1),front=fp.getZ(i)>0;fp.setXYZ(i,x,y,front?surface(x,y):fp.getZ(i)/s*radius(y,2));}faceGeo.computeVertexNormals();const colors=[];for(let i=0;i<fp.count;i++){const x=fp.getX(i),y=fp.getY(i),z=fp.getZ(i),warm=Math.exp(-(((Math.abs(x)-.060)/.033)**2)-(((y-.137)/.025)**2))*(z>0?1:0),shadow=.10*Math.exp(-((x/.017)**2)-(((y-.114)/.008)**2))*(z>0?1:0);colors.push(1-shadow,.99-.07*warm-shadow,.98-.08*warm-shadow);}faceGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));const faceMaterial=skin.clone();faceMaterial.vertexColors=true;faceMaterial.name='faceSkin';const face=mesh(head,faceGeo,faceMaterial);face.receiveShadow=false;
  for(const side of [-1,1]){
-  const ear=ell(head,skin,side*.110,.151,-.007,.021,.033,.015);ear.rotation.z=-side*.22;
-  ell(head,mat(0xb97558),side*.115,.150,.006,.010,.020,.004);
-  const ex=side*.044,ey=.165,eyeGroup=new THREE.Group();head.add(eyeGroup);
-  const almond=new THREE.Shape();almond.moveTo(-.027,0);almond.bezierCurveTo(-.018,.016,.013,.019,.027,.002);almond.bezierCurveTo(.014,-.012,-.013,-.014,-.027,0);
-  const g=new THREE.ShapeGeometry(almond,18),p=g.attributes.position;
-  for(let i=0;i<p.count;i++){const x=ex+p.getX(i),y=ey+p.getY(i);p.setXYZ(i,x,y,surface(x,y)+.0015);}g.computeVertexNormals();mesh(eyeGroup,g,white);
-  const iris=ell(eyeGroup,teal,ex+.001,ey+.002,surface(ex,ey)+.004,.010,.012,.002);
-  ell(eyeGroup,eye,ex+.001,ey+.002,surface(ex,ey)+.006,.005,.008,.001);
-  ell(eyeGroup,white,ex-.003,ey+.008,surface(ex,ey)+.007,.003,.003,.001);
-  const lid=[];for(let i=0;i<=12;i++){const t=i/12,x=ex-.027+t*.054,y=ey+Math.sin(t*Math.PI)*.015+t*.002;lid.push([x,y,surface(x,y)+.002]);}stroke(eyeGroup,hair,lid,.0021);
-  const brow=[];for(let i=0;i<=12;i++){const t=i/12,x=ex-.030+t*.058,y=.194+.008*Math.sin(t*Math.PI)+side*(t-.5)*.008;brow.push([x,y,surface(x,y)+.003]);}stroke(head,hair,brow,.0042);eyeGroup.position.y=ey;for(const part of eyeGroup.children)part.position.y-=ey;(root.userData.eyeGroups??=[]).push(eyeGroup);
+  const ear=ell(head,skin,side*.109,.151,-.004,.017,.029,.012);ear.rotation.z=-side*.22;
+  ell(head,mat(0xb97558),side*.112,.150,.006,.008,.017,.003);
+  const ex=side*.044,ey=.172,eyeGroup=new THREE.Group();head.add(eyeGroup);
+  const almond=new THREE.Shape();almond.moveTo(-.028,-.001);almond.bezierCurveTo(-.018,.017,.013,.019,.028,.003);almond.bezierCurveTo(.014,-.012,-.015,-.014,-.028,-.001);
+  const g=new THREE.ShapeGeometry(almond,24),p=g.attributes.position;
+  for(let i=0;i<p.count;i++){const x=ex+side*p.getX(i),y=ey+p.getY(i);p.setXYZ(i,x,y,surface(x,y)+.0012);}g.computeVertexNormals();const eyeWhite=white.clone();eyeWhite.side=THREE.DoubleSide;mesh(eyeGroup,g,eyeWhite);
+  ell(eyeGroup,mat(0x459b8c),ex-side*.001,ey+.002,surface(ex,ey)+.003,.013,.014,.0018);
+  ell(eyeGroup,eye,ex-side*.001,ey+.002,surface(ex,ey)+.005,.005,.008,.001);
+  ell(eyeGroup,white,ex-.004,ey+.008,surface(ex,ey)+.006,.0026,.0026,.0008);
+  const lid=[];for(let i=0;i<=16;i++){const t=i/16,x=ex+side*(-.028+t*.056),y=ey+Math.sin(t*Math.PI)*.016-.001+t*.004;lid.push([x,y,surface(x,y)+.002]);}stroke(eyeGroup,mat(0x603e32),lid,.0017);
+  const browShape=new THREE.Shape();browShape.moveTo(-.026,0);browShape.quadraticCurveTo(-.006,.008,.027,.003);browShape.quadraticCurveTo(.018,.014,-.013,.013);browShape.quadraticCurveTo(-.021,.011,-.026,0);
+  const bg=new THREE.ShapeGeometry(browShape,16),bp=bg.attributes.position;for(let i=0;i<bp.count;i++){const x=ex+side*bp.getX(i),y=.200+bp.getY(i);bp.setXYZ(i,x,y,surface(x,y)+.0015);}bg.computeVertexNormals();const bm=hair.clone();bm.side=THREE.DoubleSide;mesh(head,bg,bm);
+  eyeGroup.position.y=ey;for(const part of eyeGroup.children)part.position.y-=ey;(root.userData.eyeGroups??=[]).push(eyeGroup);
  }
- // Fine mouth seam follows the actual cheek surface, avoiding a tubular smile.
- const lip=[];for(let i=0;i<=16;i++){const x=-.024+i*.003,y=.081+.006*(x/.024)**2+.002*x/.024;lip.push([x,y,surface(x,y)+.001]);}stroke(head,mat(0x995c49),lip,.0014);
+ // Restrained lip planes and a slight asymmetric expression, not an outlined grin.
+ const seam=x=>.087+.0025*(x/.025)**2+.001*x/.025;
+ const mouth=[];for(let i=0;i<=24;i++){const x=-.025+i*.05/24,y=seam(x);mouth.push([x,y,surface(x,y)+.0012]);}stroke(head,mat(0x925b49),mouth,.0008);
+ function lipPlane(upper){const g=new THREE.PlaneGeometry(.05,1,32,4),p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),u=p.getY(i)+.5,w=Math.pow(Math.max(0,1-(x/.025)**2),.8),height=upper?.0035:.0045,y=seam(x)+(upper?1:-1)*height*w*u;const bulge=.0015*Math.sin(u*Math.PI)*w;p.setXYZ(i,x,y,surface(x,y)+.0007+bulge);}g.computeVertexNormals();mesh(head,g,mat(upper?0xc28b70:0xdba786));}lipPlane(true);lipPlane(false);
+
  // Hair volume is one cap; individual locks are tapered sweeps, not cones.
  const cap=new THREE.SphereGeometry(1,32,18,0,Math.PI*2,0,Math.PI*.63);const hp=cap.attributes.position;
  for(let j=0;j<=18;j++)for(let i=0;i<=32;i++){const phi=i/32*Math.PI*2,theta=j/18*Math.PI*(.68-.27*Math.max(0,Math.sin(phi)));hp.setXYZ(j*33+i,-Math.cos(phi)*Math.sin(theta)*.121,.172+Math.cos(theta)*.145,Math.sin(phi)*Math.sin(theta)*.107-.012);}cap.computeVertexNormals();mesh(head,cap,hair);
