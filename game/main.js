@@ -94,6 +94,7 @@ function drawMap(){if(!mapCtx||!state.started)return;const w=mapCanvas.width,h=m
  if(!state.restored){mapCtx.fillStyle='#e8c77a';mapCtx.font='9px system-ui';mapCtx.fillText('LOCKED',mx(8)-18,my(-9));}
  const poi=[['C',POINTS.cottage,'#f5d99a'],['W',POINTS.wheel,'#f5d99a'],['B',POINTS.chime,'#8ce1c8'],['G',POINTS.garden,'#d5ec9b'],['F',POINTS.overlook,state.restored?'#f5d99a':'#71877e']];for(const [label,[x,z],color] of poi){mapCtx.fillStyle=color;mapCtx.beginPath();mapCtx.arc(mx(x),my(z),3.5,0,Math.PI*2);mapCtx.fill();mapCtx.fillStyle='#fff0c9';mapCtx.font='9px system-ui';mapCtx.fillText(label,mx(x)+5,my(z)+3);}
  mapCtx.fillStyle='#fff0c9';mapCtx.beginPath();mapCtx.arc(mx(movement.position.x),my(movement.position.z),3,0,Math.PI*2);mapCtx.fill();mapCtx.font='8px system-ui';mapCtx.fillText('YOU',mx(movement.position.x)+5,my(movement.position.z)+3);
+ mapCtx.font='8px system-ui';mapCtx.fillStyle='#fff0c9';mapCtx.fillText('C cottage · W wheel · B bells · F far bell',8,h-5);
 }
 function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
 // Drag empty scenery to look around; movement remains relative to the camera.
