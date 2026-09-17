@@ -49,3 +49,6 @@ evidence/character-lab/review-repair-*/
 
 # Body look-development captures; selected proof is explicitly versioned.
 evidence/character-lab/body-*/
+
+# Local motion review frames; selected frames and reports are versioned.
+evidence/character-lab/motion-pass/*.png

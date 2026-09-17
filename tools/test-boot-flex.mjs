@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict';import * as T from 'three';import build from '../game/assets/hero-study-a.js';import {createBootFlex} from '../game/boot-flex.js';
+const model=build(T),j=model.userData.joints;model.updateMatrixWorld(true);
+const foot=j.leftFoot,points=[];foot.traverse(m=>{if(m.isMesh){const p=m.geometry.attributes.position;for(let i=0;i<p.count;i++){const local=new T.Vector3().fromBufferAttribute(p,i),world=local.clone().applyMatrix4(m.matrixWorld),inFoot=foot.worldToLocal(world.clone());if(inFoot.y>.10||inFoot.y<-.03)points.push({m,i,local,world,inFoot});}}});
+const deform=createBootFlex(T,j);deform();for(const p of points)assert(p.local.distanceTo(new T.Vector3().fromBufferAttribute(p.m.geometry.attributes.position,p.i))<1e-6,'rest appearance unchanged');
+// The shin stays still while the foot pitches; cuffs must stay with the shin, soles with foot.
+foot.rotation.x=.65;model.updateMatrixWorld(true);deform();let checkedTop=0,checkedSole=0;
+for(const p of points){const local=new T.Vector3().fromBufferAttribute(p.m.geometry.attributes.position,p.i),world=local.clone().applyMatrix4(p.m.matrixWorld);if(p.inFoot.y>.10){assert(world.distanceTo(p.world)<1e-5);checkedTop++;}else{assert(local.distanceTo(p.local)<1e-6);checkedSole++;}}
+assert(checkedTop&&checkedSole);foot.rotation.x=0;model.updateMatrixWorld(true);deform();for(const p of points)assert(p.local.distanceTo(new T.Vector3().fromBufferAttribute(p.m.geometry.attributes.position,p.i))<1e-6,'deformation must not accumulate');console.log('PASS rest shape, cuff/shin attachment, unchanged sole and non-accumulating deformation');

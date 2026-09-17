@@ -3,6 +3,7 @@ export function createMovement(THREE, {
   start = [0, 0, 0], sampleGround = () => 0, blocked = () => false,
   stickElement, jumpButton, runButton,
   inputTarget = globalThis.window, jumpKey = 'KeyJ', walkSpeed = 2.2, runSpeed = 4.5,
+  acceleration = 23, deceleration = 30, turnResponse = 20,
 } = {}) {
   const position = new THREE.Vector3(...start), velocity = new THREE.Vector3();
   const checkpoint = position.clone(), keys = new Set(), listeners = [];
@@ -74,7 +75,7 @@ export function createMovement(THREE, {
     const intent = magnitude > .1;
     const scale = intent ? maxSpeed * magnitude / rawMagnitude : 0;
     const tx = (.788 * x - .615 * y) * scale, tz = (-.615 * x - .788 * y) * scale;
-    const blend = 1 - Math.exp(-(grounded ? intent ? 23 : 30 : 8) * dt);
+    const blend = 1 - Math.exp(-(grounded ? intent ? acceleration : deceleration : 8) * dt);
     velocity.x += (tx - velocity.x) * blend; velocity.z += (tz - velocity.z) * blend;
     const facingX = faceTarget?.x - position.x, facingZ = faceTarget?.z - position.z;
     const facingAction = Number.isFinite(facingX) && Number.isFinite(facingZ) && Math.hypot(facingX, facingZ) > .03;
@@ -83,7 +84,7 @@ export function createMovement(THREE, {
       // translation, or leaving a separate render yaw that pops on completion.
       const targetYaw = facingAction ? Math.atan2(facingX, facingZ) : Math.atan2(tx, tz);
       const delta = Math.atan2(Math.sin(targetYaw - yaw), Math.cos(targetYaw - yaw));
-      yaw += delta * (1 - Math.exp(-(facingAction ? 14 : 20) * dt));
+      yaw += delta * (1 - Math.exp(-(facingAction ? 14 : turnResponse) * dt));
     }
     if (grounded) coyote = .11; else coyote = Math.max(0, coyote - dt);
     if (bufferedJump > 0 && coyote > 0 && !actionSlow) {

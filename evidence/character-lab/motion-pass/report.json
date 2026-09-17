@@ -1,0 +1,229 @@
+{
+  "samples": [
+    {
+      "label": "start",
+      "source": "character",
+      "authoredClip": "Jog_Fwd_Loop",
+      "clip": "free",
+      "time": 0.09999999999999999,
+      "frozen": false,
+      "grounded": true,
+      "position": [
+        -0.1889267501137628,
+        0,
+        -0.24207199851974803
+      ],
+      "speed": 4.779250374664884,
+      "yaw": -1.7322573557652226,
+      "motion": {
+        "clip": "Jog_Fwd_Loop",
+        "phase": 0.0992369107287748,
+        "weights": {
+          "Idle_Loop": 0.20189651799465533,
+          "Jog_Fwd_Loop": 0.6554789199070347,
+          "Jump_Land": 0,
+          "Jump_Loop": 0,
+          "Jump_Start": 0,
+          "Sprint_Loop": 0,
+          "Walk_Loop": 0.14262456209830998
+        },
+        "pitch": 0.0628925209279018,
+        "bank": 0.09783281033229171
+      },
+      "draws": 145
+    },
+    {
+      "label": "turn",
+      "source": "character",
+      "authoredClip": "Jog_Fwd_Loop",
+      "clip": "free",
+      "time": 0.9000000000000004,
+      "frozen": false,
+      "grounded": true,
+      "position": [
+        -2.9751215293335864,
+        0,
+        -4.453604766456797
+      ],
+      "speed": 5.490642292585623,
+      "yaw": -3.6624294450298938,
+      "motion": {
+        "clip": "Jog_Fwd_Loop",
+        "phase": 0.23374280323954325,
+        "weights": {
+          "Idle_Loop": 5.573903692694589e-7,
+          "Jog_Fwd_Loop": 0.7362659991523584,
+          "Jump_Land": 0,
+          "Jump_Loop": 0,
+          "Jump_Start": 0,
+          "Sprint_Loop": 0.26373304970329337,
+          "Walk_Loop": 3.9375397913983013e-7
+        },
+        "pitch": 0.010497143589168322,
+        "bank": 0.10586873603994067
+      },
+      "draws": 145
+    },
+    {
+      "label": "brake",
+      "source": "character",
+      "authoredClip": "Jog_Fwd_Loop",
+      "clip": "free",
+      "time": 1.2499999999999998,
+      "frozen": false,
+      "grounded": true,
+      "position": [
+        -1.3890760643151256,
+        0,
+        -5.863872168237158
+      ],
+      "speed": 2.560692757301421,
+      "yaw": -4.036765268399644,
+      "motion": {
+        "clip": "Jog_Fwd_Loop",
+        "phase": 0.6933565034088957,
+        "weights": {
+          "Idle_Loop": 2.061153622438555e-9,
+          "Jog_Fwd_Loop": 0.5533936472067241,
+          "Jump_Land": 0,
+          "Jump_Loop": 0,
+          "Jump_Start": 0,
+          "Sprint_Loop": 0.4466063492760739,
+          "Walk_Loop": 1.4560485526819546e-9
+        },
+        "pitch": -0.04326466338032274,
+        "bank": 0.018835819460533424
+      },
+      "draws": 145
+    },
+    {
+      "label": "jump-0",
+      "source": "character",
+      "authoredClip": "Jump_Start",
+      "clip": "free",
+      "time": 2.0666999999999978,
+      "frozen": false,
+      "grounded": false,
+      "position": [
+        -1.2782077795317768,
+        0.3646055450000012,
+        -5.951888159655795
+      ],
+      "speed": 0.000008621391450855603,
+      "yaw": -4.036765268399644,
+      "motion": {
+        "clip": "Jump_Start",
+        "phase": 0.12506249627284768,
+        "weights": {
+          "Idle_Loop": 0.09685003398788895,
+          "Jog_Fwd_Loop": 1.8206952404568365e-7,
+          "Jump_Land": 0,
+          "Jump_Loop": 0,
+          "Jump_Start": 0.9031411001289501,
+          "Sprint_Loop": 9.458397972379956e-8,
+          "Walk_Loop": 0.000008589229657236557
+        },
+        "pitch": -0.00003819028529314417,
+        "bank": 0.0000010440586087229884
+      },
+      "draws": 145
+    },
+    {
+      "label": "landing-0",
+      "source": "character",
+      "authoredClip": "Jump_Land",
+      "clip": "free",
+      "time": 2.7499999999999964,
+      "frozen": false,
+      "grounded": true,
+      "position": [
+        -1.278206999536896,
+        0,
+        -5.951888778877267
+      ],
+      "speed": 1.640495295300311e-8,
+      "yaw": -4.036765268399644,
+      "motion": {
+        "clip": "Jump_Land",
+        "phase": 0.20268947622762798,
+        "weights": {
+          "Idle_Loop": 0.21629705834642843,
+          "Jog_Fwd_Loop": 7.479414034848249e-18,
+          "Jump_Land": 0.7668713886686858,
+          "Jump_Loop": 0.016831552564742443,
+          "Jump_Start": 4.201430231439196e-10,
+          "Sprint_Loop": 3.885508841339558e-18,
+          "Walk_Loop": 3.528454593573312e-16
+        },
+        "pitch": -1.3032617868915046e-8,
+        "bank": 2.8686914885898856e-10
+      },
+      "draws": 145
+    },
+    {
+      "label": "jump-1",
+      "source": "character",
+      "authoredClip": "Jump_Start",
+      "clip": "free",
+      "time": 3.5165999999999946,
+      "frozen": false,
+      "grounded": false,
+      "position": [
+        -1.2782069988426286,
+        0.3641221800000017,
+        -5.951888779428435
+      ],
+      "speed": 7.9776504763483e-14,
+      "yaw": -4.036765268399644,
+      "motion": {
+        "clip": "Jump_Start",
+        "phase": 0.12487499627843579,
+        "weights": {
+          "Idle_Loop": 0.09705928083647948,
+          "Jog_Fwd_Loop": 6.387993982023494e-27,
+          "Jump_Land": 0.00013921912324870028,
+          "Jump_Loop": 1.4375438502365022e-11,
+          "Jump_Start": 0.9028015000258963,
+          "Sprint_Loop": 3.3185229457724174e-27,
+          "Walk_Loop": 3.013571197499135e-25
+        },
+        "pitch": -1.7654480910799371e-12,
+        "bank": 2.9008284553694894e-14
+      },
+      "draws": 145
+    },
+    {
+      "label": "landing-1",
+      "source": "character",
+      "authoredClip": "Jump_Land",
+      "clip": "free",
+      "time": 4.199899999999996,
+      "frozen": false,
+      "grounded": true,
+      "position": [
+        -1.2782069988426195,
+        0,
+        -5.951888779428435
+      ],
+      "speed": 0,
+      "yaw": -4.036765268399644,
+      "motion": {
+        "clip": "Jump_Land",
+        "phase": 0.20268947622762956,
+        "weights": {
+          "Idle_Loop": 0.21629705834643717,
+          "Jog_Fwd_Loop": 2.624187221562884e-37,
+          "Jump_Land": 0.766871388668692,
+          "Jump_Loop": 0.016831552566223738,
+          "Jump_Start": 4.1864724014466387e-10,
+          "Sprint_Loop": 1.3632488592296185e-37,
+          "Walk_Loop": 1.237974714754216e-35
+        },
+        "pitch": -4.850806142600353e-16,
+        "bank": 7.97041644046791e-18
+      },
+      "draws": 145
+    }
+  ],
+  "errors": []
+}

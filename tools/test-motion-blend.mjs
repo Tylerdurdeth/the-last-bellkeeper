@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import * as T from 'three';
+import {createMotionBlend} from '../game/motion-blend.js';
+const data=JSON.parse(fs.readFileSync('game/assets/quaternius/motion.json'));
+const root=new T.Group(),nodes=new Map();
+for(const n of data.nodes){const o=new T.Object3D();o.name=n.name;o.position.fromArray(n.position);o.quaternion.fromArray(n.quaternion);o.scale.fromArray(n.scale);nodes.set(n.name,o);}
+for(const n of data.nodes)(nodes.get(n.parent)||root).add(nodes.get(n.name));
+const blend=createMotionBlend(T,root,data.clips,{Walk_Loop:.83,Jog_Fwd_Loop:4.55,Sprint_Loop:7});
+const tick=(seconds,speed)=>{for(let i=0;i<Math.round(seconds*120);i++){blend.update(1/120,speed);const sum=Object.values(blend.state.weights).reduce((a,b)=>a+b,0);assert(Math.abs(sum-1)<1e-6);}};
+blend.reset();blend.play('Walk_Loop');tick(.47,.83);
+const phase=blend.state.phase;blend.play('Jog_Fwd_Loop');assert(Math.abs(blend.state.phase-phase)<1e-6,'gait switch must retain normalized stride phase');
+tick(.035,2.7);blend.play('Sprint_Loop');tick(.025,6);blend.play('Walk_Loop');tick(.02,.8);blend.play('Idle_Loop');tick(.7,0);
+assert(blend.state.weights.Idle_Loop>.999,'interrupted blends must settle without residual action weight');
+blend.play('Jump_Land',{once:true,rate:2.2});tick(.65);assert.equal(blend.state.phase,1);
+blend.play('Idle_Loop');tick(.3);blend.play('Jump_Land',{once:true,rate:3});assert.equal(blend.state.phase,0,'a later landing must restart');tick(.1);assert(blend.state.phase>.2);
+blend.reset();tick(.1,0);assert.equal(blend.clip,'Idle_Loop');
+console.log('PASS normalized weights, phase continuity, interrupted blends, landing completion and replay');

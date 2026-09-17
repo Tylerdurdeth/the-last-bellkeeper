@@ -1,4 +1,6 @@
 import * as T from 'three';
+import {createMotionBlend} from './motion-blend.js';
+import {createBootFlex} from './boot-flex.js';
 // The JSON contains animation tracks/rest transforms only. Every visible mesh is code-built.
 let motionPromise,faceTexturePromise;
 export async function loadCodeCharacter(build){
@@ -49,13 +51,23 @@ export async function loadCodeCharacter(build){
  const sourceFeet=[nodes.get('foot_l'),nodes.get('foot_r')];
  const sourceSole=Math.min(...sourceFeet.map(f=>f.getWorldPosition(new T.Vector3()).y));
  const bootSamples=[];for(const name of ['leftFoot','rightFoot']){const foot=joints[name];foot.updateWorldMatrix(true,true);const inverse=foot.matrixWorld.clone().invert(),points=[];foot.traverse(n=>{if(!n.isMesh)return;const matrix=inverse.clone().multiply(n.matrixWorld),p=n.geometry.attributes.position;for(let i=0;i<p.count;i++)points.push(new T.Vector3().fromBufferAttribute(p,i).applyMatrix4(matrix));});bootSamples.push({foot,points});}
+ const flexBoots=createBootFlex(T,joints);
  const sample=new T.Vector3();
- function groundBoots(){const flight=Math.max(0,Math.min(...sourceFeet.map(f=>f.getWorldPosition(sample).y))-sourceSole)*.85;let bottom=Infinity;for(const {foot,points}of bootSamples)for(const p of points)bottom=Math.min(bottom,sample.copy(p).applyMatrix4(foot.matrixWorld).y);model.position.y+=root.position.y+flight-bottom;model.updateMatrixWorld(true);}
- const mixer=new T.AnimationMixer(source),actions={};for(const c of data.clips){const clip=T.AnimationClip.parse(c);actions[clip.name]=mixer.clipAction(clip);}
- let current=null,elapsed=0;const nominal={Walk_Loop:.83,Jog_Fwd_Loop:4.55,Sprint_Loop:7.0};
- function play(name,{once=false}={}){const a=actions[name];if(!a||a===current)return;const old=current;a.reset().setEffectiveWeight(1).setEffectiveTimeScale(1).setLoop(once?T.LoopOnce:T.LoopRepeat,once?1:Infinity);a.clampWhenFinished=once;a.play();if(old){old.fadeOut(.16);a.fadeIn(.16);}current=a;}
+ function groundBoots(preserveFlight=true){const flight=(preserveFlight?1:0)*Math.max(0,Math.min(...sourceFeet.map(f=>f.getWorldPosition(sample).y))-sourceSole)*.85;let bottom=Infinity;for(const {foot,points}of bootSamples)for(const p of points)bottom=Math.min(bottom,sample.copy(p).applyMatrix4(foot.matrixWorld).y);model.position.y+=root.position.y+flight-bottom;model.updateMatrixWorld(true);}
+ const nominal={Walk_Loop:.83,Jog_Fwd_Loop:4.55,Sprint_Loop:7.0};
+ const motion=createMotionBlend(T,source,data.clips,nominal),play=motion.play;
+ let elapsed=0,previousSpeed=0,previousYaw=0,pitch=0,bank=0;
  const q=new T.Quaternion(),parent=new T.Quaternion(),world=new T.Quaternion();
- function update(dt,speed){elapsed+=dt;const idle=current?.getClip().name==='Idle_Loop';eyeGaze.value.set(idle?Math.sin(elapsed*.85)*.0014:0,idle?Math.sin(elapsed*.51)*.0005:0);const blinkPhase=elapsed%4.3;const blink=blinkPhase>3.7&&blinkPhase<3.88?Math.sin((blinkPhase-3.7)/.18*Math.PI):0;for(const eye of model.userData.eyeGroups||[])eye.scale.y=1-.97*blink;if(current)current.timeScale=speed!==undefined&&nominal[current.getClip().name]?Math.max(.1,Math.min(2,speed/nominal[current.getClip().name])):1;mixer.update(dt);source.updateMatrixWorld(true);root.updateMatrixWorld(true);const rootQ=root.getWorldQuaternion(new T.Quaternion());for(const l of links){l.src.getWorldQuaternion(q);world.copy(rootQ).multiply(q).multiply(l.inverse).multiply(l.rest);l.dst.parent.getWorldQuaternion(parent).invert();l.dst.quaternion.copy(parent.multiply(world));l.dst.updateMatrixWorld(true);}joints.hips.position.copy(hipRest).addScaledVector(nodes.get('pelvis').position.clone().sub(pelvisRest),.85);if(joints.cape)joints.cape.rotation.x=Math.sin(elapsed*8)*.035;model.updateMatrixWorld(true);groundBoots();}
- function reset(){mixer.stopAllAction();current=null;elapsed=0;root.position.set(0,0,0);root.rotation.set(0,0,0);play('Idle_Loop');update(0);}
- reset();return{root,nominal,play,update,reset,get clip(){return current?.getClip().name;}};
+ function update(dt,speed,{grounded=true,yaw=0}={}){elapsed+=dt;const idle=motion.clip==='Idle_Loop';eyeGaze.value.set(idle?Math.sin(elapsed*.85)*.0014:0,idle?Math.sin(elapsed*.51)*.0005:0);const blinkPhase=elapsed%4.3;const blink=blinkPhase>3.7&&blinkPhase<3.88?Math.sin((blinkPhase-3.7)/.18*Math.PI):0;for(const eye of model.userData.eyeGroups||[])eye.scale.y=1-.97*blink;motion.update(dt,speed);source.updateMatrixWorld(true);root.updateMatrixWorld(true);const rootQ=root.getWorldQuaternion(new T.Quaternion());for(const l of links){l.src.getWorldQuaternion(q);world.copy(rootQ).multiply(q).multiply(l.inverse).multiply(l.rest);l.dst.parent.getWorldQuaternion(parent).invert();l.dst.quaternion.copy(parent.multiply(world));l.dst.updateMatrixWorld(true);}joints.hips.position.copy(hipRest).addScaledVector(nodes.get('pelvis').position.clone().sub(pelvisRest),.85);const actualSpeed=speed??nominal[motion.clip]??0;
+ const acceleration=dt>0?(actualSpeed-previousSpeed)/dt:0;
+ const turn=dt>0?Math.atan2(Math.sin(yaw-previousYaw),Math.cos(yaw-previousYaw))/dt:0;
+ const ease=1-Math.exp(-12*dt);
+ pitch+=(T.MathUtils.clamp(acceleration*.006,-.09,.09)*(grounded?1:0)-pitch)*ease;
+ bank+=(T.MathUtils.clamp(-turn*actualSpeed*.012,-.14,.14)*(grounded?1:.3)-bank)*ease;
+ joints.chest.rotation.x+=pitch;joints.chest.rotation.z+=bank;
+ joints.head.rotation.y+=T.MathUtils.clamp(turn*.025,-.10,.10);
+ if(joints.cape){joints.cape.rotation.x=.018*Math.sin(elapsed*(3+actualSpeed))+pitch*.6;joints.cape.rotation.z=bank*-.35;}
+ previousSpeed=actualSpeed;previousYaw=yaw;model.updateMatrixWorld(true);flexBoots();groundBoots(grounded&&motion.clip!=='Jump_Land');}
+ function reset(){motion.reset();elapsed=0;previousSpeed=0;previousYaw=0;pitch=0;bank=0;root.position.set(0,0,0);root.rotation.set(0,0,0);update(0);}
+ reset();return{root,nominal,play,update,reset,get clip(){return motion.clip;},get motionState(){return {...motion.state,pitch,bank};}};
 }
