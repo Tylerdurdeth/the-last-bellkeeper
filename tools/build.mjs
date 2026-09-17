@@ -1,4 +1,6 @@
 import {cp,mkdir,readdir,rm} from 'node:fs/promises';
+// Fail before changing docs if downloaded mesh assets enter the shipping tree.
+for(const file of await readdir('game',{recursive:true}))if(/\.(glb|gltf|fbx|obj|ply|stl)$/i.test(file))throw Error('Jam build forbids mesh file: '+file);
 // docs is generated solely from game; preserve the prior deployment in git history.
 for(const name of await readdir('docs'))await rm('docs/'+name,{recursive:true,force:true});
 await cp('game','docs',{recursive:true,filter:source=>!source.split('/').includes('_verify')});

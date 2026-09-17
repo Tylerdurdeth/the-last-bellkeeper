@@ -16,8 +16,14 @@ Node22 or later. Run `npm ci`, `npm run build`, then `npm run serve`. Open http:
 
 Every modeled object is original Three.js geometry produced through the 404 recipe's reference → three independent candidates → multi-view render → visual selection workflow, followed by documented repairs. Background composition reuses reviewed tree/rock geometry. The rebuild's reference, selection, material and spending records are in `evidence/rebuild/provenance/`. Earlier rejected terrace evidence remains in history and `evidence/geometry/`.
 
-Atlas supplied original hero/woodland references and painted ground/bark/stone textures. Rebuild generation has settled25 credits; lifetime41 including the earlier pilot. Audio currently uses original procedural woodland/water textures, bird chirps and copper resonances. The paid pilot SFX is not shipped because reliable retrieval remains unresolved. Audio listening approval and physical iPhone performance are unverified.
+Atlas supplied original hero/woodland references and painted ground/bark/stone textures. Rebuild generation has settled32 credits; lifetime48 including the earlier pilot. The latest verified Atlas balance is1,952; no new generation was used for the code-built character correction. Audio currently uses original procedural woodland/water textures, bird chirps and copper resonances. The paid pilot SFX is not shipped because reliable retrieval remains unresolved. Audio listening approval and physical iPhone performance are unverified.
 
 Three.js0.180.0 is MIT licensed; the build includes its license. `assetlib.js` and `surfaces.js` originate from the 404 recipe at4effad311c5e137bca316257259fe5bffd6737de under its explicit copy/use instructions.
 
 The scripted known route with all discoveries covers about116 metres in48 seconds; this is a regression test, not a first-time discovery-duration claim. Independent visual and motion reviews still drive refinement. Passing the technical gate does not certify Zelda/Diablo-level artistic quality. The eventual complete adventure remains a separate12–15 minute scope.
+
+## Character studio
+
+[Open the character studio](https://tylerdurdeth.github.io/the-last-bellkeeper/character-lab.html). Three code-built head studies share the original procedural body and CC0 locomotion tracks. Study A is the selected default. Rounded features, integrated nose, swept hair, finer mouth and blinking follow the Atlas R06 reference. The head remains stylized and below the target reference quality. The woodland still uses the previous character while this study is reviewed.
+
+The downloaded mannequin and character meshes introduced in earlier experiments were unsuitable for the jam’s geometry rule. They are now archived under `experiments/character-reference/`, outside both shipping directories. No GLB/GLTF is shipped or loaded. Animation-only JSON contains no geometry. The build rejects mesh files in `game/`; source licenses and motion provenance remain included. This correction does not itself certify final jam eligibility.

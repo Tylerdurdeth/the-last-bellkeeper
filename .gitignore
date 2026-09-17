@@ -34,3 +34,6 @@ evidence/rebuild/**/*.png
 # Character experiments retained locally; selected release evidence is explicitly added.
 evidence/character-lab/candidate-*/
 evidence/character-lab/*.png
+
+# Local character iteration captures.
+evidence/character-lab/code-*/

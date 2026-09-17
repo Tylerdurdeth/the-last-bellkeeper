@@ -87,3 +87,5 @@ Configuration-only Atlas turn stopped at reservation check: UI Last Run0 /15rema
 R06 configuration attempt terminal: assistant inspected graph then failed tool search with “Credit limit reached”; UI 2 spent / 98 remaining. No 3D node or output. Release100 reservation; settle2. Fresh Atlas billing confirms1,952 account balance /48 lifetime spent. Rebuild32settled/0reserved/368remaining of400. This character round spent7 Atlas credits total, including failed configuration. No further retries or generation queued.
 
 Character checkpoint shared Codex account balance1,423.8259, included weekly allowance100%used. This is account-wide, not a measured cost for this turn. User explicitly resumed character work; no new numeric Codex cap supplied. No top-up, purchase, reset or external API charge.
+
+Code-built character correction: no Atlas calls, reservations or purchases. Reused R06 reference. Atlas remains32/400rebuild settled,0reserved,368available; last verified account balance1,952.
