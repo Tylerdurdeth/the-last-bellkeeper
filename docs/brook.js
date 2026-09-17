@@ -12,7 +12,7 @@ export function createBrook(T, waterMesh) {
     shader.vertexShader = shader.vertexShader.replace('#include <common>',
       '#include <common>\nvarying vec2 vBkBrookUV;\nuniform float bkBrookTime;\nuniform float bkBrookMotion;');
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>',
-      '#include <begin_vertex>\nvBkBrookUV = uv;\nfloat bkFlow = bkBrookTime * bkBrookMotion;\ntransformed.y += sin(uv.x * 38.0 - bkFlow * 2.4 + sin(uv.y * 12.0)) * 0.012;');
+      '#include <begin_vertex>\nvBkBrookUV = uv;\nfloat bkFlow = bkBrookTime * bkBrookMotion;\ntransformed.y += sin(uv.x * 38.0 - bkFlow * 3.8 + sin(uv.y * 12.0)) * 0.032;\ntransformed.y += sin(uv.x * 91.0 - bkFlow * 6.2 + uv.y * 18.0) * 0.008;');
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>',
       '#include <common>\nvarying vec2 vBkBrookUV;\nuniform float bkBrookTime;\nuniform float bkBrookMotion;');
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `
@@ -20,18 +20,18 @@ export function createBrook(T, waterMesh) {
       // Long drifting strokes travel along the brook, never screen-space grain.
       float t = bkBrookTime * bkBrookMotion;
       vec2 p = vBkBrookUV * vec2(28., 4.3);
-      float bend = sin(p.x * .55 - t * .38) * .16 + sin(p.x * 1.3 - t * .62) * .035;
-      float ribbons = sin((p.y + bend) * 9.0);
-      float brokenStroke = smoothstep(.15, .80, sin(p.x * 2.2 - t * .9 + sin(p.y * 3.)));
-      float streak = smoothstep(.88, .99, ribbons) * brokenStroke;
-      float broad = .5 + .5 * sin(p.y * 2.6 + sin(p.x * .34 - t * .25) * .6);
-      vec3 painted = mix(vec3(.045,.245,.29), vec3(.11,.40,.42), broad);
-      painted = mix(painted, vec3(.37,.64,.62), streak * .50);
+      float bend = sin(p.x * .55 - t * 1.15) * .16 + sin(p.x * 1.3 - t * 1.8) * .035;
+      float ribbons = sin((p.y + bend) * 9.0 - t * .55);
+      float brokenStroke = smoothstep(.12, .72, sin(p.x * 2.2 - t * 2.1 + sin(p.y * 3.)));
+      float streak = smoothstep(.72, .98, ribbons) * brokenStroke;
+      float broad = .5 + .5 * sin(p.y * 2.6 + sin(p.x * .34 - t * .75) * .6);
+      vec3 painted = mix(vec3(.035,.20,.25), vec3(.10,.46,.48), broad);
+      painted = mix(painted, vec3(.52,.83,.78), streak * .80);
       // Interrupted pale banks establish contact; no continuous rectangular border.
       float bankDistance = min(vBkBrookUV.y, 1. - vBkBrookUV.y) * 4.3;
       float edge = 1. - smoothstep(.025,.13 + .03 * sin(p.x * 1.6 - t * .5),bankDistance);
-      float foam = edge * smoothstep(-.45,.65,sin(p.x * 2.4 - t * .3));
-      diffuseColor.rgb = mix(painted, vec3(.51,.70,.65),foam * .70);
+      float foam = edge * smoothstep(-.45,.65,sin(p.x * 2.4 - t * 1.1));
+      diffuseColor.rgb = mix(painted, vec3(.65,.88,.82),foam * .85);
     `);
   };
   water.customProgramCacheKey = () => 'bellkeeper-brook-painted-v1';
