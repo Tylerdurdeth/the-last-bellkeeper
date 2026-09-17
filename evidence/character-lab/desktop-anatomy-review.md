@@ -7,3 +7,6 @@ Independent agent review identified a straight nape edge, palm-forward rest pose
 Validation: motion blend and negative-frame-time regression, boot deformation, character studio keyboard/emulated touch, real-input acceleration/turn/braking/repeated jumps, and recipe geometry verification. Final geometry: 54,708 triangles; no downloaded meshes. Approved animation clips unchanged. Wrist correction applies only to the new anatomical hands. Atlas facial texture retained. No new Atlas spending.
 
 Selected final evidence is in desktop-anatomy-final/. Full local iteration captures remain excluded from the shipped payload.
+
+## Handedness correction
+User identified that both hands had mirrored finger layouts. Corrected the thumb side and mirrored the index-to-pinky order in the geometry template; palm, wrist pose, animation, and all other appearance remain unchanged. Fresh close-up and walking/running stills inspected. Studio keyboard/touch and rendering checks pass.

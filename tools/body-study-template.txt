@@ -62,8 +62,8 @@ export default function(THREE) {
    g.computeVertexNormals();mesh(hand,g,skin).receiveShadow=false;const tip=points.at(-1);ell(hand,skin,...tip,radius*.70,radius*.70,radius*.70).receiveShadow=false;
   }
   const lengths=[.042,.048,.045,.035];
-  for(let i=0;i<4;i++){const x=side*(-.0225+i*.015),length=lengths[i],base=-.046+(i===3?.004:0);digit([[x,base,0],[x,base-length*.45,.003],[x,base-length*.76,.016],[x-side*.002,base-length*.90,.028]],.0082-(i===3?.001:0));}
-  digit([[-side*.025,-.015,.001],[-side*.040,-.028,.009],[-side*.040,-.045,.018],[-side*.034,-.052,.024]],.010);
+  for(let i=0;i<4;i++){const x=-side*(-.0225+i*.015),length=lengths[i],base=-.046+(i===3?.004:0);digit([[x,base,0],[x,base-length*.45,.003],[x,base-length*.76,.016],[x+side*.002,base-length*.90,.028]],.0082-(i===3?.001:0));}
+  digit([[side*.025,-.015,.001],[side*.040,-.028,.009],[side*.040,-.045,.018],[side*.034,-.052,.024]],.010);
   const coat=pivot(side<0?'coatLeft':'coatRight',hips,side*.064,.050,-.041);
   profile(coat,coral,[[-.075,0],[.059,.015],[.095,-.075],[.090,-.173],[-.071,-.157]],0,0,0,.014).rotation.y=side*.21;
   stroke(coat,lining,[[-.063,-.150,.015],[.030,-.159,.015],[.084,-.164,.015]],.002);
