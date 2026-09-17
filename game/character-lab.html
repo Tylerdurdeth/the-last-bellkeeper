@@ -1,14 +1,16 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Bellkeeper · Character studio</title><link rel="icon" href="data:,"><link rel="stylesheet" href="./character-lab.css"><script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script><body>
 <canvas id="stage" aria-label="Character on a plain studio floor"></canvas>
-<header><span>BELLKEEPER / CHARACTER STUDIO</span><h1>Character & motion</h1><p>Current character baseline. No scenery, quests or effects.</p></header>
+<header><span>BELLKEEPER / CHARACTER STUDIO</span><h1>Character & motion</h1><p>Compare authored motion with the original baseline.</p></header>
 <section id="settings" aria-label="Studio controls">
-<label>Movement <select id="clip"><option value="idle">Idle</option><option value="walk">Walk</option><option value="run">Run</option><option value="jump">Jump & land</option><option value="turn">Run & turn</option><option value="capture">Catch</option><option value="release">Release</option><option value="free">Play freely</option></select></label>
+<label>Source <select id="source"><option value="authored">CC0 motion rig</option><option value="baseline">Old Bellkeeper</option></select></label>
+<p id="sourceNote" class="note">Quaternius mannequin: motion reference, not the final character design.</p>
+<label>Movement <select id="clip"><option value="idle">Idle</option><option value="walk">Walk</option><option value="jog">Jog</option><option value="run">Sprint / run</option><option value="jump">Jump & land</option><option value="turn">Run & turn</option><option value="capture">Catch</option><option value="release">Release</option><option value="free">Play freely</option></select></label>
 <label>View <select id="view"><option value="three">Three-quarter</option><option value="front">Front</option><option value="side">Side</option><option value="back">Back</option><option value="face">Face close-up</option></select></label>
 <label>Orbit <input id="orbit" type="range" min="-180" max="180" value="25"></label>
 <label>Zoom <input id="zoom" type="range" min="0.7" max="1.6" step="0.05" value="1"></label>
 <label>Speed <select id="rate"><option value="1">Normal</option><option value="0.5">½ speed</option><option value="0.25">¼ speed</option></select></label>
 <div class="buttons"><button id="freeze" aria-pressed="false">Freeze</button><button id="step">Step frame</button><button id="reset">Reset</button></div>
-<p id="status" role="status">Loading character…</p><p class="note">Loops isolate poses in place. Play freely checks real movement and foot contact. WASD / arrows · Shift to run · J to jump.</p><a href="./">Return to woodland</a>
+<p id="status" role="status">Loading character…</p><p class="note">Loops isolate poses in place. Play freely checks real movement and foot contact. WASD / arrows · Shift to run · J to jump.</p><a href="./">Return to woodland</a><a href="https://quaternius.itch.io/universal-animation-library" target="_blank" rel="noopener">Animations: Quaternius · CC0</a>
 </section>
 <div id="play" hidden><div id="stick" aria-label="Movement joystick"><div id="knob"></div></div><button id="jump">Jump</button><button id="run" aria-pressed="false">Run</button></div>
 <script type="module" src="./character-lab.js"></script></body></html>

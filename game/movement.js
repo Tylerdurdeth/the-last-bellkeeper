@@ -2,7 +2,7 @@
 export function createMovement(THREE, {
   start = [0, 0, 0], sampleGround = () => 0, blocked = () => false,
   stickElement, jumpButton, runButton,
-  inputTarget = globalThis.window, jumpKey = 'KeyJ',
+  inputTarget = globalThis.window, jumpKey = 'KeyJ', walkSpeed = 2.2, runSpeed = 4.5,
 } = {}) {
   const position = new THREE.Vector3(...start), velocity = new THREE.Vector3();
   const checkpoint = position.clone(), keys = new Set(), listeners = [];
@@ -70,7 +70,7 @@ export function createMovement(THREE, {
     const y = -stickY + (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
     const rawMagnitude = Math.hypot(x, y), magnitude = Math.min(1, rawMagnitude);
     const touch = stickId !== null, running = runToggle || keys.has('ShiftLeft') || keys.has('ShiftRight');
-    const maxSpeed = actionSlow ? 1.1 : running || touch ? 4.5 : 2.2;
+    const maxSpeed = actionSlow ? 1.1 : running || touch ? runSpeed : walkSpeed;
     const intent = magnitude > .1;
     const scale = intent ? maxSpeed * magnitude / rawMagnitude : 0;
     const tx = (.788 * x - .615 * y) * scale, tz = (-.615 * x - .788 * y) * scale;

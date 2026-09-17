@@ -3,7 +3,12 @@ const b=await puppeteer.launch({headless:true});const p=await b.newPage();const 
 try{
  await p.setViewport({width:1280,height:800});await p.goto(process.argv[2]||'http://127.0.0.1:4173/the-last-bellkeeper/character-lab.html');await p.waitForFunction(()=>window.__LAB__);
  await p.screenshot({path:'evidence/character-lab/desktop.png'});
- for(const clip of ['walk','run','jump','turn','capture','release']){await p.select('#clip',clip);await sleep(120);assert.equal(await p.evaluate(()=>__LAB__.clip),clip);}
+ assert.equal(await p.evaluate(()=>__LAB__.source),'authored');
+ for(const clip of ['walk','jog','run','jump','turn']){await p.select('#clip',clip);await sleep(120);assert.equal(await p.evaluate(()=>__LAB__.clip),clip);}
+ await p.select('#clip','walk');await sleep(500);assert.equal(await p.evaluate(()=>__LAB__.authoredClip),'Walk_Loop');await p.screenshot({path:'evidence/character-lab/authored-walk.png'});
+ await p.select('#clip','run');await sleep(500);assert.equal(await p.evaluate(()=>__LAB__.authoredClip),'Sprint_Loop');await p.screenshot({path:'evidence/character-lab/authored-run.png'});
+ await p.select('#source','baseline');for(const mode of ['capture','release']){await p.select('#clip',mode);await sleep(80);assert.equal(await p.evaluate(()=>__LAB__.clip),mode);}
+ await p.select('#source','authored');await p.waitForFunction(()=>__LAB__.source==='authored');assert.equal(await p.evaluate(()=>__LAB__.source),'authored');
  await p.click('#freeze');await sleep(80);const t=await p.evaluate(()=>__LAB__.time);await sleep(100);assert.equal(await p.evaluate(()=>__LAB__.time),t);await p.click('#step');await sleep(40);assert(Math.abs((await p.evaluate(()=>__LAB__.time))-t-1/60)<.0001);
  await p.click('#freeze');await p.select('#clip','free');await p.keyboard.down('KeyW');await sleep(350);await p.keyboard.up('KeyW');assert(Math.hypot(...(await p.evaluate(()=>__LAB__.position)))>.1);
  await p.setViewport({width:390,height:844,isMobile:true,hasTouch:true});await p.waitForFunction(()=>window.__LAB__);await p.select('#clip','free');

@@ -7,3 +7,7 @@ for(const file of ['three.module.js','three.core.js'])await cp('node_modules/thr
 await cp('node_modules/three/examples/jsm/utils/BufferGeometryUtils.js','docs/vendor/BufferGeometryUtils.js');
 await cp('node_modules/three/LICENSE','docs/vendor/THREE-LICENSE.txt');
 console.log('Built self-contained docs/');
+
+await mkdir("docs/vendor/loaders",{recursive:true});await mkdir("docs/vendor/utils",{recursive:true});
+await cp("node_modules/three/examples/jsm/loaders/GLTFLoader.js","docs/vendor/loaders/GLTFLoader.js");
+await cp("node_modules/three/examples/jsm/utils/BufferGeometryUtils.js","docs/vendor/utils/BufferGeometryUtils.js");
