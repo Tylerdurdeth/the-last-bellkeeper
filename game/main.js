@@ -42,7 +42,11 @@ function action(){if(!state.started||state.paused||state.action)return;if(!conte
 $('#startb').onclick=start;$('#action').onclick=action;$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>pause(false);
 $('#sound').onclick=()=>{state.muted=!state.muted;soundscape.setMuted(state.muted);localStorage.setItem('bellkeeper-muted',state.muted?'1':'0');updateUI();};$('#motion').onclick=()=>{state.gentle=!state.gentle;localStorage.setItem('bellkeeper-gentle',state.gentle?'1':'0');updateUI();};
 $('#reset').onclick=()=>{Object.assign(state,{charged:false,awakened:false,restored:false,complete:false,porchRead:false,recoveryUntil:0,action:null,actionCallback:null});state.keepsakes.clear();visited.clear();movement.reset(START);animator.reset();travel=0;pause(false);updateUI();caption('Another morning. The woods are listening.',4);};
-addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(!e.repeat)action();}if(e.code==='Escape')pause(!state.paused);});addEventListener('blur',()=>{if(state.started)pause(true);});
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(!e.repeat)action();}if(e.code==='Escape')pause(!state.paused);});// Touch browsers can blur the window during native gestures while still visible.
+// Actual backgrounding is handled by visibilitychange on every device.
+addEventListener('blur',()=>{if(!matchMedia('(any-pointer: coarse)').matches&&state.started)pause(true);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.started)pause(true);});
+for(const id of ['world','controls'])$('#'+id).addEventListener('contextmenu',e=>e.preventDefault());
 // Wind ribbons and motes are original procedural effects rather than substitute scenery.
 function ribbon(color){const g=new T.BufferGeometry(),p=new Float32Array(48*6),idx=[];for(let i=0;i<47;i++){const n=i*2;idx.push(n,n+1,n+2,n+1,n+3,n+2);}g.setAttribute('position',new T.BufferAttribute(p,3));g.setIndex(idx);const o=new T.Mesh(g,new T.MeshBasicMaterial({color,transparent:true,opacity:.8,side:T.DoubleSide,depthWrite:false}));o.frustumCulled=false;scene.add(o);return o;}
 const winds=[ribbon(0xffedb0),ribbon(0x84ebcf),ribbon(0xdae4a6)],held=ribbon(0x92e4cd),transfer=ribbon(0xffefb5);

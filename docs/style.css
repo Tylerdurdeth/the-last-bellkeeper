@@ -5,3 +5,7 @@
 
 #jump,#run{position:absolute;bottom:36px;background:#183e3de0;color:#fff0c9;padding:13px 20px}#jump{right:232px}#run{right:332px}#jump span,#run span{display:block;font:9px system-ui;opacity:.6;margin-top:6px}#run[aria-pressed=true]{border-color:#8ae9c0;background:#3c7160}#action:disabled{opacity:.55}#hud{pointer-events:none}#pause{pointer-events:auto}#caption:empty{display:none}#hint{color:#fff0c9;text-shadow:0 1px 4px #183e3d}#targetMarker{display:none!important}
 @media(pointer:coarse),(max-width:700px){#jump{right:24px;bottom:120px;padding:13px 24px}#run{display:none}#action{bottom:38px;max-width:170px;min-height:62px}#jump span{display:none}#caption{bottom:225px}.panel{bottom:190px}#charge{bottom:170px}#hud .eyebrow{font-size:9px}h2{font-size:19px}}
+
+/* Game gestures must not start native selection or long-press callouts. */
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+#controls,#controls button{touch-action:none}
