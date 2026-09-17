@@ -77,3 +77,13 @@ After publishing029722e, the included weekly meter reports100%used; account Code
 User explicitly authorized up to500existing Codex credits for continued Bellkeeper work. Included allowance100%; first fresh balance2491.0261. Conservatively count against last confirmed2500balance, leaving491.0261of this authorization and a stop boundary at2000. Shared account movements cannot be attributed exactly to this task. No purchases, API billing, top-ups or resets authorized. Atlas remains a separate25/400rebuild ledger.
 
 Final continuation checkpoint: shared Codex balance2008.51255, approximately491.49of authorized500 consumed against conservative2500baseline before final release bookkeeping. Stop further iteration to preserve ceiling; no new paid work queued. Atlas unchanged25/400,0reserved. Runtime69eaad2 published with bounded improvements, aesthetic objective not complete.
+
+17September character redesign: user authorizes continued iteration and Atlas spending. Fresh Atlas UI balance1959; retain existing rebuild cap400 (25settled,375available). Reserve36 maximum for R06 character reference, same1K Gemini3.1 Flash Lite Image node, seed43. One execution; reconcile before another. No purchases or overage.
+
+R06 completed:5credits node Last Run, cached stale-prompt attempt0. Output retrieved and inspected (evidence/character-lab/reference/atlas-r06.png); release31reservation. Rebuild30settled/0reserved/370remaining. Reserve15maximum for one Atlas assistant configuration-only turn: identify and configure image-to-3D path without executing generation nodes; no automatic retry.
+
+Configuration-only Atlas turn stopped at reservation check: UI Last Run0 /15remaining, no node created. Release15. Authorize a new, distinct configuration attempt with100max assistant cap to accommodate upfront tool reservation (historical assistant reserves67–73 but settles~1). No generation nodes enabled. Reserve100; rebuild30settled/100reserved/270unreserved.
+
+R06 configuration attempt terminal: assistant inspected graph then failed tool search with “Credit limit reached”; UI 2 spent / 98 remaining. No 3D node or output. Release100 reservation; settle2. Fresh Atlas billing confirms1,952 account balance /48 lifetime spent. Rebuild32settled/0reserved/368remaining of400. This character round spent7 Atlas credits total, including failed configuration. No further retries or generation queued.
+
+Character checkpoint shared Codex account balance1,423.8259, included weekly allowance100%used. This is account-wide, not a measured cost for this turn. User explicitly resumed character work; no new numeric Codex cap supplied. No top-up, purchase, reset or external API charge.

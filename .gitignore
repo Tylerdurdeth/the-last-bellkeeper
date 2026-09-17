@@ -30,3 +30,7 @@ evidence/rebuild/material-study/C/
 
 # Full diagnostic PNG sequences remain local; selected review/release frames are force-added.
 evidence/rebuild/**/*.png
+
+# Character experiments retained locally; selected release evidence is explicitly added.
+evidence/character-lab/candidate-*/
+evidence/character-lab/*.png
