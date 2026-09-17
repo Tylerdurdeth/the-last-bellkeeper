@@ -52,3 +52,6 @@ evidence/character-lab/body-*/
 
 # Local motion review frames; selected frames and reports are versioned.
 evidence/character-lab/motion-pass/*.png
+
+# Desktop anatomy iterations; selected evidence is versioned explicitly.
+evidence/character-lab/desktop-anatomy-*/

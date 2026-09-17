@@ -15,4 +15,6 @@ assert(blend.state.weights.Idle_Loop>.999,'interrupted blends must settle withou
 blend.play('Jump_Land',{once:true,rate:2.2});tick(.65);assert.equal(blend.state.phase,1);
 blend.play('Idle_Loop');tick(.3);blend.play('Jump_Land',{once:true,rate:3});assert.equal(blend.state.phase,0,'a later landing must restart');tick(.1);assert(blend.state.phase>.2);
 blend.reset();tick(.1,0);assert.equal(blend.clip,'Idle_Loop');
+blend.play('Jump_Land',{once:true,rate:2.2});blend.update(-.01);blend.update(Number.NaN);
+assert(Object.values(blend.state.weights).every(w=>Number.isFinite(w)&&w>=0&&w<=1),'invalid frame times must not produce negative weights');
 console.log('PASS normalized weights, phase continuity, interrupted blends, landing completion and replay');

@@ -57,13 +57,14 @@ export async function loadCodeCharacter(build){
  const nominal={Walk_Loop:.83,Jog_Fwd_Loop:4.55,Sprint_Loop:7.0};
  const motion=createMotionBlend(T,source,data.clips,nominal),play=motion.play;
  let elapsed=0,previousSpeed=0,previousYaw=0,pitch=0,bank=0;
- const q=new T.Quaternion(),parent=new T.Quaternion(),world=new T.Quaternion();
+ const q=new T.Quaternion(),parent=new T.Quaternion(),world=new T.Quaternion(),relaxedWrist=new T.Quaternion();
  function update(dt,speed,{grounded=true,yaw=0}={}){elapsed+=dt;const idle=motion.clip==='Idle_Loop';eyeGaze.value.set(idle?Math.sin(elapsed*.85)*.0014:0,idle?Math.sin(elapsed*.51)*.0005:0);const blinkPhase=elapsed%4.3;const blink=blinkPhase>3.7&&blinkPhase<3.88?Math.sin((blinkPhase-3.7)/.18*Math.PI):0;for(const eye of model.userData.eyeGroups||[])eye.scale.y=1-.97*blink;motion.update(dt,speed);source.updateMatrixWorld(true);root.updateMatrixWorld(true);const rootQ=root.getWorldQuaternion(new T.Quaternion());for(const l of links){l.src.getWorldQuaternion(q);world.copy(rootQ).multiply(q).multiply(l.inverse).multiply(l.rest);l.dst.parent.getWorldQuaternion(parent).invert();l.dst.quaternion.copy(parent.multiply(world));l.dst.updateMatrixWorld(true);}joints.hips.position.copy(hipRest).addScaledVector(nodes.get('pelvis').position.clone().sub(pelvisRest),.85);const actualSpeed=speed??nominal[motion.clip]??0;
  const acceleration=dt>0?(actualSpeed-previousSpeed)/dt:0;
  const turn=dt>0?Math.atan2(Math.sin(yaw-previousYaw),Math.cos(yaw-previousYaw))/dt:0;
  const ease=1-Math.exp(-12*dt);
  pitch+=(T.MathUtils.clamp(acceleration*.006,-.09,.09)*(grounded?1:0)-pitch)*ease;
  bank+=(T.MathUtils.clamp(-turn*actualSpeed*.012,-.14,.14)*(grounded?1:.3)-bank)*ease;
+ if(model.userData.anatomicalHands)for(const side of ['left','right']){relaxedWrist.setFromAxisAngle(new T.Vector3(0,1,0),side==='left'?1.35:-1.35);joints[side+'Hand'].quaternion.slerp(relaxedWrist,.85);}
  joints.chest.rotation.x+=pitch;joints.chest.rotation.z+=bank;
  joints.head.rotation.y+=T.MathUtils.clamp(turn*.025,-.10,.10);
  if(joints.cape){joints.cape.rotation.x=.018*Math.sin(elapsed*(3+actualSpeed))+pitch*.6;joints.cape.rotation.z=bank*-.35;}

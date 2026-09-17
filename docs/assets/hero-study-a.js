@@ -1,5 +1,5 @@
 export default function(THREE) {
- const root=new THREE.Group(), joints={};root.userData.joints=joints;root.userData.keepHierarchy=true;
+ const root=new THREE.Group(), joints={};root.userData.joints=joints;root.userData.keepHierarchy=true;root.userData.anatomicalHands=true;
  const mat=(c,n='fabric',r=.86)=>Object.assign(new THREE.MeshStandardMaterial({color:c,roughness:r}),{name:n});
  const skin=mat(0xd7a27f), coral=mat(0xc95845), lining=mat(0x81393d), cream=mat(0xebe0c5), teal=mat(0x244f52), hair=mat(0x543321), hairLight=mat(0x72472f), leather=mat(0x625249), eye=mat(0x253333), white=mat(0xf6ecdb), copper=mat(0xb88754,'metal',.45), gem=mat(0x4ea99f,'metal',.3);
  const mesh=(p,g,m,x=0,y=0,z=0,sx=1,sy=1,sz=1)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=o.receiveShadow=true;p.add(o);return o;};
@@ -17,13 +17,13 @@ export default function(THREE) {
  const hips=pivot('hips',root,0,.78,0);
  ell(hips,teal,0,0,-.005,.126,.105,.076);
  garment(hips,coral,[[.022,.111,.072],[.075,.122,.078],[.16,.137,.088],[.25,.153,.092],[.30,.164,.085],[.365,.098,.060]],.004).userData.chestPiece=true;
- taper(hips,skin,0,.391,-.003,.045,.068,.070,.80,10);
+
  garment(hips,leather,[[.024,.122,.085],[.057,.122,.085]],0);
  // Framed buckle shows the belt through its centre.
  for(const side of [-1,1])box(hips,copper,.009+side*.024,.041,.091,.006,.035,.009);
  for(const y of [.026,.056])box(hips,copper,.009,y,.091,.050,.006,.009);
  box(hips,copper,.009,.041,.096,.030,.004,.006);
- const head=pivot('head',hips,0,.394,0);
+ const head=pivot('head',hips,0,.371,0);head.scale.setScalar(.80);
 
  // Continuous face with a cheek/jaw profile; all contours are authored functions.
  const faceProfile=[[.012,0,0],[.027,.017,.044],[.038,.033,.065],[.069,.073,.083],[.100,.089,.086],[.139,.107,.092],[.170,.102,.093],[.207,.099,.094],[.251,.094,.084],[.285,.060,.058],[.300,0,0]];
@@ -33,7 +33,10 @@ export default function(THREE) {
  const surface=(x,y)=>radius(y,2)*Math.pow(Math.max(.001,1-(x/Math.max(.001,radius(y,1)))**2),.30)+features(x,y);
  const faceGeo=new THREE.SphereGeometry(1,96,80),fp=faceGeo.attributes.position;
  for(let i=0;i<fp.count;i++){const ny=fp.getY(i),y=.156+ny*.144,s=Math.sqrt(Math.max(.000001,1-ny*ny)),x=fp.getX(i)/s*radius(y,1),front=fp.getZ(i)>0;const z=front?surface(x,y):fp.getZ(i)/s*radius(y,2),rearLift=front?0:.060*(1-THREE.MathUtils.smoothstep(y,.012,.150))*THREE.MathUtils.smoothstep(-z,0,.04);fp.setXYZ(i,x,y+rearLift,z);}faceGeo.computeVertexNormals();const colors=[];for(let i=0;i<fp.count;i++){const x=fp.getX(i),y=fp.getY(i),z=fp.getZ(i),warm=Math.exp(-(((Math.abs(x)-.060)/.033)**2)-(((y-.137)/.025)**2))*(z>0?1:0),shadow=.10*Math.exp(-((x/.017)**2)-(((y-.114)/.008)**2))*(z>0?1:0);colors.push(1-shadow,.99-.07*warm-shadow,.98-.08*warm-shadow);}faceGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));const faceMaterial=skin.clone();faceMaterial.vertexColors=true;faceMaterial.name='faceSkin';const face=mesh(head,faceGeo,faceMaterial);face.receiveShadow=false;
- ell(head,skin,0,.035,-.020,.045,.067,.045);
+ // One narrow neck follows the jaw into the skull; no overlapping rear ellipsoid.
+ const neckGeo=new THREE.CylinderGeometry(1,1,1,32,12),np=neckGeo.attributes.position;
+ for(let i=0;i<np.count;i++){const t=np.getY(i)+.5,y=-.060+t*.155,x=np.getX(i),z=np.getZ(i),rx=.034+.014*(1-t)**3+.010*t**4,rz=.027+.008*(1-t)**3+.007*t**4;np.setXYZ(i,x*rx,y,z*rz-.025);}
+ neckGeo.computeVertexNormals();mesh(head,neckGeo,skin).receiveShadow=false;
  for(const side of [-1,1]){
   const ear=ell(head,skin,side*.109,.151,-.004,.017,.029,.012);ear.rotation.z=-side*.22;
   ell(head,mat(0xb97558),side*.112,.150,.006,.008,.017,.003);
@@ -50,40 +53,39 @@ export default function(THREE) {
  const mouth=[];for(let i=0;i<=24;i++){const x=-.025+i*.05/24,y=seam(x);mouth.push([x,y,surface(x,y)+.0012]);}stroke(head,mat(0x925b49),mouth,.0008).userData.faceDetail=true;
  function lipPlane(upper){const g=new THREE.PlaneGeometry(.05,1,32,4),p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),u=p.getY(i)+.5,w=Math.pow(Math.max(0,1-(x/.025)**2),.8),height=upper?.0035:.0045,y=seam(x)+(upper?1:-1)*height*w*u;const bulge=.0015*Math.sin(u*Math.PI)*w;p.setXYZ(i,x,y,surface(x,y)+.0007+bulge);}g.computeVertexNormals();mesh(head,g,mat(upper?0xc28b70:0xdba786)).userData.faceDetail=true;}lipPlane(true);lipPlane(false);
 
- // Each lock has its own swept ridge, tapered tip and silhouette. Close cropped underlayer bridges the partings.
- const hairShadow=mat(0x492c20),hairMid=mat(0x5d3826),hairSun=mat(0x744c30);
- // Subtle crown lift and side fullness, fading out before the fringe tips and nape.
- function hairVolume(g){const p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),w=THREE.MathUtils.smoothstep(y,.17,.29)*(1-THREE.MathUtils.smoothstep(z,.025,.075));p.setXYZ(i,x*(1+.07*w),y+.012*w,(z+.014)*(1+.05*w)-.014);}}
- function strand(control,width,thickness,material){
-  const path=new THREE.CatmullRomCurve3(control.map(p=>new THREE.Vector3(...p))),g=new THREE.PlaneGeometry(1,1,8,20),p=g.attributes.position;let previousAcross=null;
-  for(let row=0;row<=20;row++){const t=row/20,c=path.getPoint(t),tangent=path.getTangent(t).normalize(),normal=new THREE.Vector3(c.x*.8,(c.y-.18)*.65,c.z+.015).normalize(),across=new THREE.Vector3().crossVectors(tangent,normal).normalize();if(previousAcross){if(across.dot(previousAcross)<0)across.negate();across.lerp(previousAcross,.35).normalize();}previousAcross=across.clone();
-   const taper=Math.pow(Math.max(0,1-t),.65)*(1+.12*Math.sin(t*Math.PI))*THREE.MathUtils.smoothstep(t,0,.09);
-   for(let col=0;col<=8;col++){const v=col/4-1,ridge=Math.pow(Math.max(0,1-v*v),.75)*thickness*.25*taper;const pos=c.clone().addScaledVector(across,v*width*taper).addScaledVector(normal,ridge);p.setXYZ(row*9+col,pos.x,pos.y,pos.z);}
-  }hairVolume(g);g.computeVertexNormals();const c=[];for(let row=0;row<=20;row++)for(let col=0;col<=8;col++){const t=row/20,v=col/4-1,streak=.018*Math.sin(v*17+t*3),tone=.94+.06*(1-v*v)+streak;c.push(tone,tone*.985,tone*.95);}g.setAttribute('color',new THREE.Float32BufferAttribute(c,3));const m=material.clone();m.side=THREE.DoubleSide;m.vertexColors=true;mesh(head,g,m).receiveShadow=false;
+ // A medium-length swept cut: broad closed locks, airy crown and a loose nape.
+ const hairShadow=mat(0x503326),hairMid=mat(0x63412d),hairSun=mat(0x735039);
+ const scalp=new THREE.SphereGeometry(1,40,24,0,Math.PI*2,0,Math.PI*.70),sp=scalp.attributes.position;
+ for(let j=0;j<=24;j++)for(let i=0;i<=40;i++){const a=i/40*Math.PI*2,t=j/24*Math.PI*(.65-.26*Math.max(0,Math.sin(a))+.018*Math.sin(a*7)),sn=Math.sin(t);sp.setXYZ(j*41+i,-Math.cos(a)*sn*.116,.179+Math.cos(t)*.145,Math.sin(a)*sn*.109-.020);}
+ scalp.computeVertexNormals();mesh(head,scalp,hairShadow).receiveShadow=false;
+ function hairLock(points,width,depth,material){
+  const path=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),profile=[[-1,0],[-.60,.68],[0,1],[.60,.68],[1,0],[.55,-.30],[0,-.40],[-.55,-.30]],verts=[],indices=[];let lastAcross=null;
+  for(let row=0;row<=16;row++){const t=row/16,c=path.getPoint(t),tangent=path.getTangent(t).normalize(),out=new THREE.Vector3(c.x*.65,(c.y-.17)*.55,c.z+.015).normalize(),across=new THREE.Vector3().crossVectors(tangent,out).normalize();if(lastAcross&&across.dot(lastAcross)<0)across.negate();lastAcross=across.clone();
+   const taper=(.70+.40*Math.sin(t*Math.PI))*Math.pow(1-t,.65);
+   for(const [a,b]of profile){const p=c.clone().addScaledVector(across,a*width*taper).addScaledVector(out,b*depth*taper);verts.push(p.x,p.y,p.z);}
+  }
+  for(let row=0;row<16;row++)for(let col=0;col<8;col++){const a=row*8+col,b=row*8+(col+1)%8,c=a+8,d=b+8;indices.push(a,c,b,b,c,d);}
+  for(let i=1;i<7;i++)indices.push(0,i,i+1);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setIndex(indices);g.computeVertexNormals();const m=material.clone();m.side=THREE.DoubleSide;mesh(head,g,m).receiveShadow=false;
  }
- // Occipital layers overlap toward a broken nape, never ending in a straight rim.
- for(let i=0;i<11;i++){const a=-Math.PI*.82+i/10*Math.PI*1.64,s=Math.sin(a),c=-Math.cos(a);strand([[s*.026,.285,c*.025-.018],[s*.083,.264,c*.081-.015],[s*.111,.204,c*.095-.012],[s*(.113+(i%3)*.005),.080+.055*s*s+(c>0?.020:0)+(i%3)*.005,c*.077-.017]],.034,.009,i%3===0?hairMid:hairShadow);}
- // Crown locks follow the skull's dome from a shared off-centre part.
- for(let i=0;i<12;i++){const a=i/12*Math.PI*2,sn=Math.sin(a),cs=Math.cos(a),height=.311+(i%3)*.002;strand([[-.018,.306,-.016],[sn*.059-.01,height,cs*.045-.014],[sn*.103,.263,cs*.082-.012],[sn*.116,.200+(cs>0?.040:0),cs*.096-.012]],.033,.012,i%4===1?hairSun:hairMid);}
- // A close cropped underlayer is occluded by the longer locks except at their partings.
- const under=new THREE.SphereGeometry(1,40,24,0,Math.PI*2,0,Math.PI*.72),up=under.attributes.position;
- for(let j=0;j<=24;j++)for(let i=0;i<=40;i++){const a=i/40*Math.PI*2,t=j/24*Math.PI*(.72-.31*Math.max(0,Math.sin(a))+.018*Math.sin(a*7)),sn=Math.sin(t);up.setXYZ(j*41+i,-Math.cos(a)*sn*.110,.181+Math.cos(t)*.127,Math.sin(a)*sn*.096-.014);}under.computeVertexNormals();mesh(head,under,hairMid).receiveShadow=false;
- for(let i=0;i<9;i++){const a=-Math.PI*.65+i/8*Math.PI*1.30,sn=Math.sin(a),cs=-Math.cos(a);strand([[sn*.080,.220,cs*.085-.014],[sn*.107,.198,cs*.101-.013],[sn*.114,.156,cs*.096-.015],[Math.sin(a+.12)*.113,.061+.055*sn*sn+(cs>0?.024:0)+(i%3)*.010,-Math.cos(a+.12)*.071-.020]],.029+(i%2)*.004,.009,i%3?hairMid:hairShadow);}
- // Fine diagonal locks bridge the broad rear masses, following the crown's sweep.
- for(let i=0;i<7;i++){const x=-.077+i*.024,z=-Math.sqrt(Math.max(.1,1-(x/.12)**2))*.106;strand([[x-.016,.254,z+.015],[x-.009,.223,z-.015],[x+.005,.186,z-.018],[x+.022,.126+(i%3)*.011,z+.005]],.012+(i%2)*.002,.004,i%3===0?hairSun:hairMid);}
- // Unequal fringe lengths expose the brows and split naturally across the forehead.
- strand([[.035,.294,.015],[.005,.300,.062],[-.035,.259,.102],[-.030,.202,.107]],.026,.010,hairMid);
- strand([[.019,.295,.025],[-.016,.286,.082],[-.064,.237,.105],[-.078,.178,.091]],.024,.009,hairMid);
- strand([[-.022,.288,.025],[-.061,.273,.067],[-.093,.221,.078],[-.113,.158,.065]],.025,.009,hairShadow);
- strand([[.051,.291,.015],[.052,.271,.074],[.059,.240,.108],[.039,.202,.108]],.024,.009,hairSun);
- strand([[.074,.280,-.008],[.099,.251,.037],[.111,.206,.055],[.095,.153,.063]],.024,.008,hairMid);
- strand([[-.063,.278,-.019],[-.102,.241,.010],[-.117,.188,.027],[-.121,.144,.017]],.022,.008,hairMid);
- strand([[.008,.292,.029],[-.018,.279,.087],[-.040,.246,.113],[-.047,.213,.110]],.012,.005,hairSun);
- strand([[-.046,.276,.028],[-.080,.247,.071],[-.099,.215,.084],[-.118,.186,.078]],.014,.006,hairMid);
- strand([[.072,.274,.003],[.094,.246,.050],[.115,.215,.064],[.123,.183,.058]],.013,.006,hairSun);
- // Small flyaways change the outer contour without becoming a spiky helmet.
- strand([[-.015,.293,-.010],[-.034,.310,.004],[-.054,.318,.011],[-.071,.313,.008]],.016,.006,hairMid);
- strand([[.038,.287,-.041],[.065,.302,-.044],[.084,.298,-.057],[.096,.288,-.069]],.017,.006,hairShadow);
+ // Crown follows an off-centre sweep rather than radial spaghetti strands.
+ for(let i=0;i<9;i++){const a=-Math.PI*.85+i/8*Math.PI*1.7,s=Math.sin(a),c=-Math.cos(a);
+  hairLock([[-.025,.304,-.020],[s*.064-.015,.328,c*.052-.020],[s*.112,.275,c*.103-.024],[s*.134,.174+(i%3)*.008,c*.120-.028]],.039,.018,i%3===0?hairSun:hairMid);
+ }
+ // Longer rear layers flare softly away from the neck instead of ending in a hard rim.
+ for(let i=0;i<7;i++){const a=-1.1+i/6*2.2,s=Math.sin(a),c=-Math.cos(a);
+  hairLock([[s*.082,.260,c*.084-.020],[s*.117,.211,c*.125-.022],[s*.132,.139,c*.130-.025],[s*.142,.070+(i%3)*.009,c*.143-.022]],.033,.015,i%3===1?hairSun:hairMid);
+ }
+ // Three broad bangs leave a clear eye line, with unequal ends and space underneath.
+ hairLock([[.043,.308,.025],[.010,.325,.080],[-.040,.275,.125],[-.081,.197,.104]],.036,.017,hairMid);
+ hairLock([[.004,.309,.035],[-.054,.292,.103],[-.091,.223,.106],[-.112,.139,.085]],.035,.015,hairMid);
+ hairLock([[.059,.303,.022],[.079,.282,.102],[.078,.236,.126],[.046,.191,.109]],.029,.016,hairSun);
+ // Cheek-framing side pieces: wider at the temple, light and tapered below the ear.
+ for(const side of [-1,1]){
+  hairLock([[side*.090,.281,.015],[side*.126,.227,.049],[side*.139,.159,.038],[side*.125,.074,.046]],.031,.016,side<0?hairShadow:hairMid);
+  hairLock([[side*.091,.271,-.042],[side*.134,.222,-.041],[side*.143,.154,-.054],[side*.156,.095,-.080]],.026,.013,hairMid);
+ }
+ hairLock([[-.031,.309,-.020],[-.071,.337,-.010],[-.109,.322,.004],[-.126,.298,.010]],.024,.011,hairMid);
  root.userData.faceStudy=true;
 
 
@@ -111,18 +113,19 @@ export default function(THREE) {
   garment(fore,leather,[[-.187,.035,.033],[-.138,.040,.037]],0);
   stroke(fore,mat(0xa48b68),[[side*.035,-.178,.012],[side*.039,-.148,.014]],.0015);
   const hand=pivot(pre+'Hand',fore,0,-.196,.005);
-  ell(hand,leather,0,-.026,0,.037,.044,.025);
-  if(side>0){
-   // Knuckles curl around the shaft centre rather than pointing past it.
-   for(let j=0;j<3;j++){
-    const y=-.042-j*.014;
-    stroke(hand,skin,[[-.022,y,.010],[-.018,y,.039],[.001,y-.003,.049],[.016,y-.003,.036]],.0075);
-   }
-   stroke(hand,skin,[[.025,-.029,.014],[.029,-.043,.029],[.013,-.047,.046]],.009);
-  }else{
-   ell(hand,skin,-side*.028,-.030,.017,.013,.026,.015);
-   for(let j=0;j<3;j++)ell(hand,skin,(j-1)*.018,-.065,.004,.009,.021,.014);
+  ell(hand,skin,0,.004,0,.021,.024,.018).receiveShadow=false;
+  // Human relaxed hands: continuous palm, four graduated fingers and an opposed thumb.
+  const palmGeo=new THREE.SphereGeometry(1,20,14),palmPos=palmGeo.attributes.position;
+  for(let i=0;i<palmPos.count;i++){const x=palmPos.getX(i),y=palmPos.getY(i),z=palmPos.getZ(i),width=.029*(.88+.12*(1-y));palmPos.setXYZ(i,x*width,-.026+y*.031,z*.015);}
+  palmGeo.computeVertexNormals();mesh(hand,palmGeo,skin).receiveShadow=false;
+  ell(hand,leather,0,-.022,-.012,.028,.028,.005).receiveShadow=false;
+  function digit(points,radius){const curve=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),g=new THREE.TubeGeometry(curve,12,1,8,false),p=g.attributes.position;
+   for(let row=0;row<=12;row++){const t=row/12,c=curve.getPoint(t),r=radius*(1-.30*t);for(let col=0;col<=8;col++){const i=row*9+col;p.setXYZ(i,c.x+(p.getX(i)-c.x)*r,c.y+(p.getY(i)-c.y)*r,c.z+(p.getZ(i)-c.z)*r);}}
+   g.computeVertexNormals();mesh(hand,g,skin).receiveShadow=false;const tip=points.at(-1);ell(hand,skin,...tip,radius*.70,radius*.70,radius*.70).receiveShadow=false;
   }
+  const lengths=[.042,.048,.045,.035];
+  for(let i=0;i<4;i++){const x=side*(-.0225+i*.015),length=lengths[i],base=-.046+(i===3?.004:0);digit([[x,base,0],[x,base-length*.45,.003],[x,base-length*.76,.016],[x-side*.002,base-length*.90,.028]],.0082-(i===3?.001:0));}
+  digit([[-side*.025,-.015,.001],[-side*.040,-.028,.009],[-side*.040,-.045,.018],[-side*.034,-.052,.024]],.010);
   const coat=pivot(side<0?'coatLeft':'coatRight',hips,side*.064,.050,-.041);
   profile(coat,coral,[[-.075,0],[.059,.015],[.095,-.075],[.090,-.173],[-.071,-.157]],0,0,0,.014).rotation.y=side*.21;
   stroke(coat,lining,[[-.063,-.150,.015],[.030,-.159,.015],[.084,-.164,.015]],.002);

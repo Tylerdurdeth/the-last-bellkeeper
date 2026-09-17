@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer';import assert from 'node:assert/strict';import fs from 'node:fs/promises';
-const out='evidence/character-lab/motion-pass';await fs.mkdir(out,{recursive:true});
+const out=process.argv[3]||'evidence/character-lab/motion-pass';await fs.mkdir(out,{recursive:true});
 const browser=await puppeteer.launch({headless:true});
 try{const p=await browser.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.setViewport({width:1100,height:850});await p.goto(process.argv[2]||'http://127.0.0.1:4173/the-last-bellkeeper/character-lab.html');await p.waitForFunction(()=>window.__LAB__);
 const wait=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>p.evaluate(()=>window.__LAB__),samples=[];

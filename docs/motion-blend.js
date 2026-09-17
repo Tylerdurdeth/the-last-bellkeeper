@@ -24,6 +24,7 @@ export function createMotionBlend(T, source, clips, nominal) {
     if (!previous) weights.set(name, 1);
   }
   function update(dt, speed) {
+    dt = Math.max(0, Number.isFinite(dt) ? dt : 0);
     const blend = 1 - Math.exp(-response * dt);
     let total = 0;
     for (const [name, action] of actions) {

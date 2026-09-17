@@ -25,8 +25,8 @@ function reset(){authored?.reset();wasGrounded=true;landUntil=0;airTime=0;time=0
 $('source').onchange=()=>{if(authored)authored.root.visible=false;authored=candidates[$('source').value]||null;usingAuthored=$('source').value!=='baseline'&&!!authored;movement.dispose();movement=makeMotor();hero.visible=!usingAuthored;if(authored)authored.root.visible=usingAuthored;$('sourceNote').textContent=usingAuthored?'Code-built geometry · CC0 animation tracks.':'Original procedural Bellkeeper baseline.';for(const o of $('clip').options)o.disabled=usingAuthored&&['capture','release'].includes(o.value);if(usingAuthored&&['capture','release'].includes(clip)){clip='idle';$('clip').value=clip;}reset();};$('source').onchange();
 $('clip').onchange=()=>{clip=$('clip').value;$('play').hidden=clip!=='free';reset();};
 const requestedClip=new URLSearchParams(location.search).get('clip');if(['transitions','jump','turn','free'].includes(requestedClip)){$('clip').value=requestedClip;$('clip').onchange();}
-$('view').onchange=()=>{$('orbit').value={three:25,front:0,side:90,back:180,face:0}[$('view').value];};
-if(new URLSearchParams(location.search).get('view')==='face'){$('view').value='face';$('view').onchange();}
+$('view').onchange=()=>{$('orbit').value={three:25,front:0,side:90,back:180,face:0,profileFace:90,hands:0}[$('view').value];};
+const requestedView=new URLSearchParams(location.search).get('view');if(['face','profileFace','hands'].includes(requestedView)){$('view').value=requestedView;$('view').onchange();}
 $('freeze').onclick=()=>{frozen=!frozen;$('freeze').textContent=frozen?'Play':'Freeze';$('freeze').setAttribute('aria-pressed',String(frozen));};
 $('step').onclick=()=>{frozen=true;$('freeze').textContent='Play';$('freeze').setAttribute('aria-pressed','true');advance(1/60);};
 $('reset').onclick=reset;
@@ -58,9 +58,9 @@ function advance(dt){
 }
 let renderWidth=0,renderHeight=0;
 function render(){
- const mobile=innerWidth<=700,face=$('view').value==='face',angle=Number($('orbit').value)*Math.PI/180;
- const base=clip==='free'?movement.position:new T.Vector3();const target=base.clone().add(new T.Vector3(0,face?1.36:.83,0));
- const d=(face?1.15:3.9)*Number($('zoom').value);
+ const mobile=innerWidth<=700,face=['face','profileFace'].includes($('view').value),hands=$('view').value==='hands',angle=Number($('orbit').value)*Math.PI/180;
+ const base=clip==='free'?movement.position:new T.Vector3();const target=face&&usingAuthored?authored.root.getObjectByName('head').localToWorld(new T.Vector3(0,.155,0)):base.clone().add(new T.Vector3(0,face?1.36:hands?.72:.83,0));
+ const d=(face?1.0:hands?1.65:3.9)*Number($('zoom').value);
  if(mobile){const bottom=$('settings').offsetHeight+16;$('stick').style.bottom=bottom+'px';for(const id of ['jump','run'])$(id).style.bottom=(bottom+20)+'px';}
  const width=innerWidth,height=mobile?Math.max(220,innerHeight-$('settings').offsetHeight-85):innerHeight;
  if(renderWidth!==width||renderHeight!==height){renderer.setSize(width,height,false);renderWidth=width;renderHeight=height;}$('stage').style.height=height+'px';$('stage').style.position='absolute';$('stage').style.top=mobile?'85px':'0';
@@ -73,4 +73,4 @@ function render(){
  window.__LAB__={source:usingAuthored?$('source').value:'baseline',authoredClip:authored?.clip,clip,time,frozen,grounded:clip==='free'?movement.grounded:preview.grounded,position:hero.position.toArray(),speed:clip==='free'?movement.speed:preview.speed,yaw:hero.rotation.y,motion:usingAuthored?authored.motionState:null,draws:renderer.info.render.calls};
 }
 
-let last=performance.now();function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!frozen&&!document.hidden)advance(dt*Number($('rate').value));render();requestAnimationFrame(frame);}requestAnimationFrame(frame);
+let last=performance.now();function frame(now){const dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;if(!frozen&&!document.hidden)advance(dt*Number($('rate').value));render();requestAnimationFrame(frame);}requestAnimationFrame(frame);

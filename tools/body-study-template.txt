@@ -1,5 +1,5 @@
 export default function(THREE) {
- const root=new THREE.Group(), joints={};root.userData.joints=joints;root.userData.keepHierarchy=true;
+ const root=new THREE.Group(), joints={};root.userData.joints=joints;root.userData.keepHierarchy=true;root.userData.anatomicalHands=true;
  const mat=(c,n='fabric',r=.86)=>Object.assign(new THREE.MeshStandardMaterial({color:c,roughness:r}),{name:n});
  const skin=mat(0xd7a27f), coral=mat(0xc95845), lining=mat(0x81393d), cream=mat(0xebe0c5), teal=mat(0x244f52), hair=mat(0x543321), hairLight=mat(0x72472f), leather=mat(0x625249), eye=mat(0x253333), white=mat(0xf6ecdb), copper=mat(0xb88754,'metal',.45), gem=mat(0x4ea99f,'metal',.3);
  const mesh=(p,g,m,x=0,y=0,z=0,sx=1,sy=1,sz=1)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=o.receiveShadow=true;p.add(o);return o;};
@@ -17,13 +17,13 @@ export default function(THREE) {
  const hips=pivot('hips',root,0,.78,0);
  ell(hips,teal,0,0,-.005,.126,.105,.076);
  garment(hips,coral,[[.022,.111,.072],[.075,.122,.078],[.16,.137,.088],[.25,.153,.092],[.30,.164,.085],[.365,.098,.060]],.004).userData.chestPiece=true;
- taper(hips,skin,0,.391,-.003,.045,.068,.070,.80,10);
+
  garment(hips,leather,[[.024,.122,.085],[.057,.122,.085]],0);
  // Framed buckle shows the belt through its centre.
  for(const side of [-1,1])box(hips,copper,.009+side*.024,.041,.091,.006,.035,.009);
  for(const y of [.026,.056])box(hips,copper,.009,y,.091,.050,.006,.009);
  box(hips,copper,.009,.041,.096,.030,.004,.006);
- const head=pivot('head',hips,0,.394,0);
+ const head=pivot('head',hips,0,.371,0);head.scale.setScalar(.80);
 
  HEAD_STUDY
 
@@ -51,18 +51,19 @@ export default function(THREE) {
   garment(fore,leather,[[-.187,.035,.033],[-.138,.040,.037]],0);
   stroke(fore,mat(0xa48b68),[[side*.035,-.178,.012],[side*.039,-.148,.014]],.0015);
   const hand=pivot(pre+'Hand',fore,0,-.196,.005);
-  ell(hand,leather,0,-.026,0,.037,.044,.025);
-  if(side>0){
-   // Knuckles curl around the shaft centre rather than pointing past it.
-   for(let j=0;j<3;j++){
-    const y=-.042-j*.014;
-    stroke(hand,skin,[[-.022,y,.010],[-.018,y,.039],[.001,y-.003,.049],[.016,y-.003,.036]],.0075);
-   }
-   stroke(hand,skin,[[.025,-.029,.014],[.029,-.043,.029],[.013,-.047,.046]],.009);
-  }else{
-   ell(hand,skin,-side*.028,-.030,.017,.013,.026,.015);
-   for(let j=0;j<3;j++)ell(hand,skin,(j-1)*.018,-.065,.004,.009,.021,.014);
+  ell(hand,skin,0,.004,0,.021,.024,.018).receiveShadow=false;
+  // Human relaxed hands: continuous palm, four graduated fingers and an opposed thumb.
+  const palmGeo=new THREE.SphereGeometry(1,20,14),palmPos=palmGeo.attributes.position;
+  for(let i=0;i<palmPos.count;i++){const x=palmPos.getX(i),y=palmPos.getY(i),z=palmPos.getZ(i),width=.029*(.88+.12*(1-y));palmPos.setXYZ(i,x*width,-.026+y*.031,z*.015);}
+  palmGeo.computeVertexNormals();mesh(hand,palmGeo,skin).receiveShadow=false;
+  ell(hand,leather,0,-.022,-.012,.028,.028,.005).receiveShadow=false;
+  function digit(points,radius){const curve=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),g=new THREE.TubeGeometry(curve,12,1,8,false),p=g.attributes.position;
+   for(let row=0;row<=12;row++){const t=row/12,c=curve.getPoint(t),r=radius*(1-.30*t);for(let col=0;col<=8;col++){const i=row*9+col;p.setXYZ(i,c.x+(p.getX(i)-c.x)*r,c.y+(p.getY(i)-c.y)*r,c.z+(p.getZ(i)-c.z)*r);}}
+   g.computeVertexNormals();mesh(hand,g,skin).receiveShadow=false;const tip=points.at(-1);ell(hand,skin,...tip,radius*.70,radius*.70,radius*.70).receiveShadow=false;
   }
+  const lengths=[.042,.048,.045,.035];
+  for(let i=0;i<4;i++){const x=side*(-.0225+i*.015),length=lengths[i],base=-.046+(i===3?.004:0);digit([[x,base,0],[x,base-length*.45,.003],[x,base-length*.76,.016],[x-side*.002,base-length*.90,.028]],.0082-(i===3?.001:0));}
+  digit([[-side*.025,-.015,.001],[-side*.040,-.028,.009],[-side*.040,-.045,.018],[-side*.034,-.052,.024]],.010);
   const coat=pivot(side<0?'coatLeft':'coatRight',hips,side*.064,.050,-.041);
   profile(coat,coral,[[-.075,0],[.059,.015],[.095,-.075],[.090,-.173],[-.071,-.157]],0,0,0,.014).rotation.y=side*.21;
   stroke(coat,lining,[[-.063,-.150,.015],[.030,-.159,.015],[.084,-.164,.015]],.002);
