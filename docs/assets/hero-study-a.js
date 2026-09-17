@@ -20,42 +20,62 @@ export default function(THREE) {
  taper(hips,leather,0,.039,0,.119,.119,.034,.70);box(hips,copper,.016,.040,.089,.036,.035,.011);
  const head=pivot('head',hips,0,.394,0);
  // Continuous face with a cheek/jaw profile; all contours are authored functions.
- const faceProfile=[[.012,.012,.030],[.032,.033,.055],[.067,.069,.077],[.112,.098,.089],[.16,.108,.093],[.207,.110,.094],[.251,.095,.084],[.285,.060,.058],[.300,0,0]];
+ const faceProfile=[[.012,0,0],[.027,.017,.044],[.038,.033,.065],[.069,.073,.083],[.100,.089,.086],[.139,.107,.092],[.170,.102,.093],[.207,.099,.094],[.251,.094,.084],[.285,.060,.058],[.300,0,0]];
  function radius(y,k){for(let i=1;i<faceProfile.length;i++)if(y<=faceProfile[i][0]){const a=faceProfile[i-1],b=faceProfile[i],prev=faceProfile[Math.max(0,i-2)],next=faceProfile[Math.min(faceProfile.length-1,i+1)],h=b[0]-a[0],u=THREE.MathUtils.clamp((y-a[0])/h,0,1),m0=(b[k]-prev[k])/(b[0]-prev[0]),m1=(next[k]-a[k])/(next[0]-a[0]);return Math.max(0,(2*u*u*u-3*u*u+1)*a[k]+(u*u*u-2*u*u+u)*h*m0+(-2*u*u*u+3*u*u)*b[k]+(u*u*u-u*u)*h*m1);}return 0;}
- const features=(x,y)=>.012*Math.exp(-((x/.014)**2)-(((y-.143)/.028)**2))+.009*Math.exp(-((x/.018)**2)-(((y-.124)/.017)**2))-.004*Math.exp(-(((Math.abs(x)-.044)/.028)**2)-(((y-.173)/.019)**2))+.003*Math.exp(-(((Math.abs(x)-.065)/.029)**2)-(((y-.133)/.028)**2));
- const surface=(x,y)=>radius(y,2)*Math.pow(Math.max(.001,1-(x/Math.max(.001,radius(y,1)))**2),.43)+features(x,y);
+ function noseForm(x,y){const knots=[[.110,0,.018],[.120,.023,.017],[.128,.026,.013],[.148,.015,.010],[.174,.003,.010],[.191,0,.012]];for(let i=1;i<knots.length;i++)if(y>=knots[i-1][0]&&y<=knots[i][0]){const a=knots[i-1],b=knots[i],u=(y-a[0])/(b[0]-a[0]),h=THREE.MathUtils.lerp(a[1],b[1],u),w=THREE.MathUtils.lerp(a[2],b[2],u);return h*Math.pow(Math.max(0,1-(x/w)**2),1.7);}return 0;}
+ const features=(x,y)=>noseForm(x,y)-.005*Math.exp(-(((Math.abs(x)-.055)/.026)**2)-(((y-.173)/.019)**2))+.004*Math.exp(-(((Math.abs(x)-.070)/.025)**2)-(((y-.137)/.024)**2))+.002*Math.exp(-(((Math.abs(x)-.055)/.030)**2)-(((y-.20)/.010)**2));
+ const surface=(x,y)=>radius(y,2)*Math.pow(Math.max(.001,1-(x/Math.max(.001,radius(y,1)))**2),.30)+features(x,y);
  const faceGeo=new THREE.SphereGeometry(1,96,80),fp=faceGeo.attributes.position;
- for(let i=0;i<fp.count;i++){const ny=fp.getY(i),y=.156+ny*.144,s=Math.sqrt(Math.max(.000001,1-ny*ny)),x=fp.getX(i)/s*radius(y,1),front=fp.getZ(i)>0;fp.setXYZ(i,x,y,front?surface(x,y):fp.getZ(i)/s*radius(y,2));}faceGeo.computeVertexNormals();const colors=[];for(let i=0;i<fp.count;i++){const x=fp.getX(i),y=fp.getY(i),z=fp.getZ(i),warm=Math.exp(-(((Math.abs(x)-.060)/.033)**2)-(((y-.137)/.025)**2))*(z>0?1:0),shadow=.10*Math.exp(-((x/.017)**2)-(((y-.114)/.008)**2))*(z>0?1:0);colors.push(1-shadow,.99-.07*warm-shadow,.98-.08*warm-shadow);}faceGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));const faceMaterial=skin.clone();faceMaterial.vertexColors=true;faceMaterial.name='faceSkin';const face=mesh(head,faceGeo,faceMaterial);face.receiveShadow=false;
+ for(let i=0;i<fp.count;i++){const ny=fp.getY(i),y=.156+ny*.144,s=Math.sqrt(Math.max(.000001,1-ny*ny)),x=fp.getX(i)/s*radius(y,1),front=fp.getZ(i)>0;const z=front?surface(x,y):fp.getZ(i)/s*radius(y,2),rearLift=front?0:.060*(1-THREE.MathUtils.smoothstep(y,.012,.150))*THREE.MathUtils.smoothstep(-z,0,.04);fp.setXYZ(i,x,y+rearLift,z);}faceGeo.computeVertexNormals();const colors=[];for(let i=0;i<fp.count;i++){const x=fp.getX(i),y=fp.getY(i),z=fp.getZ(i),warm=Math.exp(-(((Math.abs(x)-.060)/.033)**2)-(((y-.137)/.025)**2))*(z>0?1:0),shadow=.10*Math.exp(-((x/.017)**2)-(((y-.114)/.008)**2))*(z>0?1:0);colors.push(1-shadow,.99-.07*warm-shadow,.98-.08*warm-shadow);}faceGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));const faceMaterial=skin.clone();faceMaterial.vertexColors=true;faceMaterial.name='faceSkin';const face=mesh(head,faceGeo,faceMaterial);face.receiveShadow=false;
+ ell(head,skin,0,.035,-.020,.045,.067,.045);
  for(const side of [-1,1]){
   const ear=ell(head,skin,side*.109,.151,-.004,.017,.029,.012);ear.rotation.z=-side*.22;
   ell(head,mat(0xb97558),side*.112,.150,.006,.008,.017,.003);
-  const ex=side*.044,ey=.172,eyeGroup=new THREE.Group();head.add(eyeGroup);
-  const almond=new THREE.Shape();almond.moveTo(-.028,-.001);almond.bezierCurveTo(-.018,.017,.013,.019,.028,.003);almond.bezierCurveTo(.014,-.012,-.015,-.014,-.028,-.001);
-  const g=new THREE.ShapeGeometry(almond,24),p=g.attributes.position;
-  for(let i=0;i<p.count;i++){const x=ex+side*p.getX(i),y=ey+p.getY(i);p.setXYZ(i,x,y,surface(x,y)+.0012);}g.computeVertexNormals();const eyeWhite=white.clone();eyeWhite.side=THREE.DoubleSide;mesh(eyeGroup,g,eyeWhite);
-  ell(eyeGroup,mat(0x459b8c),ex-side*.001,ey+.002,surface(ex,ey)+.003,.013,.014,.0018);
-  ell(eyeGroup,eye,ex-side*.001,ey+.002,surface(ex,ey)+.005,.005,.008,.001);
-  ell(eyeGroup,white,ex-.004,ey+.008,surface(ex,ey)+.006,.0026,.0026,.0008);
-  const lid=[];for(let i=0;i<=16;i++){const t=i/16,x=ex+side*(-.028+t*.056),y=ey+Math.sin(t*Math.PI)*.016-.001+t*.004;lid.push([x,y,surface(x,y)+.002]);}stroke(eyeGroup,mat(0x603e32),lid,.0017);
-  const browShape=new THREE.Shape();browShape.moveTo(-.026,0);browShape.quadraticCurveTo(-.006,.008,.027,.003);browShape.quadraticCurveTo(.018,.014,-.013,.013);browShape.quadraticCurveTo(-.021,.011,-.026,0);
-  const bg=new THREE.ShapeGeometry(browShape,16),bp=bg.attributes.position;for(let i=0;i<bp.count;i++){const x=ex+side*bp.getX(i),y=.200+bp.getY(i);bp.setXYZ(i,x,y,surface(x,y)+.0015);}bg.computeVertexNormals();const bm=hair.clone();bm.side=THREE.DoubleSide;mesh(head,bg,bm);
+  const ex=side*.055,ey=.174,eyeGroup=new THREE.Group();head.add(eyeGroup);
+  const g=new THREE.PlaneGeometry(1,1,32,16),p=g.attributes.position;
+  for(let row=0;row<=16;row++)for(let col=0;col<=32;col++){const u=col/32,t=row/16,lx=-.025+u*.050,arch=Math.pow(Math.sin(u*Math.PI),.8),top=.012*arch-.001+u*.004,bottom=-.009*arch-.001+u*.004,x=ex+side*lx,y=ey+THREE.MathUtils.lerp(top,bottom,t);p.setXYZ(row*33+col,x,y,surface(x,y)+.0015);}g.computeVertexNormals();const eyeWhite=white.clone();eyeWhite.side=THREE.DoubleSide;eyeWhite.name='irisSurface';mesh(eyeGroup,g,eyeWhite).userData.eyeSide=side;
+  const lid=[];for(let i=0;i<=16;i++){const t=i/16,x=ex+side*(-.025+t*.050),y=ey+Math.sin(t*Math.PI)*.012-.001+t*.004;lid.push([x,y,surface(x,y)+.002]);}stroke(eyeGroup,mat(0x603e32),lid,.0017);
+  const bg=new THREE.PlaneGeometry(1,1,28,4),bp=bg.attributes.position;for(let row=0;row<=4;row++)for(let col=0;col<=28;col++){const u=col/28,x=ex+side*(-.027+u*.058),center=.203+.006*Math.sin(Math.PI*u)-.003*u,width=.007*Math.pow(1-u,.45)*(.7+.3*Math.sin(Math.PI*u)),y=center+(row/4-.5)*width;bp.setXYZ(row*29+col,x,y,surface(x,y)+.0015);}bg.computeVertexNormals();const bm=hair.clone();bm.side=THREE.DoubleSide;mesh(head,bg,bm).userData.faceDetail=true;
+  const lower=[];for(let i=0;i<=16;i++){const u=i/16,x=ex+side*(-.025+u*.050),y=ey-.009*Math.pow(Math.sin(u*Math.PI),.8)-.001+u*.004;lower.push([x,y,surface(x,y)+.0018]);}stroke(eyeGroup,mat(0xb98568),lower,.0007);
   eyeGroup.position.y=ey;for(const part of eyeGroup.children)part.position.y-=ey;(root.userData.eyeGroups??=[]).push(eyeGroup);
  }
  // Restrained lip planes and a slight asymmetric expression, not an outlined grin.
- const seam=x=>.087+.0025*(x/.025)**2+.001*x/.025;
- const mouth=[];for(let i=0;i<=24;i++){const x=-.025+i*.05/24,y=seam(x);mouth.push([x,y,surface(x,y)+.0012]);}stroke(head,mat(0x925b49),mouth,.0008);
- function lipPlane(upper){const g=new THREE.PlaneGeometry(.05,1,32,4),p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),u=p.getY(i)+.5,w=Math.pow(Math.max(0,1-(x/.025)**2),.8),height=upper?.0035:.0045,y=seam(x)+(upper?1:-1)*height*w*u;const bulge=.0015*Math.sin(u*Math.PI)*w;p.setXYZ(i,x,y,surface(x,y)+.0007+bulge);}g.computeVertexNormals();mesh(head,g,mat(upper?0xc28b70:0xdba786));}lipPlane(true);lipPlane(false);
+ const seam=x=>.091+.0015*(x/.025)**2+.0008*x/.025;
+ const mouth=[];for(let i=0;i<=24;i++){const x=-.025+i*.05/24,y=seam(x);mouth.push([x,y,surface(x,y)+.0012]);}stroke(head,mat(0x925b49),mouth,.0008).userData.faceDetail=true;
+ function lipPlane(upper){const g=new THREE.PlaneGeometry(.05,1,32,4),p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),u=p.getY(i)+.5,w=Math.pow(Math.max(0,1-(x/.025)**2),.8),height=upper?.0035:.0045,y=seam(x)+(upper?1:-1)*height*w*u;const bulge=.0015*Math.sin(u*Math.PI)*w;p.setXYZ(i,x,y,surface(x,y)+.0007+bulge);}g.computeVertexNormals();mesh(head,g,mat(upper?0xc28b70:0xdba786)).userData.faceDetail=true;}lipPlane(true);lipPlane(false);
 
- // Hair volume is one cap; individual locks are tapered sweeps, not cones.
- const cap=new THREE.SphereGeometry(1,32,18,0,Math.PI*2,0,Math.PI*.63);const hp=cap.attributes.position;
- for(let j=0;j<=18;j++)for(let i=0;i<=32;i++){const phi=i/32*Math.PI*2,theta=j/18*Math.PI*(.68-.27*Math.max(0,Math.sin(phi)));hp.setXYZ(j*33+i,-Math.cos(phi)*Math.sin(theta)*.121,.172+Math.cos(theta)*.145,Math.sin(phi)*Math.sin(theta)*.107-.012);}cap.computeVertexNormals();mesh(head,cap,hair);
- function lock(points,width,depth,color){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const g=new THREE.TubeGeometry(curve,16,1,8,false),p=g.attributes.position;for(let j=0;j<=16;j++){const u=j/16,c=curve.getPointAt(u),w=Math.pow(Math.sin(Math.PI*(.12+.88*u)),.8);for(let k=0;k<=8;k++){const i=j*9+k;const v=new THREE.Vector3().fromBufferAttribute(p,i).sub(c);p.setXYZ(i,c.x+v.x*width*w,c.y+v.y*width*w,c.z+v.z*depth*w);}}g.computeVertexNormals();mesh(head,g,color);}
- lock([[.052,.282,.051],[.013,.278,.089],[-.031,.237,.099],[-.027,.188,.099]],.031,.013,hairLight);
- lock([[.081,.281,.021],[.045,.281,.075],[.010,.254,.105],[.023,.216,.104]],.026,.014,hair);
- lock([[.011,.288,.043],[-.050,.283,.055],[-.086,.237,.063],[-.107,.181,.059]],.032,.014,hair);
- lock([[.088,.259,.028],[.101,.223,.039],[.101,.171,.049],[.084,.137,.043]],.023,.012,hairLight);
- lock([[-.077,.262,.019],[-.108,.215,.006],[-.109,.160,.014],[-.117,.137,.005]],.023,.012,hair);
- lock([[.083,.269,-.040],[.118,.227,-.050],[.116,.182,-.053],[.127,.165,-.053]],.022,.012,hair);
+ // Each lock has its own swept ridge, tapered tip and silhouette. Close cropped underlayer bridges the partings.
+ const hairShadow=mat(0x492c20),hairMid=mat(0x5d3826),hairSun=mat(0x744c30);
+ function strand(control,width,thickness,material){
+  const path=new THREE.CatmullRomCurve3(control.map(p=>new THREE.Vector3(...p))),g=new THREE.PlaneGeometry(1,1,8,20),p=g.attributes.position;let previousAcross=null;
+  for(let row=0;row<=20;row++){const t=row/20,c=path.getPoint(t),tangent=path.getTangent(t).normalize(),normal=new THREE.Vector3(c.x*.8,(c.y-.18)*.65,c.z+.015).normalize(),across=new THREE.Vector3().crossVectors(tangent,normal).normalize();if(previousAcross){if(across.dot(previousAcross)<0)across.negate();across.lerp(previousAcross,.35).normalize();}previousAcross=across.clone();
+   const taper=Math.pow(Math.max(0,1-t),.65)*(1+.12*Math.sin(t*Math.PI))*THREE.MathUtils.smoothstep(t,0,.09);
+   for(let col=0;col<=8;col++){const v=col/4-1,ridge=Math.pow(Math.max(0,1-v*v),.75)*thickness*.25*taper;const pos=c.clone().addScaledVector(across,v*width*taper).addScaledVector(normal,ridge);p.setXYZ(row*9+col,pos.x,pos.y,pos.z);}
+  }g.computeVertexNormals();const c=[];for(let row=0;row<=20;row++)for(let col=0;col<=8;col++){const t=row/20,v=col/4-1,streak=.018*Math.sin(v*17+t*3),tone=.94+.06*(1-v*v)+streak;c.push(tone,tone*.985,tone*.95);}g.setAttribute('color',new THREE.Float32BufferAttribute(c,3));const m=material.clone();m.side=THREE.DoubleSide;m.vertexColors=true;mesh(head,g,m).receiveShadow=false;
+ }
+ // Occipital layers overlap toward a broken nape, never ending in a straight rim.
+ for(let i=0;i<11;i++){const a=-Math.PI*.82+i/10*Math.PI*1.64,s=Math.sin(a),c=-Math.cos(a);strand([[s*.026,.285,c*.025-.018],[s*.083,.264,c*.081-.015],[s*.111,.204,c*.095-.012],[s*(.113+(i%3)*.005),.080+.055*s*s+(c>0?.020:0)+(i%3)*.005,c*.077-.017]],.034,.009,i%3===0?hairMid:hairShadow);}
+ // Crown locks follow the skull's dome from a shared off-centre part.
+ for(let i=0;i<12;i++){const a=i/12*Math.PI*2,sn=Math.sin(a),cs=Math.cos(a),height=.311+(i%3)*.002;strand([[-.018,.306,-.016],[sn*.059-.01,height,cs*.045-.014],[sn*.103,.263,cs*.082-.012],[sn*.116,.200+(cs>0?.040:0),cs*.096-.012]],.033,.012,i%4===1?hairSun:hairMid);}
+ // A close cropped underlayer is occluded by the longer locks except at their partings.
+ const under=new THREE.SphereGeometry(1,40,24,0,Math.PI*2,0,Math.PI*.72),up=under.attributes.position;
+ for(let j=0;j<=24;j++)for(let i=0;i<=40;i++){const a=i/40*Math.PI*2,t=j/24*Math.PI*(.72-.31*Math.max(0,Math.sin(a))+.018*Math.sin(a*7)),sn=Math.sin(t);up.setXYZ(j*41+i,-Math.cos(a)*sn*.110,.181+Math.cos(t)*.127,Math.sin(a)*sn*.096-.014);}under.computeVertexNormals();mesh(head,under,hairMid).receiveShadow=false;
+ for(let i=0;i<9;i++){const a=-Math.PI*.65+i/8*Math.PI*1.30,sn=Math.sin(a),cs=-Math.cos(a);strand([[sn*.080,.220,cs*.085-.014],[sn*.107,.198,cs*.101-.013],[sn*.114,.156,cs*.096-.015],[Math.sin(a+.12)*.113,.061+.055*sn*sn+(cs>0?.024:0)+(i%3)*.010,-Math.cos(a+.12)*.071-.020]],.029+(i%2)*.004,.009,i%3?hairMid:hairShadow);}
+ // Fine diagonal locks bridge the broad rear masses, following the crown's sweep.
+ for(let i=0;i<7;i++){const x=-.077+i*.024,z=-Math.sqrt(Math.max(.1,1-(x/.12)**2))*.106;strand([[x-.016,.254,z+.015],[x-.009,.223,z-.015],[x+.005,.186,z-.018],[x+.022,.126+(i%3)*.011,z+.005]],.012+(i%2)*.002,.004,i%3===0?hairSun:hairMid);}
+ // Unequal fringe lengths expose the brows and split naturally across the forehead.
+ strand([[.035,.294,.015],[.005,.300,.062],[-.035,.259,.102],[-.030,.202,.107]],.026,.010,hairMid);
+ strand([[.019,.295,.025],[-.016,.286,.082],[-.064,.237,.105],[-.078,.178,.091]],.024,.009,hairMid);
+ strand([[-.022,.288,.025],[-.061,.273,.067],[-.093,.221,.078],[-.113,.158,.065]],.025,.009,hairShadow);
+ strand([[.051,.291,.015],[.052,.271,.074],[.059,.240,.108],[.039,.202,.108]],.024,.009,hairSun);
+ strand([[.074,.280,-.008],[.099,.251,.037],[.111,.206,.055],[.095,.153,.063]],.024,.008,hairMid);
+ strand([[-.063,.278,-.019],[-.102,.241,.010],[-.117,.188,.027],[-.121,.144,.017]],.022,.008,hairMid);
+ strand([[.008,.292,.029],[-.018,.279,.087],[-.040,.246,.113],[-.047,.213,.110]],.012,.005,hairSun);
+ strand([[-.046,.276,.028],[-.080,.247,.071],[-.099,.215,.084],[-.118,.186,.078]],.014,.006,hairMid);
+ strand([[.072,.274,.003],[.094,.246,.050],[.115,.215,.064],[.123,.183,.058]],.013,.006,hairSun);
+ // Small flyaways change the outer contour without becoming a spiky helmet.
+ strand([[-.015,.293,-.010],[-.034,.310,.004],[-.054,.318,.011],[-.071,.313,.008]],.016,.006,hairMid);
+ strand([[.038,.287,-.041],[.065,.302,-.044],[.084,.298,-.057],[.096,.288,-.069]],.017,.006,hairShadow);
  root.userData.faceStudy=true;
 
  for(const side of [-1,1]){

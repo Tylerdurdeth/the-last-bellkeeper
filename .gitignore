@@ -40,3 +40,9 @@ evidence/character-lab/code-*/
 
 # Face iteration captures; selected release view is versioned.
 evidence/character-lab/face-repair-*/
+
+# Intermediate head look-development; selected evidence is explicitly versioned.
+evidence/character-lab/atlas-face-*/
+evidence/character-lab/link-benchmark-*/
+evidence/character-lab/head-*/
+evidence/character-lab/review-repair-*/

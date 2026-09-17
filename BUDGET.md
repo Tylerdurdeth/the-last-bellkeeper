@@ -89,3 +89,6 @@ R06 configuration attempt terminal: assistant inspected graph then failed tool s
 Character checkpoint shared Codex account balance1,423.8259, included weekly allowance100%used. This is account-wide, not a measured cost for this turn. User explicitly resumed character work; no new numeric Codex cap supplied. No top-up, purchase, reset or external API charge.
 
 Code-built character correction: no Atlas calls, reservations or purchases. Reused R06 reference. Atlas remains32/400rebuild settled,0reserved,368available; last verified account balance1,952.
+
+R07 facial colour-map experiment: fresh Atlas billing balance1,952,48 lifetime. Reserve36 configured maximum for one direct1K Gemini image (seed43). Rebuild32settled/36reserved/332unreserved. Purpose test painted facial detail on code-generated geometry, not a generated mesh. No assistant turn, no retry batch.
+R07 terminal image output inspected and retrieved; node LastRun5. Release36 reservation. Rebuild37settled/0reserved/363remaining; lifetime53; fresh billing confirmed balance1,947 and53 lifetime spent. No 3D call or assistant turn. R07 is used as a fitted facial colour map in the character studio.

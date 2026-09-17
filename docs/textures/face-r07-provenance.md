@@ -1,0 +1,9 @@
+# Atlas R07 facial colour map
+
+Generated 17 September 2026 in Atlas, direct 1K Gemini 3.1 Flash Lite Image, seed 43. Configured maximum reservation 36 credits; terminal charge 5; reservation released. Billing confirmed 1,947 remaining and 53 lifetime spent. Rebuild total 37/400, no outstanding reservations.
+
+`face-r07.png` is the unmodified downloaded 1024×1024 PNG. `code-character.js` fits selected facial colour regions to original procedural head geometry using UV coordinates and masks. Animated eyes are separately rendered; image hair/background/ears are excluded. No image-to-3D output or downloaded mesh is used. Original output also retained in `evidence/character-lab/reference/atlas-r07.png`.
+
+Prompt:
+
+> Game character FACE ALBEDO TEXTURE reference, one square image. Straight-on perfectly symmetric orthographic front portrait of an ORIGINAL young adult male fantasy apprentice, shoulders and full head centered, neutral gentle confident expression. Youthful angular cheekbones, distinct narrow jaw and small chin, small defined nose, large almond teal eyes with painted upper eyelids, natural thick chestnut eyebrows, softly painted closed lips, warm peach-tan skin with subtle warm cheek colour. Painterly cel-shaded Japanese adventure game facial art, polished expressive face, no realistic pores. All hair brushed entirely back behind the ears and off the forehead, no bangs or strands covering any part of the face. Human rounded ears. Face and head fill 85 percent of frame vertically. Flat diffuse unlit albedo lighting, nearly no directional shadows or specular highlight. Plain warm beige background. No text, no accessories, no hood, no pointed ears, no copied franchise character. The face should look like a charismatic premium stylized game protagonist, never a plastic doll or emoji.
