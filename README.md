@@ -1,10 +1,10 @@
 # The Last Bellkeeper
 
-An original woodland adventure in development. **The Waking Bough** is the current first-area study, rebuilt around a winding woodland route, a listening garden, a sleeping crossing and three small discoveries. It is not the complete game or a submission-ready entry.
+An original woodland adventure in development. **The Waking Bough** is the current first-area study, rebuilt around a winding woodland route, a listening garden, a sleeping crossing, responsive bellflowers, a startled bird flock, and a low-to-high echo-stone puzzle. The approved code-built character now anchors the playable scene, with camera orbit by drag or Q/E and camera-relative movement. It is not the complete game or a submission-ready entry.
 
 [Play the study](https://tylerdurdeth.github.io/the-last-bellkeeper/)
 
-Move with WASD/arrows; Shift runs, J jumps, Space interacts. Touch uses an analogue joystick plus Jump and the contextual action button. A full joystick push runs. Escape/pause opens sound, gentle motion and restart controls. Follow environmental clues to awaken and carry the wind back to the crossing. Inspect the cottage note, watch which garden flowers answer the chime, and notice how carried wind changes the way home. Optional keepsakes reward searching and jumping beyond the main path.
+Move with WASD/arrows; Shift runs, J jumps, Space interacts. Drag the scenery or use Q/E to orbit the camera; movement follows the camera. Touch uses an analogue joystick plus Jump and the contextual action button. A full joystick push runs. Escape/pause opens sound, gentle motion and restart controls. Follow environmental clues to awaken the chime, play the three rising stone notes, carry the wind back to the crossing, and cross to the restored bell sanctuary. Flowers and birds respond as optional discoveries; keepsakes reward searching and jumping beyond the main path.
 
 ## Development
 
