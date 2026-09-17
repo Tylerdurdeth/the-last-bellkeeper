@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {loadCodeCharacter} from './code-character.js';
-import studyA from './assets/hero-study-a.js?v=hand-options-1';
+import studyA from './assets/hero-study-a.js?v=hand-approved-d';
 import studyB from './assets/hero-study-b.js';
 import studyC from './assets/hero-study-c.js';
 import buildHero from './assets/hero.js';
@@ -21,9 +21,9 @@ const handRoot=candidates.character.root;
 const handShapes=['left','right'].map(side=>handRoot.getObjectByName(side+'HandShape'));
 const handParents=handShapes.map(shape=>shape.parent);
 function chooseHands(){
- const option=$('handOption').value,swap=option==='C'||option==='D',turn=option==='B'||option==='D';
- handShapes.forEach((shape,i)=>{handParents[swap?1-i:i].add(shape);shape.rotation.set(0,Math.PI+(turn?Math.PI:0),0);});
- $('handNote').textContent='Hand comparison · Option '+option;
+ const option=$('handOption').value,swap=option==='A'||option==='B',turn=option==='A'||option==='C';
+ handShapes.forEach((shape,i)=>{handParents[swap?1-i:i].add(shape);shape.rotation.set(0,turn?Math.PI:0,0);});
+ $('handNote').textContent='Hand comparison · Option '+option+(option==='D'?' · Approved':'');
  const url=new URL(location.href);url.searchParams.set('hand',option);history.replaceState(null,'',url);
  reset();
 }

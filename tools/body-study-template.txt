@@ -51,10 +51,10 @@ export default function(THREE) {
   garment(fore,leather,[[-.187,.035,.033],[-.138,.040,.037]],0);
   stroke(fore,mat(0xa48b68),[[side*.035,-.178,.012],[side*.039,-.148,.014]],.0015);
   const hand=pivot(pre+'Hand',fore,0,-.196,.005);
-  // Swap complete left/right hand geometry and turn it 180 degrees about the arm axis.
+  // User-approved Option D is the authored hand orientation.
   // Keep the animation joint unchanged so the correction persists through every clip.
-  const handSide=-side,handShape=new THREE.Group();handShape.name=pre+'HandShape';
-  handShape.rotation.y=Math.PI;hand.add(handShape);
+  const handSide=side,handShape=new THREE.Group();handShape.name=pre+'HandShape';
+  hand.add(handShape);
   ell(handShape,skin,0,.004,0,.021,.024,.018).receiveShadow=false;
   // Human relaxed hands: continuous palm, four graduated fingers and an opposed thumb.
   const palmGeo=new THREE.SphereGeometry(1,20,14),palmPos=palmGeo.attributes.position;
