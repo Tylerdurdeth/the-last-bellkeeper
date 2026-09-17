@@ -10,3 +10,6 @@ Selected final evidence is in desktop-anatomy-final/. Full local iteration captu
 
 ## Handedness correction
 User identified that both hands had mirrored finger layouts. Corrected the thumb side and mirrored the index-to-pinky order in the geometry template; palm, wrist pose, animation, and all other appearance remain unchanged. Fresh close-up and walking/running stills inspected. Studio keyboard/touch and rendering checks pass.
+
+## Complete hand swap and axial rotation
+The user rejected the earlier finger-only correction. Applied the requested complete hand swap and 180-degree rotation about the local arm axis using a geometry group beneath each unchanged animation joint. Includes palm, back patch, wrist, fingers, and thumb. Independent review verified the requested transformation and connected wrists in side/idle/running captures; this is not a claim of anatomical acceptance. Studio rendering, keyboard, and emulated-touch checks pass.

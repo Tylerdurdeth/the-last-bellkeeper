@@ -51,19 +51,23 @@ export default function(THREE) {
   garment(fore,leather,[[-.187,.035,.033],[-.138,.040,.037]],0);
   stroke(fore,mat(0xa48b68),[[side*.035,-.178,.012],[side*.039,-.148,.014]],.0015);
   const hand=pivot(pre+'Hand',fore,0,-.196,.005);
-  ell(hand,skin,0,.004,0,.021,.024,.018).receiveShadow=false;
+  // Swap complete left/right hand geometry and turn it 180 degrees about the arm axis.
+  // Keep the animation joint unchanged so the correction persists through every clip.
+  const handSide=-side,handShape=new THREE.Group();handShape.name=pre+'HandShape';
+  handShape.rotation.y=Math.PI;hand.add(handShape);
+  ell(handShape,skin,0,.004,0,.021,.024,.018).receiveShadow=false;
   // Human relaxed hands: continuous palm, four graduated fingers and an opposed thumb.
   const palmGeo=new THREE.SphereGeometry(1,20,14),palmPos=palmGeo.attributes.position;
   for(let i=0;i<palmPos.count;i++){const x=palmPos.getX(i),y=palmPos.getY(i),z=palmPos.getZ(i),width=.029*(.88+.12*(1-y));palmPos.setXYZ(i,x*width,-.026+y*.031,z*.015);}
-  palmGeo.computeVertexNormals();mesh(hand,palmGeo,skin).receiveShadow=false;
-  ell(hand,leather,0,-.022,-.012,.028,.028,.005).receiveShadow=false;
+  palmGeo.computeVertexNormals();mesh(handShape,palmGeo,skin).receiveShadow=false;
+  ell(handShape,leather,0,-.022,-.012,.028,.028,.005).receiveShadow=false;
   function digit(points,radius){const curve=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),g=new THREE.TubeGeometry(curve,12,1,8,false),p=g.attributes.position;
    for(let row=0;row<=12;row++){const t=row/12,c=curve.getPoint(t),r=radius*(1-.30*t);for(let col=0;col<=8;col++){const i=row*9+col;p.setXYZ(i,c.x+(p.getX(i)-c.x)*r,c.y+(p.getY(i)-c.y)*r,c.z+(p.getZ(i)-c.z)*r);}}
-   g.computeVertexNormals();mesh(hand,g,skin).receiveShadow=false;const tip=points.at(-1);ell(hand,skin,...tip,radius*.70,radius*.70,radius*.70).receiveShadow=false;
+   g.computeVertexNormals();mesh(handShape,g,skin).receiveShadow=false;const tip=points.at(-1);ell(handShape,skin,...tip,radius*.70,radius*.70,radius*.70).receiveShadow=false;
   }
   const lengths=[.042,.048,.045,.035];
-  for(let i=0;i<4;i++){const x=-side*(-.0225+i*.015),length=lengths[i],base=-.046+(i===3?.004:0);digit([[x,base,0],[x,base-length*.45,.003],[x,base-length*.76,.016],[x+side*.002,base-length*.90,.028]],.0082-(i===3?.001:0));}
-  digit([[side*.025,-.015,.001],[side*.040,-.028,.009],[side*.040,-.045,.018],[side*.034,-.052,.024]],.010);
+  for(let i=0;i<4;i++){const x=-handSide*(-.0225+i*.015),length=lengths[i],base=-.046+(i===3?.004:0);digit([[x,base,0],[x,base-length*.45,.003],[x,base-length*.76,.016],[x+handSide*.002,base-length*.90,.028]],.0082-(i===3?.001:0));}
+  digit([[handSide*.025,-.015,.001],[handSide*.040,-.028,.009],[handSide*.040,-.045,.018],[handSide*.034,-.052,.024]],.010);
   const coat=pivot(side<0?'coatLeft':'coatRight',hips,side*.064,.050,-.041);
   profile(coat,coral,[[-.075,0],[.059,.015],[.095,-.075],[.090,-.173],[-.071,-.157]],0,0,0,.014).rotation.y=side*.21;
   stroke(coat,lining,[[-.063,-.150,.015],[.030,-.159,.015],[.084,-.164,.015]],.002);
