@@ -1,4 +1,16 @@
-# Status — Waking Bough rebuild
+# Status — Waking Bough, 20 September refinement
+
+Release candidate ready for publication. Arrow keys exclusively move the character; A jumps and Shift runs. The camera-aligned parchment/ink/copper chart includes facing and north indicators, exact bridge endpoints, crossing status and phone enlargement. Enlarged-map gestures do not orbit the world; portrait and landscape pause/resume pass.
+
+The sanctuary now occupies an irregular rocky island surrounded by an eight-metre clear channel. Shared rendered/navigation triangles replace arbitrary void limits; a visible escarpment bounds the woodland, and the actual raised bridge deck is the only connection. Gong, ceramic seed bells, harp and crowned sanctuary bell have distinct geometry and cues. Bramble, hosta, shelf fungi, rabbits, perched kingfishers and articulated luna moths diversify the scene. Thirty new asset candidates were verified and visually compared before selection.
+
+Verification: 10,773 dry terrain contacts, 2,052 water samples, 264 jump approaches, both bridge directions at 30/60/120 Hz, map projections at 720 camera angles, bounded animal motion, full keyboard route, full touch quest with all three keepsakes and reset, plus desktop/phone/landscape UI checks. Independent reviews caught and confirmed repairs to bridge landing flicker, premature bell proximity, misleading early puzzle text and chart gesture pass-through. Source/root-chime/harp/terrain/bridge/bird recipe verification passes. Evidence: `evidence/rebuild/refinement-20/`.
+
+Final local unmodified phone gate: PASS, 15.7 s readiness, 7.5 MB, 538 peak calls / 773,997 triangles, 59.71 median FPS, no errors/404s/external dependencies. This uses 390×844 touch emulation, 4G/2× CPU throttling and an Apple M5 Pro renderer—not a physical phone. A wide desktop jump diagnostic reaches 957 calls; further batching is a performance follow-up, not a claimed desktop-budget pass. Human listening and full adventure completion remain unverified/outside this first-scene refinement.
+
+Atlas: this pass 8 settled / 0 reserved / 392 unused under the 400-credit authorization. Fresh balance 1,939, lifetime spent 61. No purchases, overage, resets or additional audio generation.
+
+## Historical release notes below
 
 Current published runtime:69eaad2, a woodland first-area study replacing the rejected terrace. The user authorized repeated refinement of this scene up to400 additional Atlas credits, including running, jumping, richer environments and discovery. The full12–15-minute adventure remains outside this milestone.
 

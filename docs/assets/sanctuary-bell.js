@@ -1,0 +1,16 @@
+export default function(T){
+ const g=new T.Group();
+ const mat=(c,n,r=.85)=>Object.assign(new T.MeshStandardMaterial({color:c,roughness:r,side:T.DoubleSide}),{name:n});
+ const wood=mat(0x594333,'timber'),ivory=mat(0xe6d9b7,'plaster'),bronze=mat(0xb08049,'metal',.52),patina=mat(0x498f82,'metal',.63),stone=mat(0x89917d,'stone'),dark=mat(0x293f3c,'timber'),rope=mat(0xae9367,'fabric'),leaf=mat(0x53785b,'foliage');
+ function mesh(geo,m,x=0,y=0,z=0,parent=g){const o=new T.Mesh(geo,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;parent.add(o);return o;}
+ function ell(m,x,y,z,a,b,c,parent=g){const o=mesh(new T.SphereGeometry(1,12,8),m,x,y,z,parent);o.scale.set(a,b,c);return o;}
+ function rod(m,a,b,r=.04,r2=r,parent=g){const v=new T.Vector3(...a),w=new T.Vector3(...b),d=w.clone().sub(v);const o=mesh(new T.CylinderGeometry(r2,r,d.length(),8),m,0,0,0,parent);o.position.copy(v.add(w).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o;}
+ function curve(m,points,r=.04,parent=g){const path=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));return mesh(new T.TubeGeometry(path,18,r,6,false),m,0,0,0,parent);}
+ function ring(m,x,y,z,r,t=.025,parent=g){return mesh(new T.TorusGeometry(r,t,6,24),m,x,y,z,parent);}
+ function profile(m,points,x,y,z,parent=g){return mesh(new T.LatheGeometry(points.map(p=>new T.Vector2(...p)),24),m,x,y,z,parent);}
+ function block(m,x,y,z,a,b,c,angle=0,parent=g){const o=mesh(new T.BoxGeometry(a,b,c),m,x,y,z,parent);o.rotation.z=angle;return o;}
+
+for(const s of [-1,1]){for(let i=0;i<5;i++){const sh=new T.Shape();sh.moveTo(-.2,-.23);sh.lineTo(.2,-.2);sh.lineTo(.22,.2);sh.lineTo(-.17,.24);sh.closePath();mesh(new T.ExtrudeGeometry(sh,{depth:.42,bevelEnabled:true,bevelSize:.035,bevelThickness:.025,bevelSegments:1,steps:1}),stone,s*.94,.26+i*.49,-.21);}}for(let i=0;i<9;i++){const a=i/8*Math.PI;block(ivory,Math.cos(a)*.94,2.45+Math.sin(a)*.78,0,.34,.43,.45,a-Math.PI/2);}rod(wood,[-.96,2.41,0],[.96,2.41,0],.09);profile(bronze,[[.66,0],[.66,.08],[.53,.17],[.43,.38],[.36,.8],[.29,1.04],[.2,1.13],[.1,1.15],[.09,1.1],[.2,1.07],[.25,.95],[.32,.72],[.39,.32],[.49,.13],[.61,.06],[.61,0]],0,.82,0);for(const [y,r] of [[.9,.61],[1.14,.46],[1.72,.34],[1.84,.3]])ring(patina,0,y,0,r,.026).rotation.x=Math.PI/2;ring(bronze,0,2.12,0,.14,.035);rod(dark,[0,2.42,0],[0,2.18,0],.025);rod(wood,[0,1.72,0],[0,.69,0],.035);ell(bronze,0,.73,0,.09,.12,.09);ring(bronze,0,2.63,0,.21,.035);for(let i=0;i<9;i++){const a=i/8*Math.PI;rod(bronze,[Math.cos(a)*.23,2.63+Math.sin(a)*.23,0],[Math.cos(a)*.37,2.63+Math.sin(a)*.37,0],.033,.002);}for(const s of [-1,1]){curve(wood,[[s*1.25,0,.34],[s*.94,.26,.27],[s*1.02,.66,.26],[s*.91,1.2,.24]],.05);for(let j=0;j<5;j++)ell(leaf,s*(.92+Math.sin(j)*.12),.22+j*.3,.28,.12,.07,.035);}
+ g.name='sanctuary-bell candidate b';
+ g.updateMatrixWorld(true);const b=new T.Box3(),v=new T.Vector3();g.traverse(n=>{if(n.isMesh){const p=n.geometry.attributes.position;for(let i=0;i<p.count;i++)b.expandByPoint(v.fromBufferAttribute(p,i).applyMatrix4(n.matrixWorld));}});const c=b.getCenter(new T.Vector3());for(const o of g.children){o.position.x-=c.x;o.position.z-=c.z;o.position.y-=b.min.y;}g.updateMatrixWorld(true);return g;
+}

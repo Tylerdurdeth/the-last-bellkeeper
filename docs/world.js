@@ -1,8 +1,30 @@
 import * as T from 'three';
 import {createBrook} from './brook.js';
+import {createWoodlandLife} from './woodland-life.js';
 import {buildBackdrop} from './backdrop.js';
 import {ASSET,bakeStatic} from './assetlib.js';
-import {height,pathDistance,POINTS} from './world-layout.js';
+import {height,pathDistance,POINTS,TERRAIN,terrainGround,ridgeBlocked,shoreClearance} from './world-layout.js';
+
+// The named deck survives recipe loading. Only its real triangles support feet;
+// ropes and posts never become an invisible floor. World matrices follow the rise.
+export function createBridgeCrossing(bridge){
+ const deck=bridge.getObjectByName('bridge-deck');
+ if(!deck)throw new Error('Bridge recipe must retain its named deck');
+ const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0));
+ const {x,z,length,width}=TERRAIN.bridge;
+ bridge.updateMatrixWorld(true);ray.ray.origin.set(x,30,z+length/2-.12);
+ const end=ray.intersectObject(deck,true)[0];if(!end)throw new Error('Bridge endpoint has no deck');
+ // A four-centimetre timber lip clears the bank without coplanar flicker.
+ const raisedY=bridge.position.y+height(x,TERRAIN.south+.25)-end.point.y+.04;
+ let lift=0;bridge.position.y=raisedY-3.6;bridge.visible=false;bridge.updateMatrixWorld(true);
+ function update(dt,restored){lift=restored?T.MathUtils.damp(lift,1,7,dt):0;bridge.visible=restored;bridge.position.y=raisedY-(1-lift)*3.6;bridge.updateMatrixWorld(true);}
+ function ground(px,pz){
+  if(!bridge.visible||Math.abs(px-x)>width/2+.01||Math.abs(pz-z)>length/2+.01)return null;
+  ray.ray.origin.set(px,30,pz);const hit=ray.intersectObject(deck,true)[0];
+  return hit&&hit.point.y>TERRAIN.waterY?hit.point.y:null;
+ }
+ return {ground,update,get lift(){return lift;},raisedY};
+}
 // Authored landmarks, then deterministic natural scatter. Geometry comes from reviewed recipe assets.
 export async function buildWorld(scene,art){
  const scatterRocks=[],colliders=[],chunks=new Map(),animated=[],birds=[],lanterns=[],trees=[];let seed=419;const rnd=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);
@@ -10,11 +32,13 @@ export async function buildWorld(scene,art){
  const shortcutDistance=(x,z)=>{const a=shortcutLine[0],b=shortcutLine[1],dx=b[0]-a[0],dz=b[1]-a[1],u=T.MathUtils.clamp(((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz),0,1);return Math.hypot(x-a[0]-u*dx,z-a[1]-u*dz);};
  const gardenClearance=(x,z)=>[POINTS.garden,POINTS.quietGarden].some(([gx,gz])=>Math.hypot(x-gx,z-gz)<1.6);
  const prototypes={};
- for(const name of ['terrain','cottage','tree','fern','rock','bridge','chimes','bird','flower','wheel','lantern']){
-  prototypes[name]=await ASSET('./assets/'+name+'.js',{keepHierarchy:['terrain','bird','wheel','chimes'].includes(name)});
+ await Promise.all(['terrain','cottage','tree','fern','rock','bridge','chimes','sanctuary-bell','bird','flower','wheel','lantern','bramble','hosta','shelf-stump','rabbit','kingfisher','luna-moth'].map(async name=>{
+  prototypes[name]=await ASSET('./assets/'+name+'.js',{keepHierarchy:['terrain','bridge','bird','wheel','chimes','rabbit','kingfisher','luna-moth'].includes(name)});
   art.style(prototypes[name],{terrain:name==='terrain',wood:name==='tree'});
- }
+ }));
  function place(name,x,z,scale=1,rotation=0,{dynamic=false,y=height(x,z)}={}){
+  // Bank dressing must not overhang the clear channel or create stepping stones.
+  if(name!=='bridge'&&!shoreClearance(x,z,name==='rock'?scale*1.15:name==='tree'?.8:.15))return new T.Group();
   const o=prototypes[name].clone(true);for(const [key,val] of Object.entries(prototypes[name].userData)){if(val?.isObject3D)o.userData[key]=o.getObjectByName(val.name);}
   o.position.set(x,y,z);o.scale.multiplyScalar(scale);o.rotation.y=rotation;
   if(dynamic){scene.add(o);animated.push(o);}else{const key=Math.floor(x/10)+':'+Math.floor(z/10);if(!chunks.has(key))chunks.set(key,new T.Group());chunks.get(key).add(o);}return o;
@@ -22,11 +46,23 @@ export async function buildWorld(scene,art){
  const terrain=prototypes.terrain;terrain.position.y=-8;terrain.traverse(n=>{if(n.isMesh&&n.material.name==='ground'&&!n.geometry.attributes.color)n.visible=false;});scene.add(terrain);const brook=createBrook(T,terrain.getObjectByName('water'));
  const cottage=place('cottage',-8,9,1,.7,{dynamic:true});colliders.push({x:-8,z:9,r:2.25});const cottageMats=[];cottage.traverse(o=>{if(o.isMesh){o.material=o.material.clone();art.style(o);o.material.transparent=true;cottageMats.push(o.material);}});
  const wheel=place('wheel',6,2.5,1.2,-.45,{dynamic:true});colliders.push({x:6,z:2.5,r:.62});
- const bridge=place('bridge',8,-3.35,1,0,{dynamic:true,y:.9});bridge.visible=false;
+ const bridge=place('bridge',TERRAIN.bridge.x,TERRAIN.bridge.z,1,0,{dynamic:true,y:0});
+ const crossing=createBridgeCrossing(bridge);
  const chimes=place('chimes',-9.5,-14.5,1.05,0,{dynamic:true});
+ // Reviewed moss rocks frame dry banks; actual rock surfaces replace circular
+ // ravine blockers. The eight metre channels remain completely clear.
+ for(const [x,z,s] of [[-5.5,-8,.8],[5.2,-9,.7],[12.8,-9,.75],[24.5,-8,.8]]){
+  const o=place('rock',x,z,s,rnd()*6.28);scatterRocks.push({o,x,z,r:s*1.5});
+ }
+ // The continuous 5.5m cliff in the terrain mesh is the physical outer boundary.
+ // Existing reviewed rocks and ferns break up its foot without replacing its shape.
+ for(let a=-25;a<=25;a+=3.5)for(const [x,z] of [[-27,a],[27,a],[a,-27],[a,27]]){
+  const s=.8+rnd()*.3,o=place('rock',x,z,s,rnd()*6.28);scatterRocks.push({o,x,z,r:s*1.5});
+  place('fern',x*.97,z*.97,.9+rnd()*.4,rnd()*6.28);
+ }
  for(const [x,z] of [[-5,14],[-10,3],[-16,-6],[-10,-17],[5,0],[8,-9]])lanterns.push(place('lantern',x,z,.7,rnd()*6.28,{dynamic:true}));
  // Trunks frame bends, roofs and clearings; never place a trunk on the walking route.
- const trunks=[[-7,17],[3,15],[-13,12],[-1,10],[-13,5],[-20,2],[-8,-2],[-20,-8],[-13,-13],[-5,-12],[-16,-20],[-5,-21],[1,-20],[16,-19],[20,-8],[16,4],[12,12],[-24,-14],[-24,12],[2,23]];
+ const trunks=[[-7,17],[3,15],[-13,12],[-1,10],[-13,5],[-20,2],[-8,-2],[-20,-8],[-13,-13],[-5,-12],[-16,-20],[-5,-21],[1,-20],[16,-19],[20,-8],[16,4],[12,12],[-24,-14],[-24,12],[2,23]].filter(([x,z])=>shoreClearance(x,z,.8));
  // Soil/moss banks bind exposed roots to terrain rather than placing them on an unbroken carpet.
  terrain.traverse(n=>{const geo=n.geometry,c=geo?.attributes.color,p=geo?.attributes.position;if(!c||!p)return;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);let edge=99;for(const [tx,tz] of trunks)edge=Math.min(edge,Math.hypot(x-tx,z-tz));const w=(1-T.MathUtils.smoothstep(edge,1.1,3.4))*.48;const col=new T.Color().fromBufferAttribute(c,i);col.lerp(new T.Color(0x495e3b),w);c.setXYZ(i,col.r,col.g,col.b);}c.needsUpdate=true;});
  // Per-instance root contact; prototypes and gameplay surfaces remain unchanged.
@@ -50,7 +86,7 @@ export async function buildWorld(scene,art){
   const branch=Math.min(...[[0,5],[5,3],[8,0]].map(([a,b])=>Math.hypot(x-a,z-b)));
   if(d<1.4||branch<2||shortcutDistance(x,z)<1.25)continue;
   const near=d<4.5||branch<4;
-  const name=i%7===0?'rock':'fern';
+  const name=i%11===0?'rock':i%7===0?'hosta':'fern';
   if(!near&&i%3)continue;
   const scatter=place(name,x,z,name==='rock'?.7+rnd()*.7:name==='fern'?.85+rnd()*.8:.7+rnd()*.8,rnd()*6.28);
   if(name==='rock')scatterRocks.push({o:scatter,x,z,r:scatter.scale.x*1.1});
@@ -62,6 +98,9 @@ export async function buildWorld(scene,art){
  for(const [cx,cz] of [[-17.8,-.5],[-13.2,-2],[-18,-6],[-14,-8.8],[-15.2,-17.7],[-14.5,-19.4]])for(let i=0;i<9;i++){const a=i*2.4,r=.4+Math.sqrt(i/9)*1.1,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;if(pathDistance(x,z)<1.25||gardenClearance(x,z))continue;place(i%3?'fern':'flower',x,z,1.1+(i%3)*.18,a);}
  for(const [x,z,s] of [[-15.4,-18.8,1.8],[-13.7,-20,1.4],[-17.2,-17.1,1.2]]){const o=place('rock',x,z,s,.6);scatterRocks.push({o,x,z,r:s*1.1});}
  const backdrop=buildBackdrop(T,scene,{prototypes,art,height});
+ // Legacy valley masses were authored inside the new northern channel. Keep
+ // this non-collidable scenery wholly behind the physical perimeter ridge.
+ backdrop.root.position.z=-16;
  const memoryRock=prototypes.rock.clone(true);memoryRock.position.set(-19,height(-19,-5),-5);memoryRock.scale.set(1.7,1.1,1.7);scene.add(memoryRock);memoryRock.updateMatrixWorld(true);const rockRay=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0));
  function scatterGround(x,z){let top=null;rockRay.ray.origin.set(x,10,z);for(const r of scatterRocks){if(Math.hypot(x-r.x,z-r.z)>r.r)continue;const hit=rockRay.intersectObject(r.o,true)[0];if(hit)top=top===null?hit.point.y:Math.max(top,hit.point.y);}return top;}
  function rockGround(x,z){if(Math.hypot(x+19,z+5)>1.8)return null;rockRay.ray.origin.set(x,10,z);const hits=rockRay.intersectObject(memoryRock,true);return hits[0]?.point.y??null;}
@@ -73,29 +112,32 @@ export async function buildWorld(scene,art){
  const shortcutPoint=new T.Vector3(-7,shelfGround(-7,-5),-5),shortcutFlowers=[];
  for(let i=0;i<14;i++){const u=i/13,x=-10+u*7+(i%2?-.65:.65),z=-9+u*11;const o=place('flower',x,z,.9,Math.sin(i)*2,{dynamic:true});const mats=[];o.traverse(n=>{if(n.isMesh){n.material=n.material.clone();art.style(n);if(n.material.color.r>n.material.color.g){mats.push(n.material);n.material.emissive.setHex(0xe8ad51);}}});shortcutFlowers.push({o,mats,phase:i*.8});}
  let shortcutAwake=0;
- // The far-bank destination is an overgrown bell sanctuary, assembled from
- // reviewed moss-rock and chime geometry rather than an invisible finish point.
+ // One selected sanctuary asset, at its authored scale; no duplicate rock arch.
  const sanctuary=new T.Group();sanctuary.name='Far-bank bell sanctuary';scene.add(sanctuary);
  const sanctuaryY=height(8,-11.2),sanctuaryFlowers=[],bloomMaterials=new Map();
- function ruinRock(x,y,z,sx,sy,sz,angle=0){const o=prototypes.rock.clone(true);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.rotation.z=angle;sanctuary.add(o);return o;}
- for(const side of [-1,1])for(let i=0;i<4;i++)ruinRock(8+side*1.35,sanctuaryY+i*.60,-11.6,.52,1.6,.65,(i%2?.025:-.025)*side);
- for(let i=0;i<7;i++){const a=i/6*Math.PI;ruinRock(8+Math.cos(a)*1.3,sanctuaryY+2.25+Math.sin(a)*.95,-11.6,.54,1.25,.63,a-Math.PI/2);}
- const sanctuaryBell=prototypes.chimes.clone(true);sanctuaryBell.position.set(8,sanctuaryY,-11.3);sanctuaryBell.scale.setScalar(1.6);sanctuary.add(sanctuaryBell);
+ const sanctuaryBell=place('sanctuary-bell',8,-11.3,1,0,{dynamic:true});sanctuary.add(sanctuaryBell);
  for(let i=0;i<52;i++){const a=i*2.39996,r=1.8+Math.sqrt(i/52)*2.2,x=8+Math.cos(a)*r,z=-9.8+Math.sin(a)*r;if(z< -12.5||Math.abs(x-8)<.7&&z> -10)continue;const f=place('flower',x,z,.8+(i%4)*.12,a,{dynamic:true});f.traverse(n=>{if(n.isMesh&&n.material.name==='foliage'){const key=n.material.uuid+':'+(i%3?0:1);if(!bloomMaterials.has(key)){const m=n.material.clone();if(m.color.r>m.color.g*.85||m.color.b>m.color.g*.8){m.color.setHex(i%3?0x86c9d7:0xe4bb82);m.emissive.setHex(0x75d8c0);}bloomMaterials.set(key,m);}n.material=bloomMaterials.get(key);}});sanctuaryFlowers.push(f);}
  const bloomGroup=new T.Group();for(const f of sanctuaryFlowers)bloomGroup.add(f);const blooms=bakeStatic(bloomGroup);scene.add(blooms);
  const pulseGeo=new T.RingGeometry(.96,1,64),pulse=new T.Mesh(pulseGeo,new T.MeshBasicMaterial({color:0xc0ffe0,transparent:true,opacity:0,side:T.DoubleSide,depthWrite:false}));pulse.rotation.x=-Math.PI/2;pulse.position.set(8,sanctuaryY+.09,-9.8);scene.add(pulse);let wakeAge=99,wasComplete=false;
+ const life=createWoodlandLife(T,{place,height,shoreClearance});
  const chunkList=[];for(const g of chunks.values()){const baked=bakeStatic(g);scene.add(baked);const center=new T.Box3().setFromObject(baked).getCenter(new T.Vector3());chunkList.push({o:baked,center});}
  let restored=false,bridgeLift=0,cottageOpacity=1,occlusionTimer=0;const cameraRay=new T.Raycaster();
- function ground(x,z){if(x>2&&z< -13&&height(x,z)<.95)return null;const shelfY=shelfGround(x,z);if(shelfY!==null)return Math.max(height(x,z),shelfY);const rockY=rockGround(x,z);if(rockY!==null)return Math.max(height(x,z),rockY);const scatterY=scatterGround(x,z);if(scatterY!==null)return Math.max(height(x,z),scatterY);if(Math.abs(x)>35||Math.abs(z)>35)return null;if(!restored&&x>7&&z< -5.8)return null;if(restored&&Math.abs(x-8)<1.1&&z> -6.2&&z<.2)return 1.2-.15*Math.cos(Math.min(1,Math.abs(z+3.35)/2.5)*Math.PI/2);const h=height(x,z);if(x>2&&x<31&&z> -5.5&&z< -1.2&&h<-.35)return null;return h< -2?null:h;}
- function blocked(x,z,r){return colliders.some(c=>Math.hypot(x-c.x,z-c.z)<c.r+r);}
+ function ground(x,z){
+  const land=terrainGround(x,z),deck=crossing.ground(x,z);
+  // Water excludes decorative props before their support queries; a real bridge
+  // is the only exception. Every dry terrain triangle retains physical support.
+  if(land===null)return deck;
+  return Math.max(land,deck??-Infinity,shelfGround(x,z)??-Infinity,rockGround(x,z)??-Infinity,scatterGround(x,z)??-Infinity);
+ }
+ function blocked(x,z,r){return ridgeBlocked(x,z,r)||colliders.some(c=>Math.hypot(x-c.x,z-c.z)<c.r+r);}
  function update(dt,t,pos,isRestored,gentle,camera,charged=false,complete=false){
+  life.update(dt,t,pos,gentle);
   brook.update(t,gentle);
   shortcutAwake=T.MathUtils.damp(shortcutAwake,charged||isRestored?1:0,3,dt);for(const f of shortcutFlowers){f.o.rotation.z=Math.sin(t*3-f.phase)*.16*shortcutAwake*(gentle?.2:1);for(const m of f.mats)m.emissiveIntensity=shortcutAwake*(.55+.3*Math.sin(t*2-f.phase));}
   backdrop.update?.(dt,t,pos);if(isRestored&&!restored){wakeAge=0;pulse.position.set(6,height(6,2.5)+.08,2.5);}if(complete&&!wasComplete){wakeAge=0;pulse.position.set(8,sanctuaryY+.09,-9.8);}wasComplete=complete;if(!isRestored)wakeAge=99;wakeAge+=dt;
   pulse.visible=wakeAge<3.2;pulse.scale.setScalar(1+wakeAge*4);pulse.material.opacity=Math.max(0,.5*(1-wakeAge/3.2));
-  sanctuaryBell.rotation.z=gentle?0:Math.sin(t*(isRestored?2:1))*(isRestored?.07:.012);
   for(const m of bloomMaterials.values())m.emissiveIntensity=isRestored?.24:0;
-  restored=isRestored;bridgeLift=T.MathUtils.damp(bridgeLift,restored?1:0,7,dt);bridge.visible=restored;bridge.position.y=.9-(1-bridgeLift)*3.6;
+  restored=isRestored;crossing.update(dt,restored);bridgeLift=crossing.lift;
   const view=camera?camera.position.clone().sub(pos).setY(0).normalize():new T.Vector3(.615,0,.788),cdx=cottage.position.x-pos.x,cdz=cottage.position.z-pos.z,front=cdx*view.x+cdz*view.z,side=Math.abs(cdx*view.z-cdz*view.x);cottageOpacity=T.MathUtils.damp(cottageOpacity,front> -1&&front<12&&side<3.4?.025:1,12,dt);for(const m of cottageMats){m.opacity=cottageOpacity;m.depthWrite=cottageOpacity>.98;}
   const rotor=wheel.userData.rotor||wheel.getObjectByName('rotor');if(rotor?.rotation)rotor.rotation.z+=dt*(restored?1.4:.05);
   chimes.rotation.z=gentle?0:Math.sin(t*1.7)*.055;

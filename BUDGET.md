@@ -1,5 +1,13 @@
 # Budget ledger
 
+## 20 September refinement allocation
+
+Final billing verified 20 September: account 1,939 remaining, 61 lifetime spent. R08 instruments and R09 woodland references each settled at 4 credits (31 reserved, 27 returned). Both downloaded and visually inspected. This pass: 8 settled, 0 reserved, 392 remaining under the user’s 400-credit limit. No purchases, overage or new audio jobs. References saved in local asset-work/refinement-20/reference/.
+
+R08 completed: node Last Run 4 credits; 1K instrument sheet visually inspected, download requested. Release 31 reservation; pass settled 4, reserved 0. R09 botanical/fauna reference reserved 31 configured maximum, one 1K direct image; available after reservation 365.
+
+User authorizes up to 400 Atlas credits for the map/terrain/instrument/flora/fauna refinement pass. Fresh browser billing: 1,947 remaining, 53 lifetime spent; no outstanding jobs. Original overall 2,000 and protected 800 repair reserve remain. R08 instrument reference: reserve 31 credits (configured image node maximum); one 1K Gemini 3.1 Flash Lite Image execution, seed 43. This pass: 0 settled, 31 reserved, 369 unallocated. Reconcile before another dispatch. Included Codex weekly usage observed 2% used, ordinary usage allowed.
+
 ## Limits
 
 - Atlas overall <=2000 credits or verified lower balance.

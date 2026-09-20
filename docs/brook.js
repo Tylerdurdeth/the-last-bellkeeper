@@ -10,16 +10,17 @@ export function createBrook(T, waterMesh) {
     shader.uniforms.bkBrookTime = clock;
     shader.uniforms.bkBrookMotion = motion;
     shader.vertexShader = shader.vertexShader.replace('#include <common>',
-      '#include <common>\nvarying vec2 vBkBrookUV;\nuniform float bkBrookTime;\nuniform float bkBrookMotion;');
+      '#include <common>\nvarying vec2 vBkBrookUV;\nattribute float bankDistance;\nvarying float vBankDistance;\nuniform float bkBrookTime;\nuniform float bkBrookMotion;');
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>',
-      '#include <begin_vertex>\nvBkBrookUV = uv;\nfloat bkFlow = bkBrookTime * bkBrookMotion;\ntransformed.y += sin(uv.x * 38.0 - bkFlow * 3.8 + sin(uv.y * 12.0)) * 0.032;\ntransformed.y += sin(uv.x * 91.0 - bkFlow * 6.2 + uv.y * 18.0) * 0.008;');
+      '#include <begin_vertex>\nvBkBrookUV = uv;\nvBankDistance = bankDistance;\nfloat bkFlow = bkBrookTime * bkBrookMotion;\ntransformed.y += sin(uv.x * 1.36 - bkFlow * 3.8 + sin(uv.y * 2.8)) * 0.032;\ntransformed.y += sin(uv.x * 3.25 - bkFlow * 6.2 + uv.y * 4.2) * 0.008;');
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>',
-      '#include <common>\nvarying vec2 vBkBrookUV;\nuniform float bkBrookTime;\nuniform float bkBrookMotion;');
+      '#include <common>\nvarying vec2 vBkBrookUV;\nvarying float vBankDistance;\nuniform float bkBrookTime;\nuniform float bkBrookMotion;');
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `
       #include <color_fragment>
       // Long drifting strokes travel along the brook, never screen-space grain.
       float t = bkBrookTime * bkBrookMotion;
-      vec2 p = vBkBrookUV * vec2(28., 4.3);
+      // Asset UVs are world metres, continuous around every side of the island.
+      vec2 p = vBkBrookUV;
       float bend = sin(p.x * .55 - t * 1.15) * .16 + sin(p.x * 1.3 - t * 1.8) * .035;
       float ribbons = sin((p.y + bend) * 9.0 - t * .55);
       float brokenStroke = smoothstep(.12, .72, sin(p.x * 2.2 - t * 2.1 + sin(p.y * 3.)));
@@ -28,13 +29,13 @@ export function createBrook(T, waterMesh) {
       vec3 painted = mix(vec3(.035,.20,.25), vec3(.10,.46,.48), broad);
       painted = mix(painted, vec3(.52,.83,.78), streak * .80);
       // Interrupted pale banks establish contact; no continuous rectangular border.
-      float bankDistance = min(vBkBrookUV.y, 1. - vBkBrookUV.y) * 4.3;
-      float edge = 1. - smoothstep(.025,.13 + .03 * sin(p.x * 1.6 - t * .5),bankDistance);
+      // Distances are baked from the exact authored shoreline vertices.
+      float edge = 1. - smoothstep(.025,.13 + .03 * sin(p.x * 1.6 - t * .5),vBankDistance);
       float foam = edge * smoothstep(-.45,.65,sin(p.x * 2.4 - t * 1.1));
       diffuseColor.rgb = mix(painted, vec3(.65,.88,.82),foam * .85);
     `);
   };
-  water.customProgramCacheKey = () => 'bellkeeper-brook-painted-v1';
+  water.customProgramCacheKey = () => 'bellkeeper-brook-organic-v3';
   waterMesh.material = water;
   waterMesh.receiveShadow = true;
   waterMesh.castShadow = false;

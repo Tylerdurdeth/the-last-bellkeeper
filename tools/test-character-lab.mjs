@@ -11,7 +11,7 @@ try{
  for(const source of ['profile','sculpt','character']){await p.select('#source',source);await p.waitForFunction(s=>__LAB__.source===s,{},source);}
  await p.select('#source','character');await p.waitForFunction(()=>__LAB__.source==='character');
  await p.click('#freeze');await sleep(80);const t=await p.evaluate(()=>__LAB__.time);await sleep(100);assert.equal(await p.evaluate(()=>__LAB__.time),t);await p.click('#step');await sleep(40);assert(Math.abs((await p.evaluate(()=>__LAB__.time))-t-1/60)<.0001);
- await p.click('#freeze');await p.select('#clip','free');await p.keyboard.down('KeyW');await sleep(350);await p.keyboard.up('KeyW');assert(Math.hypot(...(await p.evaluate(()=>__LAB__.position)))>.1);
+ await p.click('#freeze');await p.select('#clip','free');await p.keyboard.down('ArrowUp');await sleep(350);await p.keyboard.up('ArrowUp');assert(Math.hypot(...(await p.evaluate(()=>__LAB__.position)))>.1);
  await p.setViewport({width:390,height:844,isMobile:true,hasTouch:true});await p.waitForFunction(()=>window.__LAB__);await p.select('#clip','free');
  const s=await p.$eval('#stick',e=>{const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2};});const c=await p.createCDPSession();
  await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,...s}]});await c.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{id:1,x:s.x,y:s.y-35}]});await sleep(300);await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert(Math.hypot(...(await p.evaluate(()=>__LAB__.position)))>.1);

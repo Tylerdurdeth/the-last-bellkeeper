@@ -1,0 +1,78 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 30,
+  "tris": 2432,
+  "materials": 6,
+  "size": [
+   1.24,
+   1.59,
+   0.8
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1071,
+    "edgeDensity": 0.2622
+   },
+   "right": {
+    "coverage": 0.0884,
+    "edgeDensity": 0.2413
+   },
+   "back": {
+    "coverage": 0.1056,
+    "edgeDensity": 0.226
+   },
+   "left": {
+    "coverage": 0.0845,
+    "edgeDensity": 0.2137
+   }
+  },
+  "error": null,
+  "name": "chimes",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 17,
+  "tris": 1172,
+  "materials": 4,
+  "size": [
+   0.981,
+   1.86,
+   0.34
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1481,
+    "edgeDensity": 0.2479
+   },
+   "right": {
+    "coverage": 0.0665,
+    "edgeDensity": 0.173
+   },
+   "back": {
+    "coverage": 0.148,
+    "edgeDensity": 0.2161
+   },
+   "left": {
+    "coverage": 0.0629,
+    "edgeDensity": 0.2298
+   }
+  },
+  "error": null,
+  "name": "wind-harp",
+  "problems": []
+ }
+]

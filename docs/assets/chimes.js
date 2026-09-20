@@ -17,7 +17,11 @@ export default function(T){
 
  const pts=[[.33,0],[.4,.06],[.29,.15],[.12,.22],[0,.24]].map(p=>new T.Vector2(...p));mesh(new T.LatheGeometry(pts,16),copper,0,.72,0);
  ring(copper,0,1.06,0,.10,.02);rod(rope,[0,.95,0],[0,1.04,0],.012);
- for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.sin(a)*.25,z=Math.cos(a)*.25,len=.35+(i%3)*.08;rod(rope,[x,.75,z],[x,.58,z],.008);mesh(new T.CylinderGeometry(.025,.03,len,8,true),i%2?copper:patina,x,.58-len/2,z);ring(copper,x,.58,z,.037,.009).rotation.x=Math.PI/2;}
+ for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.sin(a)*.25,z=Math.cos(a)*.25,len=.35+(i%3)*.08;rod(rope,[x,.75,z],[x,.58,z],.008);
+  if(i%3===0){mesh(new T.CylinderGeometry(.025,.03,len,8,true),copper,x,.58-len/2,z);ring(copper,x,.58,z,.037,.009).rotation.x=Math.PI/2;}
+  else if(i%3===1){const pod=ell(patina,x,.58-len*.48,z,.075,.16,.075);pod.rotation.z=.22;rod(rope,[x,.58-len*.86,z],[x,.58-len,z],.012);}
+  else {rod(copper,[x-.08,.58,z],[x+.08,.58,z],.012,.012);ring(teal,x,.58,z,.09,.012).rotation.x=Math.PI/2;}
+ }
  rod(rope,[0,.75,0],[0,.10,0],.008);ell(wood,0,.33,0,.08,.045,.08);shape(teal,[[0,0],[.06,.14],[0,.28],[-.06,.14]],.012,0,0,0);
 
  // A crooked timber bracket carries the instrument, visibly anchored in the soil.

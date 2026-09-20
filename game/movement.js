@@ -2,7 +2,7 @@
 export function createMovement(THREE, {
   start = [0, 0, 0], sampleGround = () => 0, blocked = () => false,
   stickElement, jumpButton, runButton,
-  inputTarget = globalThis.window, jumpKey = 'KeyJ', walkSpeed = 2.2, runSpeed = 4.5,
+  inputTarget = globalThis.window, jumpKey = 'KeyA', walkSpeed = 2.2, runSpeed = 4.5,
   acceleration = 23, deceleration = 30, turnResponse = 20, cameraYaw = null,
 } = {}) {
   const position = new THREE.Vector3(...start), velocity = new THREE.Vector3();
@@ -38,7 +38,7 @@ export function createMovement(THREE, {
     if (grounded) position.y = g;
     speed = 0; mode = 'idle'; coyote = grounded ? .11 : 0; safeTime = 0;
   }
-  const movementKeys = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', jumpKey]);
+  const movementKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', jumpKey]);
   on(inputTarget, 'keydown', e => {
     if (!active || e.target?.matches?.('input, textarea, select, [contenteditable="true"]')) return;
     if (!movementKeys.has(e.code)) return;
@@ -67,8 +67,9 @@ export function createMovement(THREE, {
   on(runButton, 'click', () => { if (active) { runToggle = !runToggle; runButton.setAttribute('aria-pressed', String(runToggle)); } });
 
   function integrate(dt, actionSlow, faceTarget) {
-    const x = stickX + (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
-    const y = -stickY + (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
+    // A is reserved for jump; keyboard strafe-left remains on ArrowLeft.
+    const x = stickX + (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
+    const y = -stickY + (keys.has('ArrowUp') ? 1 : 0) - (keys.has('ArrowDown') ? 1 : 0);
     const rawMagnitude = Math.hypot(x, y), magnitude = Math.min(1, rawMagnitude);
     const touch = stickId !== null, running = runToggle || keys.has('ShiftLeft') || keys.has('ShiftRight');
     const maxSpeed = actionSlow ? 1.1 : running || touch ? runSpeed : walkSpeed;

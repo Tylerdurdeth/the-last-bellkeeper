@@ -23,5 +23,17 @@ export default function(T){
  for(const s of [-1,1]){rod(copper,[s*.025,.045,.025],[s*.025,0,.045],.006);rod(copper,[s*.025,.005,.045],[s*.025,.003,.08],.005);ell(dark,s*.036,.163,.086,.006,.006,.006,body);}
  const beak=mesh(new T.ConeGeometry(.015,.05,5),copper,0,.15,.117,body);beak.rotation.x=Math.PI/2;
 
- root.name="bird candidate b"; root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),center=bounds.getCenter(new T.Vector3());for(const child of root.children){child.position.x-=center.x;child.position.y-=bounds.min.y;child.position.z-=center.z;}root.updateMatrixWorld(true);const size=bounds.getSize(new T.Vector3()),uniform=0.25/(size.z);for(const child of root.children){child.position.multiplyScalar(uniform);child.scale.multiplyScalar(uniform);}root.updateMatrixWorld(true);return root;
+ root.name="bird candidate b"; root.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(root),center=bounds.getCenter(new T.Vector3());for(const child of root.children){child.position.x-=center.x;child.position.y-=bounds.min.y;child.position.z-=center.z;}root.updateMatrixWorld(true);const size=bounds.getSize(new T.Vector3()),uniform=0.25/(size.z);for(const child of root.children){child.position.multiplyScalar(uniform);child.scale.multiplyScalar(uniform);}root.updateMatrixWorld(true);
+ // Batch only rigid siblings. Body and wing groups retain their authored pivots,
+ // so the flock's tilt, hop and opposite wing rotations remain independent.
+ for(const parent of [root,body,root.userData.leftWing,root.userData.rightWing]){
+  const buckets=new Map();for(const o of parent.children){if(!o.isMesh)continue;if(!buckets.has(o.material))buckets.set(o.material,[]);buckets.get(o.material).push(o);}
+  for(const [material,nodes] of buckets){if(nodes.length<2)continue;const data={position:[],normal:[],uv:[]};
+   for(const o of nodes){o.updateMatrix();const geo=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();geo.applyMatrix4(o.matrix);for(const name of Object.keys(data))for(const value of geo.attributes[name].array)data[name].push(value);geo.dispose();}
+   const geo=new T.BufferGeometry();for(const [name,values] of Object.entries(data))geo.setAttribute(name,new T.Float32BufferAttribute(values,name==='uv'?2:3));
+   const merged=new T.Mesh(geo,material);merged.castShadow=nodes.some(o=>o.castShadow);merged.receiveShadow=nodes.some(o=>o.receiveShadow);parent.add(merged);
+   for(const o of nodes){parent.remove(o);o.geometry.dispose();}
+  }
+ }
+ root.updateMatrixWorld(true);return root;
 }

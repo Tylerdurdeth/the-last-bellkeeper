@@ -1,0 +1,1843 @@
+{
+  "kind": "Actual keyboard/touch input with read-only telemetry; known-route scripted regression, not a natural discovery playtest",
+  "startedAt": "2026-09-20T06:28:42.414Z",
+  "errors": [],
+  "requests": [],
+  "checks": {
+    "counterInitiallyHidden": {
+      "pass": true
+    },
+    "walkRun": {
+      "walk": 1.5443670789892647,
+      "run": 5.577305158199319,
+      "pass": true
+    },
+    "jump": {
+      "air": {
+        "pos": [
+          -2.133004991449773,
+          16.54827978331313
+        ],
+        "y": 0.8132045269273762,
+        "fps": 59.42751910863706,
+        "speed": 1.6651383902808008,
+        "mode": "jump",
+        "grounded": false,
+        "score": 0,
+        "draws": 1018,
+        "tris": 980843,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 1.8415189106244527,
+        "context": null,
+        "discoveryId": null,
+        "discoveries": {
+          "flowersAwake": false,
+          "birdMode": "rest",
+          "birdStartles": 0,
+          "birdCalls": 0,
+          "stoneStep": 0,
+          "stoneSolved": false,
+          "echoSolved": false,
+          "locations": {
+            "flowers": [
+              -3,
+              12
+            ],
+            "birds": [
+              -16,
+              -4
+            ],
+            "stones": [
+              [
+                -8.8,
+                -11.5
+              ],
+              [
+                -7.970000000000001,
+                -11.73
+              ],
+              [
+                -7.140000000000001,
+                -11.96
+              ]
+            ]
+          },
+          "particleCount": 32
+        },
+        "heroVersion": "approved-D",
+        "cameraYaw": 0.662710272684869
+      },
+      "land": {
+        "pos": [
+          -2.2524322104769996,
+          16.39525759047826
+        ],
+        "y": 0.10602286243819765,
+        "fps": 59.84205935683126,
+        "speed": 0.0012599705845069897,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 1010,
+        "tris": 1019939,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 2.0356288077048688,
+        "context": null,
+        "discoveryId": null,
+        "discoveries": {
+          "flowersAwake": false,
+          "birdMode": "rest",
+          "birdStartles": 0,
+          "birdCalls": 0,
+          "stoneStep": 0,
+          "stoneSolved": false,
+          "echoSolved": false,
+          "locations": {
+            "flowers": [
+              -3,
+              12
+            ],
+            "birds": [
+              -16,
+              -4
+            ],
+            "stones": [
+              [
+                -8.8,
+                -11.5
+              ],
+              [
+                -7.970000000000001,
+                -11.73
+              ],
+              [
+                -7.140000000000001,
+                -11.96
+              ]
+            ]
+          },
+          "particleCount": 32
+        },
+        "heroVersion": "approved-D",
+        "cameraYaw": 0.662710272684869
+      },
+      "pass": true
+    },
+    "pause": {
+      "pass": true
+    },
+    "reset": {
+      "pass": true
+    },
+    "flowers": {
+      "pos": [
+        -3.0381956203832443,
+        12.083442541167887
+      ],
+      "y": 0.029709985478293736,
+      "fps": 60.00517962035657,
+      "speed": 4.021988607503513e-8,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 986,
+      "tris": 1008425,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": false,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 8.33899553424541,
+      "context": null,
+      "discoveryId": null,
+      "discoveries": {
+        "flowersAwake": true,
+        "birdMode": "rest",
+        "birdStartles": 0,
+        "birdCalls": 0,
+        "stoneStep": 0,
+        "stoneSolved": false,
+        "echoSolved": false,
+        "locations": {
+          "flowers": [
+            -3,
+            12
+          ],
+          "birds": [
+            -16,
+            -4
+          ],
+          "stones": [
+            [
+              -8.8,
+              -11.5
+            ],
+            [
+              -7.970000000000001,
+              -11.73
+            ],
+            [
+              -7.140000000000001,
+              -11.96
+            ]
+          ]
+        },
+        "particleCount": 32
+      },
+      "heroVersion": "approved-D",
+      "cameraYaw": 0.662710272684869
+    },
+    "bellflowers": {
+      "pass": true
+    },
+    "porch-story": {
+      "pos": [
+        -6.382711724708812,
+        11.381356536156614
+      ],
+      "y": 0.06709966081565856,
+      "fps": 59.99957028683598,
+      "speed": 5.378205688290968e-8,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 986,
+      "tris": 995625,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 11.837148956802034,
+      "context": null,
+      "discoveryId": null,
+      "discoveries": {
+        "flowersAwake": true,
+        "birdMode": "rest",
+        "birdStartles": 0,
+        "birdCalls": 0,
+        "stoneStep": 0,
+        "stoneSolved": false,
+        "echoSolved": false,
+        "locations": {
+          "flowers": [
+            -3,
+            12
+          ],
+          "birds": [
+            -16,
+            -4
+          ],
+          "stones": [
+            [
+              -8.8,
+              -11.5
+            ],
+            [
+              -7.970000000000001,
+              -11.73
+            ],
+            [
+              -7.140000000000001,
+              -11.96
+            ]
+          ]
+        },
+        "particleCount": 32
+      },
+      "heroVersion": "approved-D",
+      "cameraYaw": 0.662710272684869
+    },
+    "porchStory": {
+      "pass": true
+    },
+    "bird-whistle": {
+      "pos": [
+        -16.181639735767547,
+        -4.316880995734142
+      ],
+      "y": 1.359433780159448,
+      "fps": 60.00025223626346,
+      "speed": 0,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 440,
+      "tris": 639939,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 41.33003448543545,
+      "context": null,
+      "discoveryId": null,
+      "discoveries": {
+        "flowersAwake": true,
+        "birdMode": "called",
+        "birdStartles": 1,
+        "birdCalls": 1,
+        "stoneStep": 0,
+        "stoneSolved": false,
+        "echoSolved": false,
+        "locations": {
+          "flowers": [
+            -3,
+            12
+          ],
+          "birds": [
+            -16,
+            -4
+          ],
+          "stones": [
+            [
+              -8.8,
+              -11.5
+            ],
+            [
+              -7.970000000000001,
+              -11.73
+            ],
+            [
+              -7.140000000000001,
+              -11.96
+            ]
+          ]
+        },
+        "particleCount": 32
+      },
+      "heroVersion": "approved-D",
+      "cameraYaw": 0.662710272684869
+    },
+    "birdCall": {
+      "pass": true
+    },
+    "echo-note-0": {
+      "pos": [
+        -8.812246938299673,
+        -10.989893888526577
+      ],
+      "y": 2.491043728536671,
+      "fps": 60.003384698432406,
+      "speed": 5.1678419317578525e-8,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 480,
+      "tris": 610947,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 53.08459176131957,
+      "context": "discovery",
+      "discoveryId": "stone-0",
+      "discoveries": {
+        "flowersAwake": true,
+        "birdMode": "called",
+        "birdStartles": 1,
+        "birdCalls": 1,
+        "stoneStep": 1,
+        "stoneSolved": false,
+        "echoSolved": false,
+        "locations": {
+          "flowers": [
+            -3,
+            12
+          ],
+          "birds": [
+            -16,
+            -4
+          ],
+          "stones": [
+            [
+              -8.8,
+              -11.5
+            ],
+            [
+              -7.970000000000001,
+              -11.73
+            ],
+            [
+              -7.140000000000001,
+              -11.96
+            ]
+          ]
+        },
+        "particleCount": 32
+      },
+      "heroVersion": "approved-D",
+      "cameraYaw": 0.662710272684869
+    },
+    "echo-note-1": {
+      "pos": [
+        -7.96330957423492,
+        -11.136445480133144
+      ],
+      "y": 2.4191604315577475,
+      "fps": 60.003446988582624,
+      "speed": 5.28186596040896e-8,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 484,
+      "tris": 616951,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 53.99261703200349,
+      "context": "discovery",
+      "discoveryId": "stone-1",
+      "discoveries": {
+        "flowersAwake": true,
+        "birdMode": "called",
+        "birdStartles": 1,
+        "birdCalls": 1,
+        "stoneStep": 2,
+        "stoneSolved": false,
+        "echoSolved": false,
+        "locations": {
+          "flowers": [
+            -3,
+            12
+          ],
+          "birds": [
+            -16,
+            -4
+          ],
+          "stones": [
+            [
+              -8.8,
+              -11.5
+            ],
+            [
+              -7.970000000000001,
+              -11.73
+            ],
+            [
+              -7.140000000000001,
+              -11.96
+            ]
+          ]
+        },
+        "particleCount": 32
+      },
+      "heroVersion": "approved-D",
+      "cameraYaw": 0.662710272684869
+    },
+    "echo-note-2": {
+      "pos": [
+        -7.113817211099896,
+        -11.283036593600627
+      ],
+      "y": 2.3260908839489955,
+      "fps": 60.00430174960309,
+      "speed": 5.1528698382854194e-8,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 486,
+      "tris": 617191,
+      "charged": false,
+      "awakened": false,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 54.90123067954554,
+      "context": "discovery",
+      "discoveryId": "stone-2",
+      "discoveries": {
+        "flowersAwake": true,
+        "birdMode": "rest",
+        "birdStartles": 1,
+        "birdCalls": 1,
+        "stoneStep": 3,
+        "stoneSolved": true,
+        "echoSolved": true,
+        "locations": {
+          "flowers": [
+            -3,
+            12
+          ],
+          "birds": [
+            -16,
+            -4
+          ],
+          "stones": [
+            [
+              -8.8,
+              -11.5
+            ],
+            [
+              -7.970000000000001,
+              -11.73
+            ],
+            [
+              -7.140000000000001,
+              -11.96
+            ]
+          ]
+        },
+        "particleCount": 32
+      },
+      "heroVersion": "approved-D",
+      "cameraYaw": 0.662710272684869
+    },
+    "echoPuzzle": {
+      "pass": true
+    },
+    "chimes-awakened": {
+      "pos": [
+        -8.161679439507736,
+        -14.832455505002223
+      ],
+      "y": 2.2489243039599702,
+      "fps": 59.99838569537045,
+      "speed": 7.457845682736487e-10,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 457,
+      "tris": 600647,
+      "charged": false,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": false,
+      "keepsakes": 0,
+      "travel": 63.2629644946634,
+      "context": null,
+      "discoveryId": null,
+      "discoveries": {
+        "flowersAwake": true,
+        "birdMode": "rest",
+        "birdStartles": 1,
+        "birdCalls": 1,
+        "stoneStep": 3,
+        "stoneSolved": true,
+        "echoSolved": true,
+        "locations": {
+          "flowers": [
+            -3,
+            12
+          ],
+          "birds": [
+            -16,
+            -4
+          ],
+          "stones": [
+            [
+              -8.8,
+              -11.5
+            ],
+            [
+              -7.970000000000001,
+              -11.73
+            ],
+            [
+              -7.140000000000001,
+              -11.96
+            ]
+          ]
+        },
+        "particleCount": 32
+      },
+      "heroVersion": "approved-D",
+      "cameraYaw": 0.662710272684869
+    },
+    "quietPocket": {
+      "pass": true
+    },
+    "captured": {
+      "pos": [
+        -13.059420704626188,
+        -17.67265339242742
+      ],
+      "y": 1.8002143568645075,
+      "fps": 60.00139090559745,
+      "speed": 8.937427907282185e-10,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 324,
+      "tris": 505641,
+      "charged": true,
+      "awakened": true,
+      "restored": false,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": true,
+      "keepsakes": 0,
+      "travel": 76.73975095021083,
+      "context": null,
+      "discoveryId": null,
+      "discoveries": {
+        "flowersAwake": true,
+        "birdMode": "rest",
+        "birdStartles": 1,
+        "birdCalls": 1,
+        "stoneStep": 3,
+        "stoneSolved": true,
+        "echoSolved": true,
+        "locations": {
+          "flowers": [
+            -3,
+            12
+          ],
+          "birds": [
+            -16,
+            -4
+          ],
+          "stones": [
+            [
+              -8.8,
+              -11.5
+            ],
+            [
+              -7.970000000000001,
+              -11.73
+            ],
+            [
+              -7.140000000000001,
+              -11.96
+            ]
+          ]
+        },
+        "particleCount": 32
+      },
+      "heroVersion": "approved-D",
+      "cameraYaw": 0.662710272684869
+    },
+    "restored": {
+      "pos": [
+        4.788443570525186,
+        4.0056107493759745
+      ],
+      "y": 1.1486749088221382,
+      "fps": 60.000392382886034,
+      "speed": 5.372305873478195e-8,
+      "mode": "idle",
+      "grounded": true,
+      "score": 0,
+      "draws": 858,
+      "tris": 844985,
+      "charged": false,
+      "awakened": true,
+      "restored": true,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": true,
+      "keepsakes": 0,
+      "travel": 128.53660172079546,
+      "context": null,
+      "discoveryId": null,
+      "discoveries": {
+        "flowersAwake": true,
+        "birdMode": "rest",
+        "birdStartles": 2,
+        "birdCalls": 1,
+        "stoneStep": 3,
+        "stoneSolved": true,
+        "echoSolved": true,
+        "locations": {
+          "flowers": [
+            -3,
+            12
+          ],
+          "birds": [
+            -16,
+            -4
+          ],
+          "stones": [
+            [
+              -8.8,
+              -11.5
+            ],
+            [
+              -7.970000000000001,
+              -11.73
+            ],
+            [
+              -7.140000000000001,
+              -11.96
+            ]
+          ]
+        },
+        "particleCount": 32
+      },
+      "heroVersion": "approved-D",
+      "cameraYaw": 0.662710272684869
+    },
+    "completed": {
+      "pos": [
+        8.228558002754308,
+        -9.859382326728916
+      ],
+      "y": 1.2,
+      "fps": 60.004751178561335,
+      "speed": 5.0615815314031806e-8,
+      "mode": "idle",
+      "grounded": true,
+      "score": 1,
+      "draws": 526,
+      "tris": 602171,
+      "charged": false,
+      "awakened": true,
+      "restored": true,
+      "paused": false,
+      "started": true,
+      "porchRead": true,
+      "quietObserved": true,
+      "keepsakes": 0,
+      "travel": 146.38740626740437,
+      "context": null,
+      "discoveryId": null,
+      "discoveries": {
+        "flowersAwake": true,
+        "birdMode": "rest",
+        "birdStartles": 2,
+        "birdCalls": 1,
+        "stoneStep": 3,
+        "stoneSolved": true,
+        "echoSolved": true,
+        "locations": {
+          "flowers": [
+            -3,
+            12
+          ],
+          "birds": [
+            -16,
+            -4
+          ],
+          "stones": [
+            [
+              -8.8,
+              -11.5
+            ],
+            [
+              -7.970000000000001,
+              -11.73
+            ],
+            [
+              -7.140000000000001,
+              -11.96
+            ]
+          ]
+        },
+        "particleCount": 32
+      },
+      "heroVersion": "approved-D",
+      "cameraYaw": 0.662710272684869
+    },
+    "completion": {
+      "pass": true,
+      "scriptedSeconds": 55.888,
+      "travel": 146.38740627009193
+    },
+    "eastBoundary": {
+      "pass": true,
+      "state": {
+        "pos": [
+          11.48189340728735,
+          -12.398470240592639
+        ],
+        "y": 1.2,
+        "fps": 60.00636906565536,
+        "speed": 0,
+        "mode": "idle",
+        "grounded": true,
+        "score": 1,
+        "draws": 401,
+        "tris": 539229,
+        "charged": false,
+        "awakened": true,
+        "restored": true,
+        "paused": false,
+        "started": true,
+        "porchRead": true,
+        "quietObserved": true,
+        "keepsakes": 0,
+        "travel": 152.88180661872903,
+        "context": null,
+        "discoveryId": null,
+        "discoveries": {
+          "flowersAwake": true,
+          "birdMode": "rest",
+          "birdStartles": 2,
+          "birdCalls": 1,
+          "stoneStep": 3,
+          "stoneSolved": true,
+          "echoSolved": true,
+          "locations": {
+            "flowers": [
+              -3,
+              12
+            ],
+            "birds": [
+              -16,
+              -4
+            ],
+            "stones": [
+              [
+                -8.8,
+                -11.5
+              ],
+              [
+                -7.970000000000001,
+                -11.73
+              ],
+              [
+                -7.140000000000001,
+                -11.96
+              ]
+            ]
+          },
+          "particleCount": 32
+        },
+        "heroVersion": "approved-D",
+        "cameraYaw": 0.662710272684869
+      }
+    },
+    "fallRecovery": {
+      "pass": true,
+      "fell": true,
+      "recovered": true,
+      "state": {
+        "pos": [
+          8.282514337908838,
+          0.883756087238209
+        ],
+        "y": 1.2,
+        "fps": 60.01116073531392,
+        "speed": 0,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 696,
+        "tris": 743613,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 30.840532061311013,
+        "context": null,
+        "discoveryId": null,
+        "discoveries": {
+          "flowersAwake": false,
+          "birdMode": "rest",
+          "birdStartles": 0,
+          "birdCalls": 0,
+          "stoneStep": 0,
+          "stoneSolved": false,
+          "echoSolved": false,
+          "locations": {
+            "flowers": [
+              -3,
+              12
+            ],
+            "birds": [
+              -16,
+              -4
+            ],
+            "stones": [
+              [
+                -8.8,
+                -11.5
+              ],
+              [
+                -7.970000000000001,
+                -11.73
+              ],
+              [
+                -7.140000000000001,
+                -11.96
+              ]
+            ]
+          },
+          "particleCount": 32
+        },
+        "heroVersion": "approved-D",
+        "cameraYaw": 0.662710272684869
+      }
+    },
+    "touch": {
+      "pass": true,
+      "before": {
+        "pos": [
+          -1,
+          18
+        ],
+        "y": 0.11405547331075004,
+        "fps": 57.596801531480295,
+        "speed": 0,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 613,
+        "tris": 718549,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 0,
+        "context": null,
+        "discoveryId": null,
+        "discoveries": {
+          "flowersAwake": false,
+          "birdMode": "rest",
+          "birdStartles": 0,
+          "birdCalls": 0,
+          "stoneStep": 0,
+          "stoneSolved": false,
+          "echoSolved": false,
+          "locations": {
+            "flowers": [
+              -3,
+              12
+            ],
+            "birds": [
+              -16,
+              -4
+            ],
+            "stones": [
+              [
+                -8.8,
+                -11.5
+              ],
+              [
+                -7.970000000000001,
+                -11.73
+              ],
+              [
+                -7.140000000000001,
+                -11.96
+              ]
+            ]
+          },
+          "particleCount": 32
+        },
+        "heroVersion": "approved-D",
+        "cameraYaw": 0.662710272684869
+      },
+      "during": {
+        "pos": [
+          -2.914587094811378,
+          15.546837998843294
+        ],
+        "y": 0.10656859971689983,
+        "fps": 59.310815456416705,
+        "speed": 5.796205699557863,
+        "mode": "run",
+        "grounded": true,
+        "score": 0,
+        "draws": 616,
+        "tris": 775769,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 3.1118559651014452,
+        "context": null,
+        "discoveryId": null,
+        "discoveries": {
+          "flowersAwake": false,
+          "birdMode": "rest",
+          "birdStartles": 0,
+          "birdCalls": 0,
+          "stoneStep": 0,
+          "stoneSolved": false,
+          "echoSolved": false,
+          "locations": {
+            "flowers": [
+              -3,
+              12
+            ],
+            "birds": [
+              -16,
+              -4
+            ],
+            "stones": [
+              [
+                -8.8,
+                -11.5
+              ],
+              [
+                -7.970000000000001,
+                -11.73
+              ],
+              [
+                -7.140000000000001,
+                -11.96
+              ]
+            ]
+          },
+          "particleCount": 32
+        },
+        "heroVersion": "approved-D",
+        "cameraYaw": 0.662710272684869
+      },
+      "stopped": {
+        "pos": [
+          -3.2434087905778752,
+          15.125518492722966
+        ],
+        "y": 0.09965386635502603,
+        "fps": 59.64599858742975,
+        "speed": 0.03918156045552296,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 601,
+        "tris": 769697,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 3.646303187794418,
+        "context": null,
+        "discoveryId": null,
+        "discoveries": {
+          "flowersAwake": false,
+          "birdMode": "rest",
+          "birdStartles": 0,
+          "birdCalls": 0,
+          "stoneStep": 0,
+          "stoneSolved": false,
+          "echoSolved": false,
+          "locations": {
+            "flowers": [
+              -3,
+              12
+            ],
+            "birds": [
+              -16,
+              -4
+            ],
+            "stones": [
+              [
+                -8.8,
+                -11.5
+              ],
+              [
+                -7.970000000000001,
+                -11.73
+              ],
+              [
+                -7.140000000000001,
+                -11.96
+              ]
+            ]
+          },
+          "particleCount": 32
+        },
+        "heroVersion": "approved-D",
+        "cameraYaw": 0.662710272684869
+      },
+      "touchAir": {
+        "pos": [
+          -3.245051455807214,
+          15.123413744429115
+        ],
+        "y": 0.8988405819263013,
+        "fps": 59.76307114123272,
+        "speed": 0.0037926475641858345,
+        "mode": "jump",
+        "grounded": false,
+        "score": 0,
+        "draws": 604,
+        "tris": 770199,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 3.648973078136013,
+        "context": null,
+        "discoveryId": null,
+        "discoveries": {
+          "flowersAwake": false,
+          "birdMode": "rest",
+          "birdStartles": 0,
+          "birdCalls": 0,
+          "stoneStep": 0,
+          "stoneSolved": false,
+          "echoSolved": false,
+          "locations": {
+            "flowers": [
+              -3,
+              12
+            ],
+            "birds": [
+              -16,
+              -4
+            ],
+            "stones": [
+              [
+                -8.8,
+                -11.5
+              ],
+              [
+                -7.970000000000001,
+                -11.73
+              ],
+              [
+                -7.140000000000001,
+                -11.96
+              ]
+            ]
+          },
+          "particleCount": 32
+        },
+        "heroVersion": "approved-D",
+        "cameraYaw": 0.662710272684869
+      },
+      "touchPaused": {
+        "pos": [
+          -3.2453192111794156,
+          15.123070669253021
+        ],
+        "y": 0.0996136924576257,
+        "fps": 59.960540580734495,
+        "speed": 0.0000012758353652495528,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 589,
+        "tris": 769227,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": true,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 3.649408271789224,
+        "context": null,
+        "discoveryId": null,
+        "discoveries": {
+          "flowersAwake": false,
+          "birdMode": "rest",
+          "birdStartles": 0,
+          "birdCalls": 0,
+          "stoneStep": 0,
+          "stoneSolved": false,
+          "echoSolved": false,
+          "locations": {
+            "flowers": [
+              -3,
+              12
+            ],
+            "birds": [
+              -16,
+              -4
+            ],
+            "stones": [
+              [
+                -8.8,
+                -11.5
+              ],
+              [
+                -7.970000000000001,
+                -11.73
+              ],
+              [
+                -7.140000000000001,
+                -11.96
+              ]
+            ]
+          },
+          "particleCount": 32
+        },
+        "heroVersion": "approved-D",
+        "cameraYaw": 0.662710272684869
+      },
+      "touchReset": {
+        "pos": [
+          -1,
+          18
+        ],
+        "y": 0.11405547331075004,
+        "fps": 59.96991108903716,
+        "speed": 0,
+        "mode": "idle",
+        "grounded": true,
+        "score": 0,
+        "draws": 598,
+        "tris": 714293,
+        "charged": false,
+        "awakened": false,
+        "restored": false,
+        "paused": false,
+        "started": true,
+        "porchRead": false,
+        "quietObserved": false,
+        "keepsakes": 0,
+        "travel": 0,
+        "context": null,
+        "discoveryId": null,
+        "discoveries": {
+          "flowersAwake": false,
+          "birdMode": "rest",
+          "birdStartles": 0,
+          "birdCalls": 0,
+          "stoneStep": 0,
+          "stoneSolved": false,
+          "echoSolved": false,
+          "locations": {
+            "flowers": [
+              -3,
+              12
+            ],
+            "birds": [
+              -16,
+              -4
+            ],
+            "stones": [
+              [
+                -8.8,
+                -11.5
+              ],
+              [
+                -7.970000000000001,
+                -11.73
+              ],
+              [
+                -7.140000000000001,
+                -11.96
+              ]
+            ]
+          },
+          "particleCount": 32
+        },
+        "heroVersion": "approved-D",
+        "cameraYaw": 0.662710272684869
+      }
+    }
+  },
+  "waypoints": [
+    {
+      "label": "first-bend",
+      "target": [
+        -5,
+        13
+      ],
+      "actual": [
+        -4.805154799966075,
+        13.124452061181668
+      ],
+      "time": 1789885726906,
+      "travel": 6.1846722431686345
+    },
+    {
+      "label": "bellflowers",
+      "target": [
+        -3,
+        12
+      ],
+      "actual": [
+        -3.0584919887755393,
+        12.099415421164608
+      ],
+      "time": 1789885727781,
+      "travel": 8.313167730132301
+    },
+    {
+      "label": "porch-note",
+      "target": [
+        -6.5,
+        11
+      ],
+      "actual": [
+        -6.365932457342236,
+        11.401036009869097
+      ],
+      "time": 1789885729775,
+      "travel": 11.811287296009285
+    },
+    {
+      "label": "cottage",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.277359021008311,
+        8.174421164832598
+      ],
+      "time": 1789885732756,
+      "travel": 15.997853219619653
+    },
+    {
+      "label": "roots",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -9.714209893474658,
+        5.267616975977959
+      ],
+      "time": 1789885736088,
+      "travel": 22.985968107470757
+    },
+    {
+      "label": "west-path",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -14.693908416152839,
+        0.19383295951992252
+      ],
+      "time": 1789885738313,
+      "travel": 31.32281386117639
+    },
+    {
+      "label": "upper-bend",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.868564182020124,
+        -6.6450431138087716
+      ],
+      "time": 1789885739996,
+      "travel": 38.979287603558106
+    },
+    {
+      "label": "bird-flock",
+      "target": [
+        -16,
+        -4
+      ],
+      "actual": [
+        -16.178020533307297,
+        -4.346194617108935
+      ],
+      "time": 1789885740659,
+      "travel": 41.30049828688942
+    },
+    {
+      "label": "bird-return",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.894572203311267,
+        -6.644948903457587
+      ],
+      "time": 1789885744623,
+      "travel": 43.67573437057897
+    },
+    {
+      "label": "garden-approach",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.393426617418394,
+        -9.84549916897766
+      ],
+      "time": 1789885746313,
+      "travel": 50.90905080822094
+    },
+    {
+      "label": "echo-0",
+      "target": [
+        -8.8,
+        -10.9
+      ],
+      "actual": [
+        -8.831637718056001,
+        -10.973386613919265
+      ],
+      "time": 1789885747205,
+      "travel": 53.05912624631356
+    },
+    {
+      "label": "echo-1",
+      "target": [
+        -7.97,
+        -11.13
+      ],
+      "actual": [
+        -7.98390190965627,
+        -11.121756195177122
+      ],
+      "time": 1789885748872,
+      "travel": 53.96732238097555
+    },
+    {
+      "label": "echo-2",
+      "target": [
+        -7.14,
+        -11.36
+      ],
+      "actual": [
+        -7.134527176158658,
+        -11.26826504403541
+      ],
+      "time": 1789885750538,
+      "travel": 54.87579249310677
+    },
+    {
+      "label": "echo-return",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -9.800688165619437,
+        -10.255383108137236
+      ],
+      "time": 1789885752677,
+      "travel": 57.9869825038767
+    },
+    {
+      "label": "chimes",
+      "target": [
+        -8,
+        -15
+      ],
+      "actual": [
+        -8.182598753667294,
+        -14.817655456747897
+      ],
+      "time": 1789885754027,
+      "travel": 63.237339133529616
+    },
+    {
+      "label": "quiet-approach",
+      "target": [
+        -9,
+        -19.5
+      ],
+      "actual": [
+        -8.856583717255246,
+        -19.280393250128714
+      ],
+      "time": 1789885756636,
+      "travel": 68.33147431811088
+    },
+    {
+      "label": "quiet-near",
+      "target": [
+        -7,
+        -19.5
+      ],
+      "actual": [
+        -7.250839060031738,
+        -19.21173974776066
+      ],
+      "time": 1789885757186,
+      "travel": 69.95777385032282
+    },
+    {
+      "label": "quiet-bed",
+      "target": [
+        -7,
+        -18.7
+      ],
+      "actual": [
+        -7.130048656711013,
+        -19.108519482426072
+      ],
+      "time": 1789885757386,
+      "travel": 70.1198122805668
+    },
+    {
+      "label": "current-trail",
+      "target": [
+        -9,
+        -19.5
+      ],
+      "actual": [
+        -8.772856655080723,
+        -19.298094705348856
+      ],
+      "time": 1789885758219,
+      "travel": 71.80834498944448
+    },
+    {
+      "label": "current-bed-approach",
+      "target": [
+        -11,
+        -19.5
+      ],
+      "actual": [
+        -10.640101453246357,
+        -19.52833924806231
+      ],
+      "time": 1789885758880,
+      "travel": 73.68973162852912
+    },
+    {
+      "label": "garden",
+      "target": [
+        -13.2,
+        -17.5
+      ],
+      "actual": [
+        -13.035375447734905,
+        -17.691417937817203
+      ],
+      "time": 1789885759645,
+      "travel": 76.70925041672933
+    },
+    {
+      "label": "return-around-root",
+      "target": [
+        -11,
+        -16
+      ],
+      "actual": [
+        -11.278799854342033,
+        -16.06684056149441
+      ],
+      "time": 1789885761942,
+      "travel": 79.48193916232827
+    },
+    {
+      "label": "return-path",
+      "target": [
+        -10,
+        -13
+      ],
+      "actual": [
+        -10.186468128758692,
+        -13.390547480180645
+      ],
+      "time": 1789885762937,
+      "travel": 82.96927427979494
+    },
+    {
+      "label": "return-garden",
+      "target": [
+        -10,
+        -10
+      ],
+      "actual": [
+        -10.29626930033044,
+        -10.2295084211951
+      ],
+      "time": 1789885763858,
+      "travel": 86.26592429478018
+    },
+    {
+      "label": "return-upper",
+      "target": [
+        -16,
+        -7
+      ],
+      "actual": [
+        -15.759294499704001,
+        -7.315789633349053
+      ],
+      "time": 1789885765687,
+      "travel": 93.47596454530425
+    },
+    {
+      "label": "return-west",
+      "target": [
+        -15,
+        0
+      ],
+      "actual": [
+        -15.192405934492266,
+        -0.2727434361065771
+      ],
+      "time": 1789885767553,
+      "travel": 101.4316156057346
+    },
+    {
+      "label": "return-roots",
+      "target": [
+        -10,
+        5
+      ],
+      "actual": [
+        -10.257333517724494,
+        4.8807630768569155
+      ],
+      "time": 1789885769504,
+      "travel": 109.90970484474632
+    },
+    {
+      "label": "return-cottage",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -4.312623940551499,
+        7.837012763609306
+      ],
+      "time": 1789885770987,
+      "travel": 117.26445149770939
+    },
+    {
+      "label": "wheel-approach",
+      "target": [
+        0,
+        6
+      ],
+      "actual": [
+        -0.2950210165457179,
+        6.149496522254299
+      ],
+      "time": 1789885772120,
+      "travel": 122.11339071750395
+    },
+    {
+      "label": "wheel-path",
+      "target": [
+        4,
+        4
+      ],
+      "actual": [
+        3.624550252673731,
+        4.139903023387823
+      ],
+      "time": 1789885773492,
+      "travel": 127.31779240080431
+    },
+    {
+      "label": "wheel",
+      "target": [
+        5,
+        3.7
+      ],
+      "actual": [
+        4.767127781786734,
+        4.020267513638791
+      ],
+      "time": 1789885774037,
+      "travel": 128.51073313776126
+    },
+    {
+      "label": "wheel-around",
+      "target": [
+        8,
+        4
+      ],
+      "actual": [
+        7.758515701862556,
+        4.266885508020151
+      ],
+      "time": 1789885776075,
+      "travel": 131.53858123578183
+    },
+    {
+      "label": "bridge-near",
+      "target": [
+        8,
+        0.1
+      ],
+      "actual": [
+        8.273399105821891,
+        0.35707510479821264
+      ],
+      "time": 1789885777108,
+      "travel": 135.4839433532722
+    },
+    {
+      "label": "bridge-deck",
+      "target": [
+        8,
+        -3.35
+      ],
+      "actual": [
+        8.232281160703796,
+        -3.2457937558318712
+      ],
+      "time": 1789885778140,
+      "travel": 139.3583147943437
+    },
+    {
+      "label": "bridge-far",
+      "target": [
+        8,
+        -6.5
+      ],
+      "actual": [
+        8.303841183083664,
+        -6.283514155120664
+      ],
+      "time": 1789885779278,
+      "travel": 142.55070996660336
+    },
+    {
+      "label": "overlook",
+      "target": [
+        8,
+        -10
+      ],
+      "actual": [
+        8.251336611342166,
+        -9.851059730172915
+      ],
+      "time": 1789885780288,
+      "travel": 146.36315486285469
+    },
+    {
+      "label": "fall-route-bend",
+      "target": [
+        -4,
+        13
+      ],
+      "actual": [
+        -3.9379665610587495,
+        13.38882737717488
+      ],
+      "time": 1789885785938,
+      "travel": 6.036439541578078
+    },
+    {
+      "label": "fall-route-cottage",
+      "target": [
+        -4,
+        8
+      ],
+      "actual": [
+        -3.707078394026739,
+        8.298154712458205
+      ],
+      "time": 1789885787256,
+      "travel": 11.403932489292306
+    },
+    {
+      "label": "fall-route-east",
+      "target": [
+        0,
+        6
+      ],
+      "actual": [
+        -0.25349207141282737,
+        6.266163043564475
+      ],
+      "time": 1789885788370,
+      "travel": 15.82423469577603
+    },
+    {
+      "label": "fall-route-wheel",
+      "target": [
+        4,
+        4
+      ],
+      "actual": [
+        3.9454714519274634,
+        4.200365588018226
+      ],
+      "time": 1789885789626,
+      "travel": 21.13242174256783
+    },
+    {
+      "label": "fall-route-around-wheel",
+      "target": [
+        8,
+        4
+      ],
+      "actual": [
+        7.837963582010404,
+        4.283642844951372
+      ],
+      "time": 1789885790737,
+      "travel": 25.131127917433172
+    },
+    {
+      "label": "fall-edge",
+      "target": [
+        8,
+        1.4
+      ],
+      "actual": [
+        8.177319707165159,
+        1.736855004207025
+      ],
+      "time": 1789885791522,
+      "travel": 27.701412943907318
+    }
+  ],
+  "screenshots": [
+    "evidence/rebuild/refinement-20/runtime-final/runtime-arrival.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-cottage.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-roots.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-echo-stones.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-chimes.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-quiet-pocket.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-responsive-pocket.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-capture.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-restoration.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-bridge.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-overlook.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-east-edge.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-fall-recovery.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-phone-arrival.png",
+    "evidence/rebuild/refinement-20/runtime-final/runtime-phone-reset.png"
+  ],
+  "pass": true,
+  "finishedAt": "2026-09-20T06:29:56.024Z"
+}

@@ -1,0 +1,25 @@
+{
+  "calls": 997,
+  "triangles": 939509,
+  "counts": {
+    "Woodland discoveries / shadow": 70,
+    "Organic island woodland terrain / shadow": 1,
+    "unnamed static batches / shadow": 203,
+    "seedWheelRotor / shadow": 20,
+    "bird candidate b / shadow": 72,
+    "rabbit / shadow": 22,
+    "kingfisher / shadow": 10,
+    "luna-moth / shadow": 20,
+    "hips / shadow": 136,
+    "unnamed static batches / colour": 442,
+    "Organic island woodland terrain / colour": 2,
+    "chimes candidate a / colour": 6,
+    "bird candidate b / colour": 196,
+    "Woodland discoveries / colour": 120,
+    "kingfisher / colour": 20,
+    "rabbit / colour": 33,
+    "luna-moth / colour": 30,
+    "Woodland valley backdrop / colour": 12,
+    "hips / colour": 136
+  }
+}

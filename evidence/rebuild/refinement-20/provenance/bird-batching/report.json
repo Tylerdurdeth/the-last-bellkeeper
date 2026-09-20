@@ -1,0 +1,78 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 18,
+  "tris": 570,
+  "materials": 5,
+  "size": [
+   0.088,
+   0.168,
+   0.245
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0.003
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.086,
+    "edgeDensity": 0.0989
+   },
+   "right": {
+    "coverage": 0.1477,
+    "edgeDensity": 0.0785
+   },
+   "back": {
+    "coverage": 0.0971,
+    "edgeDensity": 0.0602
+   },
+   "left": {
+    "coverage": 0.1466,
+    "edgeDensity": 0.0737
+   }
+  },
+  "error": null,
+  "name": "bird-before",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 10,
+  "tris": 570,
+  "materials": 5,
+  "size": [
+   0.088,
+   0.168,
+   0.245
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0.003
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.086,
+    "edgeDensity": 0.0989
+   },
+   "right": {
+    "coverage": 0.1477,
+    "edgeDensity": 0.0785
+   },
+   "back": {
+    "coverage": 0.0971,
+    "edgeDensity": 0.0602
+   },
+   "left": {
+    "coverage": 0.1466,
+    "edgeDensity": 0.0737
+   }
+  },
+  "error": null,
+  "name": "bird",
+  "problems": []
+ }
+]

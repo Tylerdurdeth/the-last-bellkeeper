@@ -1,0 +1,230 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 5,
+  "tris": 3500,
+  "materials": 5,
+  "size": [
+   2,
+   1.6,
+   1.992
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.161,
+    "edgeDensity": 0.1839
+   },
+   "right": {
+    "coverage": 0.1646,
+    "edgeDensity": 0.1963
+   },
+   "back": {
+    "coverage": 0.1607,
+    "edgeDensity": 0.2089
+   },
+   "left": {
+    "coverage": 0.1638,
+    "edgeDensity": 0.218
+   }
+  },
+  "error": null,
+  "name": "bramble",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 4,
+  "tris": 2072,
+  "materials": 4,
+  "size": [
+   1.118,
+   0.85,
+   1.114
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1072,
+    "edgeDensity": 0.2321
+   },
+   "right": {
+    "coverage": 0.1034,
+    "edgeDensity": 0.2143
+   },
+   "back": {
+    "coverage": 0.103,
+    "edgeDensity": 0.1869
+   },
+   "left": {
+    "coverage": 0.0962,
+    "edgeDensity": 0.1993
+   }
+  },
+  "error": null,
+  "name": "hosta",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 9,
+  "tris": 2500,
+  "materials": 6,
+  "size": [
+   0.183,
+   0.35,
+   0.36
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1257,
+    "edgeDensity": 0.0839
+   },
+   "right": {
+    "coverage": 0.1301,
+    "edgeDensity": 0.0826
+   },
+   "back": {
+    "coverage": 0.1604,
+    "edgeDensity": 0.0546
+   },
+   "left": {
+    "coverage": 0.1373,
+    "edgeDensity": 0.0793
+   }
+  },
+  "error": null,
+  "name": "kingfisher",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 10,
+  "tris": 2624,
+  "materials": 5,
+  "size": [
+   0.35,
+   0.064,
+   0.265
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1098,
+    "edgeDensity": 0.3649
+   },
+   "right": {
+    "coverage": 0.0873,
+    "edgeDensity": 0.3677
+   },
+   "back": {
+    "coverage": 0.0864,
+    "edgeDensity": 0.4208
+   },
+   "left": {
+    "coverage": 0.0874,
+    "edgeDensity": 0.3874
+   }
+  },
+  "error": null,
+  "name": "luna-moth",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 11,
+  "tris": 2068,
+  "materials": 5,
+  "size": [
+   0.323,
+   0.6,
+   0.352
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1567,
+    "edgeDensity": 0.1191
+   },
+   "right": {
+    "coverage": 0.1433,
+    "edgeDensity": 0.0867
+   },
+   "back": {
+    "coverage": 0.1531,
+    "edgeDensity": 0.0512
+   },
+   "left": {
+    "coverage": 0.1435,
+    "edgeDensity": 0.0771
+   }
+  },
+  "error": null,
+  "name": "rabbit",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 27,
+  "tris": 3084,
+  "materials": 6,
+  "size": [
+   0.662,
+   0.9,
+   0.663
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1974,
+    "edgeDensity": 0.1017
+   },
+   "right": {
+    "coverage": 0.1983,
+    "edgeDensity": 0.0999
+   },
+   "back": {
+    "coverage": 0.1967,
+    "edgeDensity": 0.0942
+   },
+   "left": {
+    "coverage": 0.1953,
+    "edgeDensity": 0.0901
+   }
+  },
+  "error": null,
+  "name": "shelf-stump",
+  "problems": []
+ }
+]

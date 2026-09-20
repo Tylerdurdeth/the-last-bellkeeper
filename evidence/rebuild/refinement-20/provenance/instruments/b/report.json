@@ -1,0 +1,154 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 12,
+  "tris": 2272,
+  "materials": 5,
+  "size": [
+   1.648,
+   1.455,
+   0.34
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1492,
+    "edgeDensity": 0.2363
+   },
+   "right": {
+    "coverage": 0.049,
+    "edgeDensity": 0.2101
+   },
+   "back": {
+    "coverage": 0.1495,
+    "edgeDensity": 0.1513
+   },
+   "left": {
+    "coverage": 0.0489,
+    "edgeDensity": 0.2259
+   }
+  },
+  "error": null,
+  "name": "gong",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 51,
+  "tris": 5500,
+  "materials": 7,
+  "size": [
+   2.562,
+   3.481,
+   1.32
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.2255,
+    "edgeDensity": 0.2657
+   },
+   "right": {
+    "coverage": 0.109,
+    "edgeDensity": 0.2354
+   },
+   "back": {
+    "coverage": 0.2242,
+    "edgeDensity": 0.2183
+   },
+   "left": {
+    "coverage": 0.1095,
+    "edgeDensity": 0.1749
+   }
+  },
+  "error": null,
+  "name": "sanctuary-bell",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 29,
+  "tris": 4584,
+  "materials": 7,
+  "size": [
+   1.551,
+   1.895,
+   0.34
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1054,
+    "edgeDensity": 0.2073
+   },
+   "right": {
+    "coverage": 0.0435,
+    "edgeDensity": 0.2505
+   },
+   "back": {
+    "coverage": 0.1066,
+    "edgeDensity": 0.1818
+   },
+   "left": {
+    "coverage": 0.0513,
+    "edgeDensity": 0.21
+   }
+  },
+  "error": null,
+  "name": "seed-bells",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 16,
+  "tris": 1140,
+  "materials": 4,
+  "size": [
+   0.981,
+   1.86,
+   0.34
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1467,
+    "edgeDensity": 0.2435
+   },
+   "right": {
+    "coverage": 0.0648,
+    "edgeDensity": 0.1549
+   },
+   "back": {
+    "coverage": 0.1466,
+    "edgeDensity": 0.2156
+   },
+   "left": {
+    "coverage": 0.0611,
+    "edgeDensity": 0.2319
+   }
+  },
+  "error": null,
+  "name": "wind-harp",
+  "problems": []
+ }
+]

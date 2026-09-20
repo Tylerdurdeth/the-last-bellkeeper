@@ -23,9 +23,8 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     envelope.gain.setValueAtTime(.00001,at);envelope.gain.exponentialRampToValueAtTime(Math.max(.00002,level),at+Math.min(rise,duration*.65));envelope.gain.exponentialRampToValueAtTime(.00001,at+duration);
     source.connect(filter);filter.connect(envelope);envelope.connect(route.input);track(source,[filter,envelope],route);source.start(at,random()*.6);source.stop(at+duration+.02);
   }
-  function modal(at,base,level=.08,decay=1.4,pan=0){
+  function modal(at,base,level=.08,decay=1.4,pan=0,ratios=[1,2.706,5.18,8.31,11.15]){
     // Inharmonic decaying modes plus mallet contact: a struck object, not a UI scale.
-    const ratios=[1,2.706,5.18,8.31,11.15];
     ratios.forEach((ratio,i)=>{const o=context.createOscillator(),g=gain(0),route=voicePan(pan,1,.21);
       o.type='sine';o.frequency.value=base*ratio*(1+(random()-.5)*.006);g.gain.setValueAtTime(.00001,at);g.gain.exponentialRampToValueAtTime(level/[1,3.2,6,12,20][i],at+.004);g.gain.exponentialRampToValueAtTime(.00001,at+decay/(1+i*.56));o.connect(g);g.connect(route.input);track(o,[g],route);o.start(at);o.stop(at+decay+.03);
     });hiss(at,.045,level*.35,2300,pan);
@@ -76,7 +75,7 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     if(!started||muted||paused||disposed)return;const t=Math.max(context.currentTime,at??context.currentTime);
     if(kind==='step'||kind==='land'||kind==='jump'){
       if(kind==='step'&&t-lastStep<.11)return;if(kind==='step')lastStep=t;
-      const timber=Math.abs(location.x-8)<1.4&&location.z> -6.3&&location.z<.4;
+      const timber=Math.abs(location.x-8)<1.4&&location.z> -7.85&&location.z<1.15;
       const strength=kind==='land'?1.8:kind==='jump'?.7:1;
       hiss(t,kind==='land'?.15:.095,.11*strength,timber?1700:820,(random()-.5)*.22,'lowpass');
       if(timber)modal(t,145+random()*35,.018*strength,.13,(random()-.5)*.15);
@@ -87,7 +86,9 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     else if(kind==='release'){hiss(t,.36,.09,1700,.15,'bandpass',.09);modal(t+.12,330,.075,1.7,-.08);}
     else if(kind==='restore'){modal(t,220,.085,2.3,-.28);modal(t+.31,587,.035,2.7,.4);hiss(t+.10,1.1,.055,1800,.2,'bandpass',.3);bird(t+1.2);}
     else if(kind==='chime'||kind==='start')modal(t,kind==='start'?465:523,.045,1.9,(random()-.5)*.7);
-    else if(/^stone-[012]$/.test(kind))modal(t,[262,330,392][Number(kind.slice(-1))],.065,2.2,0);
+    else if(kind==='stone-0')modal(t,196,.07,2.7,-.12,[1,1.48,2.12,3.4,5.1]);
+    else if(kind==='stone-1'){modal(t,330,.052,1.1,.08);modal(t+.09,660,.022,.7,-.08);}
+    else if(kind==='stone-2'){for(let i=0;i<3;i++)modal(t+i*.07,[392,494,587][i],.037,1.25,(i-1)*.12,[1,2,3,4,5]);}
     else if(kind==='bird')bird(t);
     else if(kind==='hazard')hiss(t,.5,.13,600,-.1,'bandpass',.09);
   }

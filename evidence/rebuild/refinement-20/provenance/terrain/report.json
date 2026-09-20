@@ -1,0 +1,78 @@
+[
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 4,
+  "tris": 3000,
+  "materials": 3,
+  "size": [
+   2.35,
+   1.428,
+   9
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.1035,
+    "edgeDensity": 0.2648
+   },
+   "right": {
+    "coverage": 0.1114,
+    "edgeDensity": 0.2829
+   },
+   "back": {
+    "coverage": 0.1035,
+    "edgeDensity": 0.2636
+   },
+   "left": {
+    "coverage": 0.1118,
+    "edgeDensity": 0.2749
+   }
+  },
+  "error": null,
+  "name": "bridge",
+  "problems": []
+ },
+ {
+  "ok": true,
+  "mounts": null,
+  "meshes": 2,
+  "tris": 16245,
+  "materials": 2,
+  "size": [
+   72,
+   16.4,
+   72
+  ],
+  "groundOffset": 0,
+  "centreOffset": [
+   0,
+   0
+  ],
+  "sides": {
+   "front": {
+    "coverage": 0.2767,
+    "edgeDensity": 0.0631
+   },
+   "right": {
+    "coverage": 0.2732,
+    "edgeDensity": 0.0614
+   },
+   "back": {
+    "coverage": 0.2772,
+    "edgeDensity": 0.0703
+   },
+   "left": {
+    "coverage": 0.2826,
+    "edgeDensity": 0.071
+   }
+  },
+  "error": null,
+  "name": "terrain",
+  "problems": []
+ }
+]

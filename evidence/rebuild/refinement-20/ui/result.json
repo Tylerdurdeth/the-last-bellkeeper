@@ -1,0 +1,18 @@
+{
+  "pass": true,
+  "checks": [
+    {
+      "name": "desktop",
+      "pass": true
+    },
+    {
+      "name": "phone",
+      "pass": true
+    },
+    {
+      "name": "landscape",
+      "pass": true
+    }
+  ],
+  "errors": []
+}

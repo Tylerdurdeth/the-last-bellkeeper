@@ -1,0 +1,51 @@
+{
+  "pass": true,
+  "results": [
+    {
+      "name": "island-before",
+      "deck": null,
+      "island": 1.2,
+      "draws": 673,
+      "triangles": 990695
+    },
+    {
+      "name": "island-after",
+      "deck": 1.1062398745660356,
+      "island": 1.2,
+      "draws": 679,
+      "triangles": 993951
+    },
+    {
+      "name": "bridge",
+      "deck": 1.1062399649620072,
+      "island": 1.2,
+      "draws": 270,
+      "triangles": 627057
+    },
+    {
+      "name": "sanctuary",
+      "deck": 1.1062399649620076,
+      "island": 1.2,
+      "draws": 196,
+      "triangles": 490313
+    },
+    {
+      "name": "ridge",
+      "deck": null,
+      "island": 1.2,
+      "draws": 74,
+      "triangles": 394473
+    }
+  ],
+  "isolated": {
+    "terrain": {
+      "calls": 2,
+      "triangles": 16245
+    },
+    "bridge": {
+      "calls": 4,
+      "triangles": 3000
+    }
+  },
+  "errors": []
+}
