@@ -1,0 +1,216 @@
+{
+  "commit": "00842b6bffaa0f021409ef206595e3d967e667a0",
+  "base": "https://tylerdurdeth.github.io/the-last-bellkeeper/",
+  "checkedAt": "2026-09-20T06:41:31.502Z",
+  "pass": true,
+  "resources": [
+    {
+      "path": "docs/assets/bird.js",
+      "status": 200,
+      "bytes": 6207,
+      "expected": "51ccd7b374a1e78f8d6fb1032a7c6311ce1993644e5009ab8426055303fc1a1c",
+      "actual": "51ccd7b374a1e78f8d6fb1032a7c6311ce1993644e5009ab8426055303fc1a1c",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/bramble.js",
+      "status": 200,
+      "bytes": 4875,
+      "expected": "3afebdfb3bbee90a7146dbf4fb75332a75aa69be26b393eb97043e30d947d5e5",
+      "actual": "3afebdfb3bbee90a7146dbf4fb75332a75aa69be26b393eb97043e30d947d5e5",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/bridge.js",
+      "status": 200,
+      "bytes": 3282,
+      "expected": "5f7ed63080627f77fa8811b3c65c43583bf330d1eb29cef246c82c73e66de762",
+      "actual": "5f7ed63080627f77fa8811b3c65c43583bf330d1eb29cef246c82c73e66de762",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/chimes.js",
+      "status": 200,
+      "bytes": 4840,
+      "expected": "8b0773c3861846c0bb39393a98e03e7a70e19e62e1d4273d3ab6e96453522624",
+      "actual": "8b0773c3861846c0bb39393a98e03e7a70e19e62e1d4273d3ab6e96453522624",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/gong.js",
+      "status": 200,
+      "bytes": 2499,
+      "expected": "dcf98e1a57b651cd7f089d793b31238b2b49ebc7447a6a6f4a000829bdbc3a57",
+      "actual": "dcf98e1a57b651cd7f089d793b31238b2b49ebc7447a6a6f4a000829bdbc3a57",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/hosta.js",
+      "status": 200,
+      "bytes": 4822,
+      "expected": "2de04dd5e5ab29d955a74a2e9fc623adc6d5a2f33bdd60e4bf21f5d7ca629727",
+      "actual": "2de04dd5e5ab29d955a74a2e9fc623adc6d5a2f33bdd60e4bf21f5d7ca629727",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/kingfisher.js",
+      "status": 200,
+      "bytes": 5306,
+      "expected": "26e9fda067d357685b85034b0714aab2184a94070bf802b030f1c483f2097cbc",
+      "actual": "26e9fda067d357685b85034b0714aab2184a94070bf802b030f1c483f2097cbc",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/luna-moth.js",
+      "status": 200,
+      "bytes": 5756,
+      "expected": "2785ce7efc736ebded23f599c2394ee19517684501a3aa659415f6ab6fd845c7",
+      "actual": "2785ce7efc736ebded23f599c2394ee19517684501a3aa659415f6ab6fd845c7",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/rabbit.js",
+      "status": 200,
+      "bytes": 5065,
+      "expected": "a3e5bad51e7c2aac1e5bb942d17de9410b9f64103ae6bb5107ad1915ff2d5b18",
+      "actual": "a3e5bad51e7c2aac1e5bb942d17de9410b9f64103ae6bb5107ad1915ff2d5b18",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/sanctuary-bell.js",
+      "status": 200,
+      "bytes": 3233,
+      "expected": "78b86e0ca26440cf96be0dd89e0eedd039bb6f945b5caa9c2a40b5d3338bcdcc",
+      "actual": "78b86e0ca26440cf96be0dd89e0eedd039bb6f945b5caa9c2a40b5d3338bcdcc",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/seed-bells.js",
+      "status": 200,
+      "bytes": 2600,
+      "expected": "49d2801e3a16b4483a497ea9f4cbf1ae61e97b7720ea1ee91d7389f8eae6fc60",
+      "actual": "49d2801e3a16b4483a497ea9f4cbf1ae61e97b7720ea1ee91d7389f8eae6fc60",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/shelf-stump.js",
+      "status": 200,
+      "bytes": 5320,
+      "expected": "6edb05eb10f6fcaa3bafe43f476ed9ebfc87d224ea9bc262d96f79bcf1774a1d",
+      "actual": "6edb05eb10f6fcaa3bafe43f476ed9ebfc87d224ea9bc262d96f79bcf1774a1d",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/terrain.js",
+      "status": 200,
+      "bytes": 10150,
+      "expected": "a9a611c99f7245ec14b3cc0108d9d6831f7d3a300902df7b3e9067e2cc606f25",
+      "actual": "a9a611c99f7245ec14b3cc0108d9d6831f7d3a300902df7b3e9067e2cc606f25",
+      "pass": true
+    },
+    {
+      "path": "docs/assets/wind-harp.js",
+      "status": 200,
+      "bytes": 2910,
+      "expected": "c824251f34ab7e255bb7e8e7ffd29a4623b0b209347f337aea7568d5cf9cf1b6",
+      "actual": "c824251f34ab7e255bb7e8e7ffd29a4623b0b209347f337aea7568d5cf9cf1b6",
+      "pass": true
+    },
+    {
+      "path": "docs/audio.js",
+      "status": 200,
+      "bytes": 8971,
+      "expected": "142e7a1e9162b1fe1a6fdb38d51a3f5587ffa7e34e402f5de638003f278f15dd",
+      "actual": "142e7a1e9162b1fe1a6fdb38d51a3f5587ffa7e34e402f5de638003f278f15dd",
+      "pass": true
+    },
+    {
+      "path": "docs/brook.js",
+      "status": 200,
+      "bytes": 2963,
+      "expected": "b7e69f740a4db8d7250d73854c7d4a4937a5c4ab500f8b619ea12b8c33d46860",
+      "actual": "b7e69f740a4db8d7250d73854c7d4a4937a5c4ab500f8b619ea12b8c33d46860",
+      "pass": true
+    },
+    {
+      "path": "docs/character-lab.html",
+      "status": 200,
+      "bytes": 3188,
+      "expected": "586b598c318f625e867afeb721508846461706f4ee0995b7c85f738c68c85350",
+      "actual": "586b598c318f625e867afeb721508846461706f4ee0995b7c85f738c68c85350",
+      "pass": true
+    },
+    {
+      "path": "docs/index.html",
+      "status": 200,
+      "bytes": 2731,
+      "expected": "cc397ba46e1216f1b1bd1c56076b4e02382d862453addccdae37b957f1f6647f",
+      "actual": "cc397ba46e1216f1b1bd1c56076b4e02382d862453addccdae37b957f1f6647f",
+      "pass": true
+    },
+    {
+      "path": "docs/main.js",
+      "status": 200,
+      "bytes": 20161,
+      "expected": "b9804652fd0b39c5b552571de6e34b2ca15fa25d0aa54357ece339a9fcaad6c7",
+      "actual": "b9804652fd0b39c5b552571de6e34b2ca15fa25d0aa54357ece339a9fcaad6c7",
+      "pass": true
+    },
+    {
+      "path": "docs/movement.js",
+      "status": 200,
+      "bytes": 8928,
+      "expected": "a636526267cf11a95f7c9fc44fa9e3b77e21fba3f358fcc03aee95ac6d64c857",
+      "actual": "a636526267cf11a95f7c9fc44fa9e3b77e21fba3f358fcc03aee95ac6d64c857",
+      "pass": true
+    },
+    {
+      "path": "docs/style.css",
+      "status": 200,
+      "bytes": 9420,
+      "expected": "8b0cb895fa544c5e658409ed18b8444193afa3a7c7d65e76d1a499fb4651f1c6",
+      "actual": "8b0cb895fa544c5e658409ed18b8444193afa3a7c7d65e76d1a499fb4651f1c6",
+      "pass": true
+    },
+    {
+      "path": "docs/woodland-discoveries.js",
+      "status": 200,
+      "bytes": 8635,
+      "expected": "146bbfc6c87744f1d8f1757eda7309c2633f7674c74fedfedb7b44e657e028b4",
+      "actual": "146bbfc6c87744f1d8f1757eda7309c2633f7674c74fedfedb7b44e657e028b4",
+      "pass": true
+    },
+    {
+      "path": "docs/woodland-life.js",
+      "status": 200,
+      "bytes": 8015,
+      "expected": "da96a16d4bf4ddcc73320951d9874260cf90d3f3b544335371eb6335c23e0873",
+      "actual": "da96a16d4bf4ddcc73320951d9874260cf90d3f3b544335371eb6335c23e0873",
+      "pass": true
+    },
+    {
+      "path": "docs/woodland-map.js",
+      "status": 200,
+      "bytes": 5815,
+      "expected": "881a997004aff3c80784493d73eb0968cb11af71bf553e72ae5df5a0ad2a5c6d",
+      "actual": "881a997004aff3c80784493d73eb0968cb11af71bf553e72ae5df5a0ad2a5c6d",
+      "pass": true
+    },
+    {
+      "path": "docs/world-layout.js",
+      "status": 200,
+      "bytes": 677,
+      "expected": "e068a195b3462e06819623eb5e9021dd11ac0fb69d9ac36e0f2384957ce15ed4",
+      "actual": "e068a195b3462e06819623eb5e9021dd11ac0fb69d9ac36e0f2384957ce15ed4",
+      "pass": true
+    },
+    {
+      "path": "docs/world.js",
+      "status": 200,
+      "bytes": 18898,
+      "expected": "88cf8782aecbdd9b09e7efd54b5c6dabf6a354282062549054be39f6b6ccc532",
+      "actual": "88cf8782aecbdd9b09e7efd54b5c6dabf6a354282062549054be39f6b6ccc532",
+      "pass": true
+    }
+  ]
+}

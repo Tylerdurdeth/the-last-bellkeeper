@@ -1,6 +1,8 @@
 # Status — Waking Bough, 20 September refinement
 
-Release candidate ready for publication. Arrow keys exclusively move the character; A jumps and Shift runs. The camera-aligned parchment/ink/copper chart includes facing and north indicators, exact bridge endpoints, crossing status and phone enlargement. Enlarged-map gestures do not orbit the world; portrait and landscape pause/resume pass.
+Published runtime: `00842b6bffaa0f021409ef206595e3d967e667a0`. All 26 changed public resources match their committed SHA-256 hashes. The live phone gate passes: 12.5 s readiness, 7.5 MB response-body payload / 5.3 MB compressed wire, 538 peak calls / 773,385 triangles, 59.88 median FPS, zero errors/404s/external dependencies. See `evidence/rebuild/refinement-20/jam-live/verdict.json` and `public-bytes.json`.
+
+Arrow keys exclusively move the character; A jumps and Shift runs. The camera-aligned parchment/ink/copper chart includes facing and north indicators, exact bridge endpoints, crossing status and phone enlargement. Enlarged-map gestures do not orbit the world; portrait and landscape pause/resume pass.
 
 The sanctuary now occupies an irregular rocky island surrounded by an eight-metre clear channel. Shared rendered/navigation triangles replace arbitrary void limits; a visible escarpment bounds the woodland, and the actual raised bridge deck is the only connection. Gong, ceramic seed bells, harp and crowned sanctuary bell have distinct geometry and cues. Bramble, hosta, shelf fungi, rabbits, perched kingfishers and articulated luna moths diversify the scene. Thirty new asset candidates were verified and visually compared before selection.
 
