@@ -36,6 +36,9 @@ export function buildBackdrop(T, scene, {prototypes, art, height}) {
     });
   }
   function place(name, band, x, y, z, sx, sy, sz, yaw=0) {
+    // The old painted valley is now traversable. Keep its large non-colliding
+    // silhouettes entirely outside the rootway and Heartwood action window.
+    if(x>-10&&x<28&&z-16<-25)return;
     const o=prototypes[name].clone(true);
     // The reviewed small rock includes tiny moss leaves. At cliff scale those
     // become metre-wide spikes; reuse its rock masses without those attachments.

@@ -1,4 +1,14 @@
-# Status — Waking Bough, 20 September refinement
+# Status — Complete adventure, 21 September
+
+Full route implemented: Waking Bough → Rootway crossing/tender → Heartwood inspection/return clearing → two guardian breaths → final bell → lift → Mara ending. Keyboard and phone-emulated touch completed the entire route with zero browser/load errors, then reloaded and continued completed saves. Evidence: `evidence/adventure/keyboard-complete/` and `touch-complete/`.
+
+Title/Continue, 28-second skippable opening, safe save checkpoints, volume/captions/gentle motion, restart and ending are integrated. Independent review caught landscape-title clipping and a persisted-caption label mismatch; both repaired and retested. Phone chart collapses in new areas to keep encounters visible. New actors, architecture and heartwood silhouettes were selected from recipe-rendered candidates.
+
+Release checks: `evidence/adventure/release/`. Human pacing/listening, physical-phone performance and broad AAA/reference-level art approval remain unverified. Full-route functional completion does not mean every acceptance-contract requirement passes. No competition entry submitted.
+
+Fresh Atlas billing: 69 settled total, zero reserved, 1,931 remaining. Expansion used 8 new credits. Weekly compute milestone: 78% used / 22% remaining; ordinary usage permitted, no purchases/resets.
+
+## Historical first-area release
 
 Published runtime: `00842b6bffaa0f021409ef206595e3d967e667a0`. All 26 changed public resources match their committed SHA-256 hashes. The live phone gate passes: 12.5 s readiness, 7.5 MB response-body payload / 5.3 MB compressed wire, 538 peak calls / 773,385 triangles, 59.88 median FPS, zero errors/404s/external dependencies. See `evidence/rebuild/refinement-20/jam-live/verdict.json` and `public-bytes.json`.
 

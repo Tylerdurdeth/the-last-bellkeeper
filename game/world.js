@@ -3,6 +3,7 @@ import {createBrook} from './brook.js';
 import {createWoodlandLife} from './woodland-life.js';
 import {buildBackdrop} from './backdrop.js';
 import {ASSET,bakeStatic} from './assetlib.js';
+import {carvePassage,passageDressing} from './terrain-passage.js';
 import {height,pathDistance,POINTS,TERRAIN,terrainGround,ridgeBlocked,shoreClearance} from './world-layout.js';
 
 // The named deck survives recipe loading. Only its real triangles support feet;
@@ -37,13 +38,14 @@ export async function buildWorld(scene,art){
   art.style(prototypes[name],{terrain:name==='terrain',wood:name==='tree'});
  }));
  function place(name,x,z,scale=1,rotation=0,{dynamic=false,y=height(x,z)}={}){
+  if(passageDressing(x,z,name==='tree'?3:name==='rock'?scale:0))return new T.Group();
   // Bank dressing must not overhang the clear channel or create stepping stones.
   if(name!=='bridge'&&!shoreClearance(x,z,name==='rock'?scale*1.15:name==='tree'?.8:.15))return new T.Group();
   const o=prototypes[name].clone(true);for(const [key,val] of Object.entries(prototypes[name].userData)){if(val?.isObject3D)o.userData[key]=o.getObjectByName(val.name);}
   o.position.set(x,y,z);o.scale.multiplyScalar(scale);o.rotation.y=rotation;
   if(dynamic){scene.add(o);animated.push(o);}else{const key=Math.floor(x/10)+':'+Math.floor(z/10);if(!chunks.has(key))chunks.set(key,new T.Group());chunks.get(key).add(o);}return o;
  }
- const terrain=prototypes.terrain;terrain.position.y=-8;terrain.traverse(n=>{if(n.isMesh&&n.material.name==='ground'&&!n.geometry.attributes.color)n.visible=false;});scene.add(terrain);const brook=createBrook(T,terrain.getObjectByName('water'));
+ const terrain=prototypes.terrain;carvePassage(T,terrain);terrain.position.y=-8;terrain.traverse(n=>{if(n.isMesh&&n.material.name==='ground'&&!n.geometry.attributes.color)n.visible=false;});scene.add(terrain);const brook=createBrook(T,terrain.getObjectByName('water'));
  const cottage=place('cottage',-8,9,1,.7,{dynamic:true});colliders.push({x:-8,z:9,r:2.25});const cottageMats=[];cottage.traverse(o=>{if(o.isMesh){o.material=o.material.clone();art.style(o);o.material.transparent=true;cottageMats.push(o.material);}});
  const wheel=place('wheel',6,2.5,1.2,-.45,{dynamic:true});colliders.push({x:6,z:2.5,r:.62});
  const bridge=place('bridge',TERRAIN.bridge.x,TERRAIN.bridge.z,1,0,{dynamic:true,y:0});

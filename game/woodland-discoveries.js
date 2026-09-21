@@ -110,5 +110,6 @@ export async function createWoodlandDiscoveries(scene,art,{caption=()=>{},sound}
   elapsed=0;flowerTime=birdTime=stoneFlash=wrongFlash=-100;flowerFound=stoneSolved=stoneClue=birdNear=false;birdMode='rest';birdStartles=birdCalls=stoneStep=0;playerPosition.set(999,0,999);applyVisuals();
  }
  function telemetry(){return {flowersAwake:flowerFound,birdMode,birdStartles,birdCalls,stoneStep,stoneSolved,echoSolved:stoneSolved,locations:{flowers:[-3,12],birds:[-16,-4],stones:stones.map(s=>[s.home.x,s.home.z])},particleCount:32};}
- reset();return {update,context,interact,reset,telemetry};
+ function restore(data={}){reset();stoneSolved=!!data.echoSolved;stoneStep=stoneSolved?3:Math.max(0,Math.min(2,Number(data.stoneStep)||0));flowerFound=!!data.flowersAwake;applyVisuals();}
+ reset();return {update,context,interact,reset,telemetry,restore};
 }

@@ -1,5 +1,11 @@
 # Acceptance contract
 
+## 21 September full-adventure authorization
+
+The user's approved plan explicitly supersedes the historical first-scene-only authorization below. Three connected areas, complete progression, two-breath guardian, restoration and Mara ending are implemented. Fresh-state keyboard and phone-emulated touch routes pass (`evidence/adventure/keyboard-complete/result.json`, `touch-complete/result.json`), including actual jumps and saved completion. Terrain: 17,730 ground comparisons plus 1,761 route samples and bidirectional jumps. Title/intro/caption defects found independently were repaired and retested. These are bounded results, not blanket approval of every contract row.
+
+Remaining limits: human first-exposure 12–15-minute pacing, actual listening, physical-phone performance, two timestamped AAA opening-footage comparisons, and complete fixed-build independent artistic/animation approval are UNVERIFIED. Procedural support wedges/rails/state effects lack separate three-candidate recipe coverage; substantial new character and architectural assets have it. The guardian visibly folds during the opening, but a separate outward-valve closure is not staged. Do not call the build fully contract-approved or automatically submit it.
+
 Authority: consolidated master brief revision 2 plus subsequent explicit user decisions. The complete adventure remains the eventual deliverable. The current authorization is the small representative test scene; passing its gate does not approve expansion or certify the full game. This public contract excludes private setup/account/contact records. Historical setup passes are not implementation passes.
 
 Every row starts **UNVERIFIED**. Evidence paths below are required destinations, not claims that evidence exists. Reports must name immutable build commit, criterion, PASS/FAIL/UNVERIFIED, observed evidence, blocker/major/minor severity, reproduction inputs or timestamps, and repair acceptance test. Lead means coordinator/integrator; independent reviewers must not approve their own implementation. Human means actual user/playtester observations, distinguished from agent review/emulation. Private account and job identifiers belong only in the private ledger; public budget evidence must be sanitized.

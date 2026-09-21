@@ -1,8 +1,14 @@
 # The Last Bellkeeper
 
-An original woodland adventure in development. **The Waking Bough** is the current first-area study, rebuilt around a winding woodland route, a listening garden, a sleeping crossing, responsive bellflowers, a startled bird flock, and a low-to-high gong / seed-bell / harp puzzle. The approved code-built character now anchors the playable scene, with camera orbit by drag or Q/E and camera-relative movement. It is not the complete game or a submission-ready entry.
+An original nonviolent windkeeping adventure. Explore the Waking Bough, descend through the Rootway, and restore the Heartwood Windworks before returning to Mara. Catch, carry and give back wind: first to machinery, then to a maintenance creature, finally to a protective guardian whose two breaths power the return and outward channels. Forgiving jumps, optional memories and a quiet ending reward attention rather than combat.
 
-[Play the study](https://tylerdurdeth.github.io/the-last-bellkeeper/)
+[Play The Last Bellkeeper](https://tylerdurdeth.github.io/the-last-bellkeeper/)
+
+The complete main route has passed real-input keyboard and phone-emulated touch regression tests, including the ending and save/Continue. Title, skippable in-engine introduction, captions, volume, gentle motion and restart are included. Human first-time pacing, listening approval and physical-phone testing remain unverified; this is not a claim of AAA equivalence or final competition acceptance.
+
+Full-route tests: `node tools/test-adventure.mjs` and `node tools/test-adventure.mjs evidence/adventure/touch --touch`. Controller: `node tools/test-campaign.mjs`; terrain: `node tools/test-campaign-world.mjs`; menus: `node tools/test-adventure-ui.mjs`. Older first-scene tests and notes below are historical. Release checks: `evidence/adventure/release/`.
+
+Latest Atlas reconciliation, 21 September: 69 total credits settled, zero reserved, 1,931 remaining. New caretaker and Heartwood references cost 8 together. New assets remain original code geometry with candidate/render selection records. Music and soundscape are original procedural audio; previously paid Atlas SFX is not shipped because retrieval remains unresolved.
 
 Move with the arrow keys; A jumps, Shift runs, Space interacts. Drag the scenery or use Q/E to orbit the camera; movement follows the camera. The woodland map rotates with the camera so screen-up travel maps up; its arrow shows your facing, and the crossing is marked locked or restored. Touch uses an analogue joystick plus Jump and the contextual action button. A full joystick push runs. Escape/pause opens sound, gentle motion and restart controls. Follow environmental clues to awaken the chime, play the gong, seed bells and harp in rising order, carry the wind back to the crossing, and cross to the restored bell sanctuary. Flowers and birds respond as optional discoveries; keepsakes reward searching and jumping beyond the main path.
 

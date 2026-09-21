@@ -1,8 +1,8 @@
 // Original procedural sound design, pending reviewed recorded/Atlas audio.
 // No context or audible source is created until start() is called from a gesture.
 export function createSoundscape({context: suppliedContext, random = Math.random} = {}) {
-  let context=null, master, ambience, wet, wind, brook, breeze, started=false, muted=false, paused=false, disposed=false;
-  let birdClock=7, charged=false, restored=false, location={x:0,z:0}, lastStep=-1;
+  let context=null, master, ambience, wet, wind, brook, breeze, started=false, muted=false, paused=false, disposed=false,volumeLevel=.65;
+  let birdClock=7, musicClock=3,musicStep=0,charged=false, restored=false, location={x:0,z:0}, lastStep=-1;
   const continuous=[], voices=new Set(), buffers=new Map();
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   function gain(value){const g=context.createGain();g.gain.value=value;return g;}
@@ -44,7 +44,7 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     if(disposed)return;if(started){if(context.state==='suspended'&&!('startRendering'in context))await context.resume();return;}
     const Constructor=globalThis.AudioContext||globalThis.webkitAudioContext;
     if(!suppliedContext&&!Constructor)return;
-    context=suppliedContext||new Constructor();master=gain(muted||paused?0:.65);ambience=gain(1);ambience.connect(master);
+    context=suppliedContext||new Constructor();master=gain(muted||paused?0:volumeLevel);ambience=gain(1);ambience.connect(master);
     const highpass=context.createBiquadFilter();highpass.type='highpass';highpass.frequency.value=65;
     const compressor=context.createDynamicsCompressor();compressor.threshold.value=-12;compressor.knee.value=15;compressor.ratio.value=3;compressor.attack.value=.006;compressor.release.value=.18;
     master.connect(highpass);highpass.connect(compressor);compressor.connect(context.destination);continuous.push(master,ambience,highpass,compressor);
@@ -59,7 +59,8 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     if(context.state==='suspended'&&context.resume)await context.resume();
     volume();
   }
-  function volume(){if(master)master.gain.setTargetAtTime(muted||paused?0:.65,context.currentTime,.04);}
+  function volume(){if(master)master.gain.setTargetAtTime(muted||paused?0:volumeLevel,context.currentTime,.04);}
+  function setVolume(v){volumeLevel=clamp(Number(v)||0,0,1);volume();}
   function setMuted(v){muted=!!v;volume();}
   function setPaused(v){paused=!!v;volume();}
   function update(dt,{position,speed=0,grounded=true,charged:hasWind=false,restored:isRestored=false,gardenDistance=30,waterDistance=30}={}){
@@ -70,6 +71,10 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     // Footfalls are explicitly cued by the distance-based animation/controller;
     // update does not also schedule them, preventing doubled footsteps.
     birdClock-=clamp(dt,0,.1);if(birdClock<=0){if(!muted)bird(t+.08);birdClock=7+random()*9;}
+    // An original sparse glass-and-copper motif leaves room for discovery cues.
+    // The windworks answers in a lower register; the homecoming resolves the pair.
+    musicClock-=clamp(dt,0,.1);if(musicClock<=0){musicClock=5.5;const phrase=[0,7,4,11,9,4,2,7],base=location.z<-44?164.81:220,note=base*2**(phrase[musicStep%phrase.length]/12);musicStep++;
+      if(!muted){modal(t+.05,note,.013,3.5,-.35,[1,2,3,4,5]);if(musicStep%4===0)modal(t+1.4,note*.75,.008,4,.35,[1,2,3,4,5]);}}
   }
   function cue(kind,{at}={}){
     if(!started||muted||paused||disposed)return;const t=Math.max(context.currentTime,at??context.currentTime);
@@ -93,5 +98,5 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     else if(kind==='hazard')hiss(t,.5,.13,600,-.1,'bandpass',.09);
   }
   function dispose(){if(disposed)return;disposed=true;for(const source of voices){try{source.stop();}catch{}}voices.clear();for(const node of continuous){try{node.stop?.();}catch{}node.disconnect();}continuous.length=0;buffers.clear();if(context&&!suppliedContext)context.close().catch(()=>{});}
-  return {start,resume,setMuted,setPaused,update,cue,dispose};
+  return {start,resume,setMuted,setPaused,setVolume,update,cue,dispose};
 }

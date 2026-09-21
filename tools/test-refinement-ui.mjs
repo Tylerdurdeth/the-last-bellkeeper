@@ -10,7 +10,7 @@ try{
  for(const [name,width,height,touch] of [['desktop',1440,900,false],['phone',390,844,true],['landscape',844,390,true]]){
   await page.setViewport({width,height,hasTouch:touch,isMobile:touch,deviceScaleFactor:1});
   await page.goto('http://127.0.0.1:4173/the-last-bellkeeper/');await page.waitForFunction(()=>window.__READY__===true,{timeout:45000});
-  await page.click('#startb');await delay(180);
+  await page.click('#startb');await page.click('#skipIntro');await delay(180);
   if(!touch){
    const before=await page.evaluate(()=>__GAME__.pos);for(const k of ['KeyW','KeyS','KeyD'])await page.keyboard.down(k);await delay(220);for(const k of ['KeyW','KeyS','KeyD'])await page.keyboard.up(k);
    assert.deepEqual(await page.evaluate(()=>__GAME__.pos),before,'letters must not move');

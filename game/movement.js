@@ -143,6 +143,7 @@ export function createMovement(THREE, {
     mode = !grounded ? velocity.y > .1 ? 'jump' : 'fall' : speed > 2.7 ? 'run' : speed > .08 ? 'walk' : 'idle';
   }
   function dispose() { clearInput(); listeners.splice(0).forEach(off => off()); disposed = true; }
+  function impulse(x,z){if(!active||disposed||!Number.isFinite(x)||!Number.isFinite(z))return;velocity.x+=Math.max(-3,Math.min(3,x));velocity.z+=Math.max(-3,Math.min(3,z));velocity.y=Math.max(velocity.y,2.2);grounded=false;coyote=0;}
   reset();
-  return { position, velocity, get yaw() { return yaw; }, get speed() { return speed; }, get recovered() { return recovered; }, get grounded() { return grounded; }, get mode() { return mode; }, get verticalVelocity() { return velocity.y; }, update, reset, jump, dispose };
+  return { position, velocity, get yaw() { return yaw; }, get speed() { return speed; }, get recovered() { return recovered; }, get grounded() { return grounded; }, get mode() { return mode; }, get verticalVelocity() { return velocity.y; }, update, reset, jump, impulse,dispose };
 }

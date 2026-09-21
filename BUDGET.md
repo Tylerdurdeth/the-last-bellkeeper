@@ -1,5 +1,17 @@
 # Budget ledger
 
+Final fresh billing check, 21 September: 1,931 credits remaining, 69 total spent, zero reserved; on-demand used zero. R10 and R11 each settled at 4. No purchases, subscriptions, overage or resets. User-authorized ceiling remains strictly below 2,000 total. Included weekly compute milestone: 78% used / 22% remaining; ordinary usage allowed, not a task-specific token budget.
+
+## 21 September — complete adventure
+
+R11 terminal Last Run4; downloaded and visually inspected evidence/adventure/reference/atlas-r11-heartwood.png. Release31. Settled total69, reserved0, expected account1931. Two references inform three character types and the remaining environments; runtime geometry still requires recipe verification, not concept-only approval.
+
+R11 reserve31 for one direct1K environment composition reference: rootway and open-sided Heartwood windworks, concrete new-zone style target. Total65settled+31reserved=96. No automatic repeats.
+
+R10 terminal success, Last Run4. Reference downloaded and visually inspected: evidence/adventure/reference/atlas-r10-caretakers.png. Release31 reservation; total settled65, outstanding0, expected balance1935. Generated incidental labels are not adopted. Included compute snapshot42% weekly used, ordinary usage allowed; no paid credit purchase/reset.
+
+User lifted the 400-credit pass cap and authorized total Atlas spending strictly below 2,000, including prior use. Fresh billing: 1,939 remaining, 61 spent, no outstanding jobs. No purchases, overage, subscriptions or credit resets authorized. R10 character design reference: reserve 31 credits maximum for one direct Gemini 3.1 Flash Lite Image 1:1 1K execution, seed43. Purpose: distinct Mara, service construct and guardian silhouettes for original code geometry. Settled61 + reserved31 =92; reconcile before further dispatch.
+
 ## 20 September refinement allocation
 
 Final billing verified 20 September: account 1,939 remaining, 61 lifetime spent. R08 instruments and R09 woodland references each settled at 4 credits (31 reserved, 27 returned). Both downloaded and visually inspected. This pass: 8 settled, 0 reserved, 392 remaining under the user’s 400-credit limit. No purchases, overage or new audio jobs. References saved in local asset-work/refinement-20/reference/.
