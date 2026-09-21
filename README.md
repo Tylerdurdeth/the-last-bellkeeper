@@ -4,6 +4,10 @@ An original nonviolent windkeeping adventure. Explore the Waking Bough, descend 
 
 [Play The Last Bellkeeper](https://tylerdurdeth.github.io/the-last-bellkeeper/)
 
+The opening now has original generated key art, a restrained full-screen title menu and a 48-second synthesized cinematic theme. Click **Enable title music** (or interact with the menu) to allow sound; mute and volume remain under player control. A new journey starts with three illustrated story beats, then the guardian and Mara in the live world. Continue bypasses the introduction; Next, Skip, or an explicit movement gesture let returning players move on. Reduced-motion preferences suppress drifting particles.
+
+Title artwork was made with built-in OpenAI image generation, not Atlas; exact prompt and distribution provenance are in `game/textures/title-heartwood-provenance.md`. The original score has no external samples. Confirm non-Atlas artwork treatment before submitting to the jam. This title/presentation upgrade is not a claim that every gameplay asset has AAA fidelity.
+
 The complete main route has passed real-input keyboard and phone-emulated touch regression tests, including the ending and save/Continue. Title, skippable in-engine introduction, captions, volume, gentle motion and restart are included. Human first-time pacing, listening approval and physical-phone testing remain unverified; this is not a claim of AAA equivalence or final competition acceptance.
 
 Full-route tests: `node tools/test-adventure.mjs` and `node tools/test-adventure.mjs evidence/adventure/touch --touch`. Controller: `node tools/test-campaign.mjs`; terrain: `node tools/test-campaign-world.mjs`; menus: `node tools/test-adventure-ui.mjs`. Older first-scene tests and notes below are historical. Release checks: `evidence/adventure/release/`.
