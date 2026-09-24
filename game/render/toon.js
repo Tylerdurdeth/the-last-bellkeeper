@@ -30,6 +30,7 @@ export function createToon(THREE) {
     bkFocusCount: { value: 0 },
     bkMist: { value: new THREE.Color('#E6ECE4') },       // mist colour for the painted under-canopy
     bkTime: { value: 0 }, bkFlicker: { value: 1 }, bkDetail: { value: 1 },
+    bkInterior: { value: new THREE.Vector4(0, 0, -1, 0) },   // x, z, radius (<0 off), top y: no aerial fog inside this volume
     bkSway: { value: .05 }, bkLeafTrans: { value: new THREE.Color('#F2D48A') },   // foliage wind amplitude (m), sunlit leaf translucency   // bkDetail 0 on fallback tiers: no weathering noise
     bkAerial: { value: new THREE.Vector3(18, 75, .22) }, bkAerialColor: { value: new THREE.Color('#B9CCD6') },   // mid-distance cool layer       // seconds; lantern-glass breathing (fx/fire.js)
   };
@@ -53,7 +54,7 @@ export function createToon(THREE) {
 uniform vec3 bkKeyColor; uniform vec4 bkBands; uniform vec3 bkShadowTint; uniform vec3 bkShade; uniform float bkShadeAmt;
 uniform vec4 bkHeight; uniform vec3 bkLowTint; uniform float bkAmbSteps; uniform vec3 bkRimColor; uniform vec3 bkSunDir;
 uniform vec3 bkFogSun; uniform vec3 bkFogHeight; uniform float bkGlow; uniform vec2 bkFogShape;
-uniform vec4 bkFocusA[ 4 ]; uniform vec4 bkFocusB[ 4 ]; uniform int bkFocusCount; uniform vec3 bkMist; uniform float bkTime, bkFlicker, bkDetail; uniform vec3 bkAerial, bkAerialColor;
+uniform vec4 bkFocusA[ 4 ]; uniform vec4 bkFocusB[ 4 ]; uniform int bkFocusCount; uniform vec3 bkMist; uniform float bkTime, bkFlicker, bkDetail; uniform vec4 bkInterior; uniform vec3 bkAerial, bkAerialColor;
 varying vec3 vBkWorldPos;`;
   const HEMI = `
 vec3 bkHemi( const in HemisphereLight h, const in vec3 n ) {
@@ -124,7 +125,7 @@ float bkFadeAmt = 0.0;
     if ( i >= bkFocusCount ) break;
     vec4 A = bkFocusA[ i ], B = bkFocusB[ i ];
     vec2 d = ( gl_FragCoord.xy - A.xy ) / vec2( A.w * B.y, A.w );
-    float inside = 1.0 - smoothstep( 0.35, 0.8, length( d ) );
+    float inside = 1.0 - smoothstep( 0.8, 1.05, length( d ) );   // solid hole over the hero box; dithered rim only outside it
     float nearer = smoothstep( 1.0, 1.6, A.z - vViewPosition.z );
     float allowed = max( 1.0 - bkFlatS, smoothstep( B.x + 1.0, B.x + 1.3, vBkWorldPos.y ) );
     float f = inside * nearer * allowed * B.z;
@@ -236,12 +237,14 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
   #else
     float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
   #endif
+  // Inside the trunk (the Hollow) there is no aerial haze: the interior reads solid and dark, never milky.
+  float bkOut = bkInterior.z < 0.0 ? 1.0 : max( smoothstep( bkInterior.z - 1.5, bkInterior.z + 0.5, length( vBkWorldPos.xz - bkInterior.xy ) ), smoothstep( bkInterior.w, bkInterior.w + 2.0, vBkWorldPos.y ) );
   // Rule 7: the mid distance goes cooler and lighter before the far haze takes over.
-  gl_FragColor.rgb = mix( gl_FragColor.rgb, bkAerialColor, smoothstep( bkAerial.x, bkAerial.y, vFogDepth ) * bkAerial.z );
+  gl_FragColor.rgb = mix( gl_FragColor.rgb, bkAerialColor, smoothstep( bkAerial.x, bkAerial.y, vFogDepth ) * bkAerial.z * bkOut );
   vec3 bkView = normalize( vBkWorldPos - cameraPosition );
   float bkSunF = pow( saturate( dot( bkView, bkSunDir ) ), 5.0 );
   float bkLowF = 1.0 - smoothstep( bkFogHeight.x, bkFogHeight.y, vBkWorldPos.y );
-  fogFactor = saturate( fogFactor * ( 1.0 + bkLowF * bkFogHeight.z ) );
+  fogFactor = saturate( fogFactor * ( 1.0 + bkLowF * bkFogHeight.z ) ) * mix( 0.12, 1.0, bkOut );
   #if BK_ROLE == 5
     fogFactor *= 0.55;   // the painted under-canopy carries its own mist; keep its forms readable from the branches
   #endif
@@ -301,6 +304,10 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
     vec3 bkTw = pow( bkFn, vec3( 4.0 ) ); bkTw /= bkTw.x + bkTw.y + bkTw.z + 1e-4;
     vec3 bkP = vBkWorldPos / bkTileScale;
     vec3 bkT = texture2D( bkTile, bkP.zy ).rgb * bkTw.x + texture2D( bkTile, bkP.xz ).rgb * bkTw.y + texture2D( bkTile, bkP.xy ).rgb * bkTw.z;
+    // second, rotated/offset sample at 0.37× scale blended in: hides tiling seams and repetition
+    vec3 bkQ = bkP * 0.37 + vec3( 0.31, 0.57, 0.13 );
+    vec3 bkT2 = texture2D( bkTile, bkQ.yz ).rgb * bkTw.x + texture2D( bkTile, bkQ.zx ).rgb * bkTw.y + texture2D( bkTile, bkQ.yx ).rgb * bkTw.z;
+    bkT = mix( bkT, bkT2, 0.5 );
     vec3 bkRel = bkT / max( bkTileMean, vec3( 0.02 ) );
     // Desaturate the tile's own hue toward pure value variation so the palette colour of the asset wins.
     float bkRelL = dot( bkT, ${LUM} ) / max( dot( bkTileMean, ${LUM} ), 0.02 );

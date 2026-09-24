@@ -72,9 +72,9 @@ function baseRigs(THREE) {
       fogColor: c('#4F6772'), fogSun: c('#D8AE74'), fogDensity: .018, fogShape: new THREE.Vector2(10, .45), fogHeight: new THREE.Vector3(-14, -2, .8),
       skyTop: c('#5E817C'), skyHorizon: c('#B89A73'), skyBelow: c('#2E4843'), sunColor: c('#FFC27A'), cloudAmt: 0,
       bands: new THREE.Vector4(.12, .50, .05, .50), shadowTint: c('#9FB6C8'), shade: c('#2C4A45'), shadeAmt: .22,
-      height: new THREE.Vector4(-15, 1, .45, .45), lowTint: c('#9FC0C2'),
-      rim: c('#FFB060'), rimIntensity: 1.1, exposure: 1.0,
-      restoreExposure: 1.1, restoreWarm: .55, aerial: new THREE.Vector3(12, 40, .12), aerialColor: c('#6F8C92'), sunGlow: .4, shafts: .2,   // restored Hollow: brighter and warmer, not yellow
+      height: new THREE.Vector4(-15, 1, .72, .45), lowTint: c('#9FC0C2'),
+      rim: c('#FFB060'), rimIntensity: 1.1, exposure: 1.1,
+      restoreExposure: 1.1, restoreWarm: .55, aerial: new THREE.Vector3(12, 40, .12), aerialColor: c('#6F8C92'), sunGlow: .4, shafts: .07,   // restored Hollow: brighter and warmer, not yellow
       shadowIntensity: .72,   // inside the trunk: occluded key survives at half strength as warm bounce (interiors keep form)
       lift: new THREE.Vector3(.0, .015, .04), gain: new THREE.Vector3(1.03, 1.0, .96), sat: 1.04, contrast: 1.22,
       vignette: .2, skyMapMix: .85, mapTint: c('#9FA7A0'), backMix: .35, backTint: c('#8E9A92'), hazeAmt: .45,
@@ -271,6 +271,31 @@ void main() {
   // Modelled cobble paving is ground: silhouette ink only (no crease ink on every cobble).
   // The world's mist sea (flat, far below) is painted as a distant forest canopy in drifting mist.
   const AUTO_ROLES = { paving: 'terrain', mist: 'mist' };
+  const NEVER_FADE = /^(bark|barkShade|heartwood|heartwoodLight|stoneDeep|pavingDeep|trunk.*)$/;
+  // The world's light-shaft wedges (bhKey 'shaft') become soft volumetric-looking beams: feathered by view angle,
+  // broken by drifting noise, faded near the camera and with distance; additive, never a hard polygon edge.
+  const softShaft = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color('#FFD68A') }, uAmt: { value: .07 } },
+    vertexShader: `varying vec3 vW, vN; void main() { vec4 w = modelMatrix * vec4( position, 1.0 ); vW = w.xyz; vN = normalize( mat3( modelMatrix ) * normal ); gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform float uTime, uAmt; uniform vec3 uColor; varying vec3 vW, vN;
+float h( vec3 p ) { return fract( sin( dot( p, vec3( 127.1, 311.7, 74.7 ) ) ) * 43758.5453 ); }
+float n3( vec3 p ) { vec3 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
+  return mix( mix( mix( h( i ), h( i + vec3( 1, 0, 0 ) ), f.x ), mix( h( i + vec3( 0, 1, 0 ) ), h( i + vec3( 1, 1, 0 ) ), f.x ), f.y ), mix( mix( h( i + vec3( 0, 0, 1 ) ), h( i + vec3( 1, 0, 1 ) ), f.x ), mix( h( i + vec3( 0, 1, 1 ) ), h( i + vec3( 1, 1, 1 ) ), f.x ), f.y ), f.z ); }
+void main() {
+  vec3 V = normalize( cameraPosition - vW ); float facing = abs( dot( normalize( vN ), V ) );
+  float feather = pow( facing, 2.5 );                                   // edges seen edge-on vanish: no hard wedge outline
+  float dust = 0.55 + 0.45 * n3( vW * 0.7 + vec3( 0.0, - uTime * 0.12, uTime * 0.05 ) );
+  float d = length( cameraPosition - vW ), near = smoothstep( 3.0, 10.0, d ) * ( 1.0 - smoothstep( 45.0, 90.0, d ) );
+  float a = feather * dust * near * uAmt;
+  if ( a < 0.002 ) discard;
+  gl_FragColor = vec4( uColor * a, 1.0 );
+}`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+  });
+  softShaft.userData.look = false; softShaft.name = 'fx-soft-shaft';
+  /** Interior volume (the Hollow): no aerial fog/mist inside. Default = Bellhollow trunk; override for other worlds. */
+  function setInterior({ x = 0, z = 0, radius = 12.5, top = 9 } = {}) { toon.uniforms.bkInterior.value.set(x, z, radius, top); }
+  setInterior();
   const lanternGlass = o => o.isInstancedMesh && /^bh-lanterns-/.test(o.name);
   const characterMaterial = (o, m) => toon.roleOf(m) === 'character' || [...characters].some(c => { for (let q = o; q; q = q.parent) if (q === c) return true; return false; });
   const tiled = new WeakSet(), surfaced = new WeakSet(), hsl = {};
@@ -320,6 +345,9 @@ void main() {
       for (const m of [].concat(o.material)) {
         if (m && AUTO_ROLES[m.userData?.bhKey]) toon.patch(m, AUTO_ROLES[m.userData.bhKey]);
         if (m && lanternGlass(o) && toon.roleOf(m) !== 'glow') toon.patch(m, 'glow');
+        // Large structure never fades (trunk shell, bark, heartwood, Hollow walls): only small props can.
+        if (m && NEVER_FADE.test(m.userData?.bhKey || '') && !toon.isNoFade(m)) toon.setNoFade(m);
+        if (m && m.userData?.bhKey === 'shaft' && o.material !== softShaft) { o.material = softShaft; o.renderOrder = 9; }
         if (o.name === 'bellhollow-wind' && !fx.wind.attached.has(o)) fx.wind.attach(o);   // zero-wiring fallback for wind.js
         // Thin double-sided cloth (sails, awnings, flags, laundry, banners): no self-shadow → no shadow acne stipple.
         if (m && m.side === THREE.DoubleSide && (m.name === 'fabric' || /^cloth|Double$/.test(m.userData?.bhKey || '')) && o.receiveShadow) o.receiveShadow = false;
@@ -342,7 +370,7 @@ void main() {
   // Painted tiles for large surfaces (terrain, trunk, walls): loaded on first use, triplanar in world space.
   // role: [file, world metres per tile, amount, tile saturation kept (0 = value-only detail, 1 = full painted colour)]
   const TILES = {
-    bark: ['bark', 6.0, .6, .25], timber: ['timber', 1.6, .65, .4],
+    bark: ['bark', 9.0, .42, .2], timber: ['timber', 1.6, .65, .4],
     'stone-wall': ['ivory-stone', .9, .42, .3], 'stone-floor': ['ivory-stone', 2.4, .7, .4], stone: ['ivory-stone', .9, .42, .3],
   }, tiles = {};
   function tile(name, { scale, amount = TILES[name][2], saturation = TILES[name][3] } = {}) {
@@ -443,7 +471,7 @@ void main() {
     if (!snapped) { lerpRig(cur, target, target, 0); snapped = true; }
     else lerpRig(cur, cur, target, 1 - Math.exp(-dt * 1.4));
     apply(cur);
-    windClock = Number.isFinite(t) ? t : windClock + dt;
+    windClock = Number.isFinite(t) ? t : windClock + dt; softShaft.uniforms.uTime.value = windClock;
     fx.wind.update(dt, windClock, { gentle }); fx.fire.update(dt, windClock); fx.water.update(dt, windClock, cur.keyDir);
     toon.uniforms.bkTime.value = windClock; toon.uniforms.bkFlicker.value = fx.fire.flicker.value;
     fx.wind.particleMaterial.uniforms.uScale.value = size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
@@ -565,7 +593,7 @@ void main() {
 
   const api = {
     update, render, applyTo,
-    ready, setFocus, focusProbe, fx,
+    ready, setFocus, focusProbe, fx, setInterior,
     /** Shared animated wind material (options: see wind-material.js); time is advanced by look.update(). */
     windMaterial,
     /** Painted sky strip: (urlOrTexture, {range:[minY,maxY], azimuthDeg, mix}). Defaults to textures/v2/sky-dawn.webp. */
