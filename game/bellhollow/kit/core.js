@@ -14,13 +14,15 @@ export const PAL = {
 // `bark` and `deck` are world surfaces the renderer may texture; the others are flat.
 const MAT_DEFS = {
   plaster: [PAL.ivory, 'plaster', .92, 0], stone: [PAL.ivory, 'stone', .9, 0], stoneShade: [PAL.ivoryShade, 'stone', .92, 0],
-  timber: [PAL.honey, 'timber', .85, 0], timberDark: [PAL.timberDark, 'timber', .88, 0],
+  // Beauty pass: large timber surfaces are weathered (honey pulled towards ivory-shade / deep shade);
+  // saturated honey is kept for small accents only.
+  timber: [0xAD8A63, 'timber', .88, 0], timberDark: [PAL.timberDark, 'timber', .88, 0],
   tileCoral: [PAL.coral, 'tile', .8, 0], tileCopper: [PAL.copper, 'tile', .75, 0], tileVerdigris: [PAL.verdigris, 'tile', .78, 0], tileDark: [PAL.timberDark, 'tile', .82, 0],
   verdigris: [PAL.verdigris, 'metal', .5, .3], copper: [PAL.copper, 'metal', .45, .4],
   cloth: [PAL.coral, 'fabric', .95, 0], clothIvory: [PAL.ivory, 'fabric', .95, 0],
   leaf: [PAL.leaf, 'foliage', .95, 0], leafLight: [PAL.leafLight, 'foliage', .95, 0], leafShade: [PAL.shade, 'foliage', .97, 0],
   bark: [0x6B5A45, 'bark', .97, 0], barkShade: [PAL.shade, 'bark', .98, 0],
-  deck: [PAL.honey, 'timber', .88, 0], paving: [PAL.ivory, 'stone', .92, 0], ink: [PAL.ink, 'metal', .7, .1],
+  deck: [0xB39A7C, 'timber', .9, 0], deckOld: [0x9C8F7D, 'timber', .92, 0], paving: [PAL.ivory, 'stone', .92, 0], ink: [PAL.ink, 'metal', .7, .1],
   glass: [PAL.dawn, 'glass', .3, 0], far: [0x6F8F86, 'foliage', 1, 0], farLight: [0x9DB7A6, 'foliage', 1, 0],
   mist: [0xE8EEE6, 'fabric', 1, 0],
 };
@@ -35,6 +37,7 @@ export function materials(THREE) {
     const mat = new THREE.MeshStandardMaterial({color, roughness, metalness});
     mat.name = name; mat.userData.bhKey = key; m[key] = mat;
   }
+  m.shaft = Object.assign(new THREE.MeshBasicMaterial({color: 0xFFE9C2, transparent: true, opacity: .06, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false}), {name: 'shaft'}); m.shaft.userData.bhKey = 'shaft';
   m.lanternOff = Object.assign(new THREE.MeshStandardMaterial({color: 0xD9C9A0, roughness: .6, emissive: PAL.gold, emissiveIntensity: 0}), {name: 'glass'});
   matCache.set(THREE, m);
   return m;
@@ -97,7 +100,8 @@ export class Bins {
       if (!merged) continue;
       merged.computeBoundingSphere(); merged.computeBoundingBox();
       const mesh = new T.Mesh(merged, mat); mesh.name = `bh-${this.name}-${key}`;
-      mesh.castShadow = key !== 'mist' && key !== 'far' && key !== 'farLight'; mesh.receiveShadow = true;
+      mesh.castShadow = !['mist', 'far', 'farLight', 'shaft'].includes(key); mesh.receiveShadow = key !== 'shaft';
+      if (key === 'shaft') { mesh.renderOrder = 5; mesh.userData.noOutline = true; }
       mesh.matrixAutoUpdate = false; mesh.updateMatrix();
       group.add(mesh);
     }
@@ -241,7 +245,8 @@ export function mossDrape(THREE, B, x, y, z, w = 1.2, h = 1.6, seed = 1, face = 
     const f = j / rows, span = w * (1 - f * .6), cnt = Math.max(1, Math.round(span / .3));
     for (let k = 0; k < cnt; k++) {
       const lx = (k / Math.max(1, cnt - 1) - .5) * span + (rnd() - .5) * .15, lr = .16 + rnd() * .12;
-      putLobe(THREE, B, j === 0 ? 'leaf' : rnd() < .35 ? 'leafLight' : rnd() < .5 ? 'leafShade' : 'leaf', x + lx * c, y - f * h - rnd() * .1, z - lx * s, lr, lr * 1.2, lr, 1);
+      // flattened against the surface it hangs on (reads as a drape, not a string of beads)
+      putLobe(THREE, B, j === 0 ? 'leaf' : rnd() < .35 ? 'leafLight' : rnd() < .5 ? 'leafShade' : 'leaf', x + lx * c, y - f * h - rnd() * .1, z - lx * s, lr * (1 - .55 * Math.abs(s)) * 1.25, lr * 1.15, lr * (1 - .55 * Math.abs(c)) * 1.25, 1);
     }
   }
 }

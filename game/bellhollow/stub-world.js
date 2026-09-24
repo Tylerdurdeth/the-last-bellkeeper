@@ -54,7 +54,7 @@ export async function buildBellhollow({ THREE: T, scene }) {
   floor(13.8, 19, -17.5, -10, 4, { color: 0xc8894a, thick: .4 });
   floor(3.5, 8, -19.6, -18, 4, { color: 0xc8894a, thick: .4 });
   floor(-3, 3, -23, -18, 8, { color: 0xf2e6c9, thick: .4 });
-  floor(4, 9, -23, -19, 12, { color: 0xf2e6c9, thick: .4 });
+  floor(4, 9, -24.2, -19, 12, { color: 0xf2e6c9, thick: .4 });
   floor(3, 9.5, -28.5, -24.2, 16, { color: 0xf2e6c9, thick: .4 });
   const planks = [0, 1, 2].map(i => floor(-12 - i * 4, -8 - i * 4, -18.8, -16.2, 4, { color: 0xb8733f, thick: .3, when: () => (restored.skyBridge || 0) >= (i + 1) / 3 - .01 }));
   floor(-27, -20, -22, -14, 4, { color: 0xcdbb95, thick: .6 });
@@ -79,13 +79,16 @@ export async function buildBellhollow({ THREE: T, scene }) {
     vane1: P(-18.5, -8, -43), vane2: P(-29.5, -4, -49), vane3: P(-16, 0, -50.5),
     ring1: P(-23, -8, -41), ring2: P(-28, -4, -46), ring3: P(-18, 0, -45.5),
     bellOut: P(-19, 0, -52), bellReturn: P(-16.5, 0, -52), finale: P(-23, 6, -47), finaleSpot: P(-3.5, 0, 4.4), farBell: P(10, 8, 80),
-    fragment1: P(-16, 4, -11.3), fragment2: P(18.5, 4, -10.5), fragment3: P(8.5, 12, -19.5),
+    fragment1: P(2.3, 8, -18.7), fragment2: P(18.5, 4, -10.5), fragment3: P(5, 12, -19.6),
+    pipesValve: P(18.4, 4, -13.4), pipesWrongOutlet: P(18.6, 5.2, -9.2),
+    gallery: { source: P(-23, 2, -25), carvings: [{ stand: P(-21.6, .3, -28.5), intake: P(-20.9, 1.5, -28.5) }, { stand: P(-24.4, -4.2, -34.5), intake: P(-25.1, -3, -34.5) }, { stand: P(-21.8, -6, -37.5), panel: P(-21, -4.8, -37.5) }, { stand: P(-24.2, -7.5, -39.5), panel: P(-25, -6.3, -39.5) }] },
   };
   const vents = [
     { id: 'loft', x: 0, z: -8.2, y: 0, top: 4.9, radius: 1.05, ledge: P(0, 4, -11.2) },
     { id: 'ladders1', x: 0, y: 4, z: -17, top: 8.9, radius: 1, ledge: P(0, 8, -20.3) },
     { id: 'ladders2', x: 1.8, y: 8, z: -21, top: 12.9, radius: 1, ledge: P(5.4, 12, -21) },
     { id: 'ladders3', x: 6.5, y: 12, z: -22.2, top: 16.9, radius: 1, ledge: P(6.3, 16, -25.4) },
+    { id: 'frag1', x: -4.6, y: 4, z: -16.6, top: 8.9, radius: .9, ledge: P(-2.3, 8, -19.4) },
     { id: 'ring1', x: -25, y: -8, z: -47.5, top: -3.1, radius: 1, ledge: P(-28, -4, -47.5) },
     { id: 'ring2', x: -21.2, y: -8, z: -47.5, top: .9, radius: 1, ledge: P(-18, 0, -47.5) },
   ];
@@ -97,6 +100,8 @@ export async function buildBellhollow({ THREE: T, scene }) {
   ];
   const sails = [
     { id: 'sailsBridge', kind: 'bridge', x: -11.6, y: 4, z: -13, lever: P(-9, 4, -11.9) },
+    { id: 'sailsCap', kind: 'sail', x: -16.6, y: 5, z: -16.2, lever: P(-13.2, 4, -14.4) },
+    { id: 'frag2', kind: 'sail', x: 18.2, y: 5, z: -13.2 },
     { id: 'laddersShutter', kind: 'shutter', x: 6.5, y: 12, z: -22.2, vent: 'ladders3', hold: 8 },
   ];
   // ---- simple visuals for anchors ----
@@ -145,6 +150,7 @@ export async function buildBellhollow({ THREE: T, scene }) {
   function setRestored(key, amount) { restored[key] = Math.max(0, Math.min(1, amount)); }
   function update(dt, t, state = {}) {
     live = state;
+    for (const [k, v] of Object.entries(state.restored || {})) if (Number.isFinite(v)) restored[k] = v;
     const pw = state.wind?.push || {}, sp = state.wind?.wheels || {};
     doors.forEach((d, i) => d.rotation.y = (i ? -1 : 1) * (pw.terraceGate || 0) * 1.7);
     bridgePivot.rotation.z = (1 - (pw.sailsBridge || 0)) * -1.45;

@@ -12,21 +12,29 @@ export function createLife(T, root) {
   const catenary = (p, q, sag, f) => V(p.x + (q.x - p.x) * f, p.y + (q.y - p.y) * f - sag * 4 * f * (1 - f), p.z + (q.z - p.z) * f);
   const ropeLine = (p, q, sag, segs = 8) => { for (let i = 0; i < segs; i++) specs.rope.push([catenary(p, q, sag, i / segs), catenary(p, q, sag, (i + 1) / segs)]); };
 
+  // Every hanging decoration records where it hangs from (hangsFrom): the test proves each of
+  // those points touches real support geometry (a post, rail, eave, beam, bracket or rope).
+  const hangers = [];
+  const hang = (kind, pts, note) => hangers.push({kind, note, pts: pts.map((p) => (p.isVector3 ? p.toArray() : p))});
   const api = {
-    lantern(area, x, y, z, s = 1) { specs.lantern.push({area, p: V(x, y, z), s}); },
-    lanternString(area, p, q, sag = .8, n = 4) { ropeLine(p, q, sag); for (let i = 1; i <= n; i++) { const c = catenary(p, q, sag, i / (n + 1)); api.lantern(area, c.x, c.y - .3, c.z, .8); } },
-    bunting(area, p, q, sag = .6, n = 8) {
+    hangers,
+    // mount: 'hang' (anchored at its cap ring) or 'base' (standing on a post/floor, anchored at its foot)
+    lantern(area, x, y, z, s = 1, {onRope = false, note, mount = 'hang'} = {}) { specs.lantern.push({area, p: V(x, y, z), s}); if (!onRope) hang('lantern', [[x, mount === 'base' ? y - .24 * s : y + .33 * s, z]], note); },
+    lanternString(area, p, q, sag = .8, n = 4, note) { ropeLine(p, q, sag); hang('lanternString', [p, q], note); for (let i = 1; i <= n; i++) { const c = catenary(p, q, sag, i / (n + 1)); api.lantern(area, c.x, c.y - .3, c.z, .8, {onRope: true}); } },
+    bunting(area, p, q, sag = .6, n = 8, note) {
+      hang('bunting', [p, q], note);
       ropeLine(p, q, sag);
       const dir = q.clone().sub(p).setY(0).normalize();
       for (let i = 0; i < n; i++) { const f = (i + .5) / n, c = catenary(p, q, sag, f); specs.pennant.push({area, p: c, dir, alt: i % 2, ph: Math.random() * 6}); }
     },
-    laundry(area, p, q, n = 5) {
+    laundry(area, p, q, n = 5, note) {
+      hang('laundry', [p, q], note);
       ropeLine(p, q, .35);
       const dir = q.clone().sub(p).setY(0).normalize();
       for (let i = 0; i < n; i++) { const f = (i + .7) / (n + .4), c = catenary(p, q, .35, f); specs.cloth.push({area, p: c, dir, alt: i % 3, w: .55 + (i % 2) * .25, h: .7 + (i % 3) * .15, ph: i * 1.7}); }
     },
-    pinwheel(area, x, y, z, yaw, s = .4) { specs.pinwheel.push({area, p: V(x, y, z), yaw, s, ph: Math.random() * 6}); },
-    flag(area, x, y, z, s = .8) { specs.flag.push({area, p: V(x, y, z), s, ph: Math.random() * 6}); },
+    pinwheel(area, x, y, z, yaw, s = .4) { hang('pinwheel', [[x, y - .02, z]]); specs.pinwheel.push({area, p: V(x, y, z), yaw, s, ph: Math.random() * 6}); },
+    flag(area, x, y, z, s = .8) { hang('flag', [[x, y - 2.4, z]]); specs.flag.push({area, p: V(x, y, z), s, ph: Math.random() * 6}); },
   };
   const ims = [], lanternIMs = [], sagOf = {};
   const q = new T.Quaternion(), e = new T.Euler(), m = new T.Matrix4(), sc = new T.Vector3(), up = V(0, 1, 0);
@@ -89,6 +97,8 @@ export function createLife(T, root) {
       im.userData.list = specs.flag; im.userData.kind = 'flag'; ims.push(im); root.add(im);
     }
     for (const im of ims) { im.instanceMatrix.setUsage(T.DynamicDrawUsage); im.frustumCulled = false; }
+    const kindOf = {pennant: 'bunting', cloth: 'laundry', pinwheel: 'pinwheel', flag: 'flag'};
+    root.traverse((o) => { if (!o.isInstancedMesh || !/^bh-(lantern|ropes|pennants|laundry|pinwheels|flag)/.test(o.name)) return; o.userData.decoration = true; const k = kindOf[o.userData.kind] || (/lantern/.test(o.name) ? 'lantern' : /ropes/.test(o.name) ? null : 'flag'); o.userData.hangsFrom = hangers.filter((h) => !k || h.kind === k || (k === 'bunting' && h.kind === 'lanternString')).flatMap((h) => h.pts); });
   };
 
   const tmpM = new T.Matrix4(), tq = new T.Quaternion(), tq2 = new T.Quaternion(), ax = V(0, 0, 1);

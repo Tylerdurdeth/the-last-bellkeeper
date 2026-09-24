@@ -8,7 +8,9 @@ const TAU = Math.PI * 2;
 const ease = f => f * f * (3 - 2 * f);
 const clamp01 = v => Math.max(0, Math.min(1, v));
 
-export function createWind({ THREE: T, scene, movement = null, sound = () => {}, capacity = 14000 } = {}) {
+// fx: optional getter for the look's natural wind FX (game/render/fx/wind-fx.js); when present the strip mesh gets
+// its soft stream material and vent columns become rising mist instead of drawn helices.
+export function createWind({ THREE: T, scene, movement = null, sound = () => {}, capacity = 14000, fx = () => null } = {}) {
   // ---------- batched ribbon renderer ----------
   const pos = new Float32Array(capacity * 3), uv = new Float32Array(capacity * 2), col = new Float32Array(capacity * 4);
   const index = new Uint16Array(Math.min(65535, capacity) * 3);
@@ -263,11 +265,14 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
       }
     }
     // Vent columns: grille ring with a countdown arc, four rising helices, vertical streaks, top ring.
+    const FX = fx?.();
+    if (FX && !FX.attached?.has?.(mesh)) FX.attach(mesh);
     for (const [id, v] of vents) {
-      v.age += dt; if (v.age >= v.duration) { vents.delete(id); continue; }
+      v.age += dt; if (v.age >= v.duration) { vents.delete(id); FX?.removeUpdraft(id); continue; }
       const k = clamp01(Math.min(v.age / .25, (v.duration - v.age) / .6)), h = v.top - v.y, left = 1 - v.age / v.duration;
       ring(v.x, v.y + .06, v.z, v.radius, { width: .3, alpha: 1 * k });
       ring(v.x, v.y + .08, v.z, v.radius + .4, { width: .2, alpha: .95 * k }, -Math.PI / 2, -Math.PI / 2 + TAU * left);
+      if (FX) { FX.setUpdraft(id, { x: v.x, y: v.y, z: v.z, top: v.top, radius: v.radius, strength: k }); continue; } // the look draws the mist column
       for (let i = 0; i < 4; i++) {
         const ph = i * TAU / 4 - t * 3.2 * spin, r = v.radius * (.62 + .1 * Math.sin(t * 2 + i));
         helix(v.x, v.y + .1, v.z, v.y + h * Math.min(1, v.age / .35) + .4, r, 1.6 + h * .12, ph, { width: .34, alpha: .9 * k, n: 44, taper: true });
@@ -315,7 +320,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
   }
   // A chain wheel's flow is drawn from its hub to the outlet; set `from` when powering.
   function chainFrom(id, from) { const w = wheels.get(id); if (w) w.from = from.isVector3 ? from.clone() : new T.Vector3(from.x, from.y, from.z); }
-  function reset() { pLife.fill(0); sources.clear(); flights.length = 0; bursts.length = 0; vents.clear(); push.clear(); wheels.clear(); charge = null; }
+  function reset() { for (const id of vents.keys()) fx?.()?.removeUpdraft(id); pLife.fill(0); sources.clear(); flights.length = 0; bursts.length = 0; vents.clear(); push.clear(); wheels.clear(); charge = null; }
   function telemetry() { return { charge: charge?.origin ?? null, sources: [...sources.values()].filter(catchable).map(s => ({ id: s.id, x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2) })), vents: [...vents.keys()], push: Object.fromEntries([...push].map(([k, v]) => [k, +v.value.toFixed(2)])), wheels: Object.fromEntries([...wheels].map(([k, v]) => [k, +v.spin.toFixed(2)])), flights: flights.length, strips: iCount / 6 }; }
   return {
     mesh, strip, ring, helix, arc, burst, petals,

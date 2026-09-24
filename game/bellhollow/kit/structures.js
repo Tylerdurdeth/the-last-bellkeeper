@@ -135,6 +135,7 @@ export class Builder {
    * style: 'timber' | 'stone' | 'copper'. Registers one collider per span.
    */
   rail(id, base, opts = {}) {
+    if (opts.style === undefined || opts.style === 'timber') opts = {spacing: 2.3, ...opts};
     // Deferred: rails are built after every deck exists (flushRails), so a rail can drop the
     // stretches where walkable ground continues on both sides at its level (joins, spurs).
     if (!this.flushing) { this.pending ??= []; this.pending.push([id, base, opts, this.cur]); return; }
@@ -161,7 +162,7 @@ export class Builder {
     if (collide) this.rails.push({id, pts: base, style, kind, enabled});
     for (let i = 1; collide && i < base.length; i++) {
       const a = base[i - 1], b = base[i];
-      this.gm.addSegment({id, ax: a[0], az: a[2], bx: b[0], bz: b[2], ya: a[1], yb: b[1], h: H + .05, t: style === 'stone' ? .16 : .08, enabled, dy});
+      this.gm.addSegment({id, ax: a[0], az: a[2], bx: b[0], bz: b[2], ya: a[1], yb: b[1], h: H + .05, t: style === 'stone' || style === 'parapet' ? .16 : .08, enabled, dy});
     }
     if (!visual) return;
     // Walk the polyline placing posts at even spacing.
@@ -177,6 +178,17 @@ export class Builder {
     }
     // de-duplicate close posts
     const P = posts.filter((p, i) => i === 0 || Math.hypot(p[0] - posts[i - 1][0], p[2] - posts[i - 1][2]) > .25);
+    if (style === 'parapet') {
+      // calm solid stone parapet with a coping: one big form instead of many thin posts
+      for (let i = 1; i < base.length; i++) {
+        const a = base[i - 1], b = base[i], L = Math.hypot(b[0] - a[0], b[2] - a[2]); if (L < .02) continue;
+        const ext = .06, dx = (b[0] - a[0]) / L, dz = (b[2] - a[2]) / L;
+        const A = [a[0] - dx * ext, a[1], a[2] - dz * ext], Bp = [b[0] + dx * ext, b[1], b[2] + dz * ext];
+        this.add(beam(T, [A[0], A[1] + .4, A[2]], [Bp[0], Bp[1] + .4, Bp[2]], .3, .8), 'stoneShade');
+        this.add(beam(T, [A[0], A[1] + .86, A[2]], [Bp[0], Bp[1] + .86, Bp[2]], .44, .12), 'stone');
+      }
+      return;
+    }
     if (style === 'stone') {
       for (const p of P) this.add(new T.BoxGeometry(.34, H - .12, .34).translate(p[0], p[1] + (H - .12) / 2, p[2]), 'stone');
       for (let i = 1; i < P.length; i++) {
@@ -189,7 +201,7 @@ export class Builder {
       }
     } else {
       const postMat = style === 'copper' ? 'verdigris' : 'timberDark', railMat = style === 'copper' ? 'copper' : 'timber';
-      for (const p of P) { this.add(new T.BoxGeometry(.13, H, .13).translate(p[0], p[1] + H / 2, p[2]), postMat); this.add(new T.SphereGeometry(.09, 6, 4).translate(p[0], p[1] + H + .04, p[2]), style === 'copper' ? 'copper' : 'verdigris'); }
+      for (const p of P) { this.add(new T.BoxGeometry(.13, H, .13).translate(p[0], p[1] + H / 2, p[2]), postMat); this.add(new T.BoxGeometry(.17, .06, .17).translate(p[0], p[1] + H + .02, p[2]), style === 'copper' ? 'copper' : 'timberDark'); }
       for (let i = 1; i < P.length; i++) {
         const a = P[i - 1], b = P[i];
         this.add(beam(T, [a[0], a[1] + H - .04, a[2]], [b[0], b[1] + H - .04, b[2]], .1, .09), railMat);

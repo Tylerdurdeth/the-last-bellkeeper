@@ -10,14 +10,28 @@ export default function (THREE, opts = {}) {
   const box = (w, h, d, m, x, y, z, p = g) => add(new THREE.BoxGeometry(w, h, d), m, x, y, z, 0, 0, 0, p);
   let s = (opts.seed ?? 5) >>> 0;
   const rnd = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  // Wind well (R-floor-vent): an octagonal ivory stone surround set into the floor, a riveted
+  // copper ring, a verdigris petal grille over a dark shaft, and a copper feed elbow entering from
+  // one side and dropping into the floor (the well is fed from below). Flush-walkable (rim .12).
   const R = .8;
-  add(new THREE.CylinderGeometry(R + .28, R + .34, .12, 20), shade, 0, .06, 0);
-  add(new THREE.TorusGeometry(R + .05, .07, 5, 24), copper, 0, .1, 0, 0, Math.PI / 2);
-  add(new THREE.CylinderGeometry(R, R, .06, 20), M(0x2C4A45, "metal", .7, .2), 0, .06, 0);
-  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI; const sl = box(R * 2 - .1, .05, .07, verd, 0, .1, 0); sl.rotation.y = a; }
-  add(new THREE.TorusGeometry(R * .5, .04, 4, 16), verd, 0, .11, 0, 0, Math.PI / 2);
-  add(new THREE.CylinderGeometry(.14, .14, .08, 10), copper, 0, .12, 0);
-  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; add(new THREE.SphereGeometry(.05, 6, 4), copper, Math.cos(a) * (R + .2), .13, Math.sin(a) * (R + .2)); }
+  add(new THREE.CylinderGeometry(R + .55, R + .62, .12, 8), shade, 0, .06, 0, Math.PI / 8);
+  add(new THREE.CylinderGeometry(R + .42, R + .5, .05, 8), ivory, 0, .145, 0, Math.PI / 8);
+  for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + Math.PI / 8; box(.05, .02, R * .7, shade, Math.sin(a) * (R + .3), .175, Math.cos(a) * (R + .3)).rotation.y = a; }
+  add(new THREE.TorusGeometry(R + .06, .08, 6, 28), copper, 0, .15, 0, 0, Math.PI / 2);
+  add(new THREE.CylinderGeometry(R, R, .06, 24), M(0x2C4A45, "metal", .8, .1), 0, .1, 0);
+  // eight petals radiating from a copper boss (drawn as flattened leaf shapes)
+  for (let k = 0; k < 8; k++) {
+    const sh = new THREE.Shape(); sh.moveTo(0, .1); sh.quadraticCurveTo(.3, .38, 0, R - .06); sh.quadraticCurveTo(-.3, .38, 0, .1);
+    const g2 = new THREE.ExtrudeGeometry(sh, {depth: .04, bevelEnabled: false, curveSegments: 4}); g2.rotateX(-Math.PI / 2); g2.rotateY(k / 8 * Math.PI * 2);
+    add(g2, verd, 0, .13, 0);
+  }
+  add(new THREE.CylinderGeometry(.16, .18, .08, 12), copper, 0, .16, 0);
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; add(new THREE.SphereGeometry(.04, 6, 4), copper, Math.cos(a) * (R + .06), .2, Math.sin(a) * (R + .06)); }
+  // feed pipe: runs in along the floor and dives into it through a bolted flange (fed from below)
+  add(new THREE.CylinderGeometry(.12, .12, .9, 8), verd, R + .95, .14, 0, 0, 0, Math.PI / 2);
+  add(new THREE.CylinderGeometry(.2, .2, .06, 10), copper, R + 1.42, .03, 0);
+  add(new THREE.SphereGeometry(.15, 8, 6), verd, R + 1.42, .12, 0);
+  for (const x of [R + .62, R + 1.18]) add(new THREE.TorusGeometry(.15, .035, 5, 10), copper, x, .14, 0, Math.PI / 2, 0, 0);
   const box3 = new THREE.Box3(), v = new THREE.Vector3(); g.updateMatrixWorld(true);
   g.traverse((n) => { const p = n.isMesh && n.geometry.attributes.position; if (!p) return; for (let i = 0; i < p.count; i++) box3.expandByPoint(v.fromBufferAttribute(p, i).applyMatrix4(n.matrixWorld)); });
   const c = box3.getCenter(new THREE.Vector3());

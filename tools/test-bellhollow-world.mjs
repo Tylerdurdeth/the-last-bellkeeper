@@ -150,7 +150,7 @@ const routes = [
   // Mill of Sails
   ['sails branch', 'walk', [P.loftView, P.sails.branchStart, P.sails.source, P.sails.bridgePush, P.sails.bridgeFrom]],
   ['sails bridge crossing', 'walk', [P.sails.bridgeFrom, P.sails.bridgeTo, G(-115.8, 36.9, 7.5), P.sails.restore]],
-  ['sails cap sail', 'walk', [P.sails.restore, P.sails.capSail]],
+  ['sails cap sail', 'walk', [P.sails.restore, ...P.sails.capPath, P.sails.capSail]],
   ['fragment2 swing platform', 'walk', [P.sails.bridgeTo, P.sails.frag2From, P.sails.frag2To, P.fragment2]],
   ['fragment1 approach', 'walk', [P.start, G(-31, 19.5, 0), G(-31, 17.5, 0)]],
   ['fragment1 updraft', 'vent', 'frag1', P.fragment1],
@@ -179,8 +179,8 @@ const routes = [
   ['gallery descent', 'walk', [P.hollowGateInside, P.gallery.top, ...galArc(105, 340), P.gallery.bottom, G(340, 7.3, -4), ...arc(340, 250, 7.3, -4), R.high.safe, P.pairedBells.stand, ...arc(225, 300, 7.3, -4), R.high.vaneStand]],
   ['well drop high->mid', 'drop', G(250, 7.2, -4), G(250, 5.2, -9)],
   ['well mid ring', 'walk', [G(250, 5.2, -9), G(250, 5.0, -9), R.mid.catchPoint, ...arc(245, 130, 5.0, -9), R.mid.safe, ...arc(130, 220, 5.0, -9), R.mid.vaneStand]],
-  ['well drop mid->low', 'drop', G(132, 4.8, -9), G(132, 3.6, -14)],
-  ['well low ring', 'walk', [G(132, 3.6, -14), G(128, 2.2, -14), R.low.catchPoint, R.low.vaneStand, R.low.safe]],
+  ['well drop mid->low', 'drop', G(120, 4.8, -9), G(120, 3.6, -14)],
+  ['well low ring', 'walk', [G(120, 3.6, -14), G(128, 2.2, -14), R.low.catchPoint, R.low.vaneStand, R.low.safe]],
   ['well updraft low->mid', 'vent', 'ring1', G(111, 5.6, -9)],
   ['well updraft mid->high', 'vent', 'ring2', G(280, 7.6, -4)],
   ['well to ring3 grille', 'walk', [R.high.safe, ...arc(250, 186, 7.3, -4), G(184, 8, -4)]],
@@ -277,11 +277,114 @@ for (let x = -52; x <= 52; x += .5) for (let z = -52; z <= 52; z += .5) {
 for (const e of voidEdges.slice(0, 20)) log('unsafe edge: ' + e);
 if (voidEdges.length > 20) log(`unsafe edge: ... ${voidEdges.length - 20} more`);
 
+// ---------------------------------------------------------------- nothing hangs in the air
+// Every banner, flag, pennant, bunting/laundry line, lantern (chain) and pinwheel records the
+// points it hangs from (world.hangers / userData.hangsFrom). Each must lie within 6 cm of real
+// support geometry (baked scenery or moving parts; the decorations themselves do not count).
+{
+  w.root.updateMatrixWorld(true);
+  const CELL = 1, grid = new Map(), keyOf = (x, y, z) => `${Math.floor(x / CELL)},${Math.floor(y / CELL)},${Math.floor(z / CELL)}`;
+  const tris = []; const A = new T.Vector3(), Bv = new T.Vector3(), C = new T.Vector3();
+  w.root.traverse((o) => {
+    if (!o.isMesh || o.userData.decoration || o.isInstancedMesh || o.material?.name === 'shaft') return;
+    const pos = o.geometry.attributes.position, idx = o.geometry.index, n = idx ? idx.count : pos.count;
+    for (let i = 0; i < n; i += 3) {
+      const ia = idx ? idx.getX(i) : i, ib = idx ? idx.getX(i + 1) : i + 1, ic = idx ? idx.getX(i + 2) : i + 2;
+      A.fromBufferAttribute(pos, ia).applyMatrix4(o.matrixWorld); Bv.fromBufferAttribute(pos, ib).applyMatrix4(o.matrixWorld); C.fromBufferAttribute(pos, ic).applyMatrix4(o.matrixWorld);
+      const t = new T.Triangle(A.clone(), Bv.clone(), C.clone()), id = tris.push(t) - 1, bb = new T.Box3().setFromPoints([t.a, t.b, t.c]).expandByScalar(.07);
+      if (bb.max.x - bb.min.x > 60 || bb.max.z - bb.min.z > 60 || bb.max.y - bb.min.y > 60) continue;
+      for (let gx = Math.floor(bb.min.x / CELL); gx <= Math.floor(bb.max.x / CELL); gx++) for (let gy = Math.floor(bb.min.y / CELL); gy <= Math.floor(bb.max.y / CELL); gy++) for (let gz = Math.floor(bb.min.z / CELL); gz <= Math.floor(bb.max.z / CELL); gz++) { const k = `${gx},${gy},${gz}`; (grid.get(k) || grid.set(k, []).get(k)).push(id); }
+    }
+  });
+  const cp = new T.Vector3(); let hangChecks = 0; const floating = [];
+  for (const h of w.hangers) for (const p of h.pts) {
+    hangChecks++; const q = new T.Vector3(...p); let best = Infinity;
+    const cx = Math.floor(q.x / CELL), cy = Math.floor(q.y / CELL), cz = Math.floor(q.z / CELL);
+    outer: for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) for (const i of grid.get(`${cx + dx},${cy + dy},${cz + dz}`) || []) { tris[i].closestPointToPoint(q, cp); best = Math.min(best, cp.distanceTo(q)); if (best < .06) break outer; }
+    if (best >= .06) floating.push(`${h.kind}${h.note ? ' (' + h.note + ')' : ''} at ${p.map((v) => v.toFixed(2))} (${best === Infinity ? '>1 m' : best.toFixed(2) + ' m'} from support)`);
+  }
+  for (const f of floating.slice(0, 30)) log('floating decoration: ' + f);
+  if (floating.length > 30) log(`floating decoration: ... ${floating.length - 30} more`);
+  globalThis.__hang = {hangChecks, floating: floating.length};
+}
+
+// ---------------------------------------------------------------- barriers never close through the hero
+{
+  const b0 = P.bridge.stages[0].from; // stage-0 barrier sits at the terrace edge of stage 0
+  w.update(1 / 60, 0, {...OPEN, skyPlanks: 1}); w.update(1 / 60, 0, {...OPEN, skyPlanks: 1});
+  const hero = new T.Vector3(b0.x, b0.y, b0.z);
+  w.update(1 / 60, 0, {...OPEN, skyPlanks: 0, hero}); // the stage vanishes while the hero stands in the chain line
+  check(!w.blocked(hero.x, hero.z, .23, hero.y), 'stage-0 chain closed through the hero');
+  const away = new T.Vector3(...[P.start.x, P.start.y, P.start.z]);
+  w.update(1 / 60, 0, {...OPEN, skyPlanks: 0, hero: away});
+  check(w.blocked(hero.x, hero.z, .23, hero.y), 'stage-0 chain did not arm once the hero was clear');
+  w.update(1 / 60, 0, {...OPEN, skyPlanks: 1.5}); check(w.ground(P.bridge.stages[1].mid.x, P.bridge.stages[1].mid.z, P.bridge.stages[1].mid.y) === null, 'animating stage must not be walkable yet');
+  setAll(OPEN);
+}
+
+// ---------------------------------------------------------------- no closed boxes
+// Reverse flood fill over 0.5 m cells on every layer: every cell the hero can stand on must have a
+// path at least 0.6 m wide (walks, drops, vents, the declared jump gaps) to a checkpoint anchor, in
+// every tested world state.
+function reachCheck(label, state) {
+  setAll(state);
+  const CELL = .5, nodes = new Map(), list = [];
+  const id = (ix, iz, h) => `${ix},${iz},${Math.round(h * 20)}`;
+  for (const s of w.ground_model.surfaces) {
+    const [x0, x1, z0, z1] = s.bb;
+    for (let ix = Math.floor(x0 / CELL); ix <= Math.ceil(x1 / CELL); ix++) for (let iz = Math.floor(z0 / CELL); iz <= Math.ceil(z1 / CELL); iz++) {
+      const x = ix * CELL, z = iz * CELL, h = w.ground_model.heightOf(s, x, z);
+      if (h === null || w.ground(x, z, h) !== h || w.blocked(x, z, .23, h)) continue;
+      const k = id(ix, iz, h); if (nodes.has(k)) continue;
+      const n = {k, ix, iz, x, z, h, preds: []}; nodes.set(k, n); list.push(n);
+    }
+  }
+  const nodeAt = (x, z, h) => { const ix = Math.round(x / CELL), iz = Math.round(z / CELL); for (const dh of [0, .05, -.05, .1, -.1]) { const n = nodes.get(id(ix, iz, h + dh)); if (n) return n; } let best = null; for (const n of list) if (Math.abs(n.h - h) < .3 && Math.hypot(n.x - x, n.z - z) < .8 && (!best || Math.hypot(n.x - x, n.z - z) < Math.hypot(best.x - x, best.z - z))) best = n; return best; };
+  const link = (a, b) => { if (a && b && a !== b) b.preds.push(a); };
+  for (const n of list) for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const x = n.x + dx * CELL, z = n.z + dz * CELL, mx = (n.x + x) / 2, mz = (n.z + z) / 2;
+    const g = w.ground(x, z, n.h + .3);
+    if (g !== null && Math.abs(g - n.h) <= .3) { if (!w.blocked(x, z, .3, g) && !w.blocked(mx, mz, .3, n.h)) link(n, nodes.get(id(Math.round(x / CELL), Math.round(z / CELL), g)) || nodeAt(x, z, g)); continue; }
+    const low = w.ground(x, z, n.h - .3);
+    if (low !== null && n.h - low <= 14 && !w.blocked(x, z, .3, n.h)) link(n, nodes.get(id(Math.round(x / CELL), Math.round(z / CELL), low)) || nodeAt(x, z, low));
+  }
+  for (const v of w.vents) { if (!v.ledge) continue; const to = nodeAt(v.ledge.x, v.ledge.z, v.ledge.y); for (const n of list) if (Math.abs(n.h - v.y) < .3 && Math.hypot(n.x - v.x, n.z - v.z) < .8) link(n, to); }
+  for (const [a, b] of [[P.pipes.gapFrom, P.pipes.gapTo], [P.pipes.frag3From, P.pipes.frag3To]]) { link(nodeAt(a.x, a.z, a.y), nodeAt(b.x, b.z, b.y)); link(nodeAt(b.x, b.z, b.y), nodeAt(a.x, a.z, a.y)); }
+  const cps = [P.start, P.loftLedge, P.sails.bridgeFrom, P.sails.restore, P.pipes.wheelA, P.pipes.restore, P.ladders.ledge0, P.ladders.ledge1, P.ladders.ledge2, P.ladders.restore, P.bridge.start, P.hollowGateInside, P.gallery.top, R.low.safe, R.mid.safe, R.high.safe, R.top];
+  const seen = new Set(), q = [];
+  for (const c of cps) { const n = nodeAt(c.x, c.z, c.y); if (n && !seen.has(n)) { seen.add(n); q.push(n); } }
+  while (q.length) { const n = q.pop(); for (const p of n.preds) if (!seen.has(p)) { seen.add(p); q.push(p); } }
+  // cells the hero can actually get into in this state (forward from the checkpoints, with a
+  // hero-sized 0.46 m clearance so tight squeezes count as reachable)...
+  const fwd = new Set(), fq = [];
+  const succ = new Map(); for (const n of list) for (const p of n.preds) (succ.get(p) || succ.set(p, []).get(p)).push(n);
+  const squeeze = (n) => { for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = n.x + dx * CELL, z = n.z + dz * CELL, g = w.ground(x, z, n.h + .3); if (g !== null && Math.abs(g - n.h) <= .3 && !w.blocked(x, z, .23, g) && !w.blocked((n.x + x) / 2, (n.z + z) / 2, .23, n.h)) { const m = nodes.get(id(Math.round(x / CELL), Math.round(z / CELL), g)); if (m) (succ.get(n) || succ.set(n, []).get(n)).push(m); } } };
+  for (const n of list) squeeze(n);
+  for (const c of cps) { const n = nodeAt(c.x, c.z, c.y); if (n && !fwd.has(n)) { fwd.add(n); fq.push(n); } }
+  while (fq.length) { const n = fq.pop(); for (const m of succ.get(n) || []) if (!fwd.has(m)) { fwd.add(m); fq.push(m); } }
+  // ...must each have a >= 0.6 m-wide way back to a checkpoint
+  const stuck = list.filter((n) => fwd.has(n) && !seen.has(n));
+  // group stuck cells into pockets (a real closed box is a pocket of several cells)
+  const pockets = []; const inP = new Set();
+  for (const s0 of stuck) { if (inP.has(s0)) continue; const pk = [s0]; inP.add(s0); for (let i = 0; i < pk.length; i++) for (const o of stuck) if (!inP.has(o) && Math.abs(o.h - pk[i].h) < .35 && Math.hypot(o.x - pk[i].x, o.z - pk[i].z) < CELL * 1.5) { inP.add(o); pk.push(o); } pockets.push(pk); }
+  for (const pk of pockets) log(`${label}: ${pk.length} stuck cell(s) near ${pk[0].x.toFixed(1)},${pk[0].h.toFixed(1)},${pk[0].z.toFixed(1)}`);
+  return {label, nodes: list.length, stuck: stuck.length, pockets: pockets.length};
+}
+const reach = [
+  reachCheck('closed', {...CLOSED}),
+  reachCheck('planks1', {...OPEN, skyPlanks: 1, hollowGate: 0}),
+  reachCheck('planks2', {...OPEN, skyPlanks: 2, hollowGate: 0}),
+  reachCheck('open', {...OPEN}),
+  reachCheck('pushes-off', {...OPEN, sailBridge: 0, frag2: 0, ladderShutter: 0, sailsCap: 0, pipesValve: 0}),
+];
+globalThis.__reach = reach;
+setAll(OPEN);
+
 // ---------------------------------------------------------------- stats
 let tris = 0, meshes = 0; w.root.traverse((o) => { if (o.isMesh) { meshes++; tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); } });
 check(meshes <= 450, `mesh count ${meshes} > 450`); check(tris <= 700000, `triangles ${tris} > 700k`);
 
-const result = {timestamp: new Date().toISOString(), pass: fails.length === 0, buildMs: Math.round(buildMs), meshes, tris: Math.round(tris), pointChecks, routeSamples, railSamples, layerChecks, edgeSamples, routes: routeResults, failures: fails};
+const result = {timestamp: new Date().toISOString(), pass: fails.length === 0, hangChecks: globalThis.__hang?.hangChecks, floatingDecorations: globalThis.__hang?.floating, reach: globalThis.__reach, buildMs: Math.round(buildMs), meshes, tris: Math.round(tris), pointChecks, routeSamples, railSamples, layerChecks, edgeSamples, routes: routeResults, failures: fails};
 if (process.argv[2]) await writeFile(process.argv[2], JSON.stringify(result, null, 2));
 console.log(JSON.stringify({...result, routes: routeResults.filter((r) => !r.ok).map((r) => r.label)}, null, 2));
 process.exit(fails.length ? 1 : 0);

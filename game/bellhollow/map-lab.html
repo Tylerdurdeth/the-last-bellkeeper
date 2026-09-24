@@ -1,0 +1,13 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Bellkeeper · Map lab</title><link rel="icon" href="data:,">
+<script type="importmap">{"imports":{"three":"../vendor/three.module.js","three/addons/utils/BufferGeometryUtils.js":"../vendor/BufferGeometryUtils.js"}}</script>
+<style>
+:root{--paper:#F1E4C4;--ink:#2A1E1C;--copper:#B8733F}
+html,body{margin:0;height:100%;overflow:hidden;background:#20302e;font:12px system-ui}
+#world{display:block;width:100vw;height:100vh}
+#map{position:absolute;right:28px;top:128px;width:270px;aspect-ratio:300/354;border:1px solid var(--copper);border-radius:5px;background:var(--paper);box-shadow:0 12px 35px #152d3440,0 0 0 3px #263e3733}
+#map.expanded{width:min(420px,calc(100vw - 28px));pointer-events:auto}
+@media (max-width:700px){#map{top:154px;right:14px;width:164px}#map.expanded{width:min(320px,calc(100vw - 28px))}}
+#info{position:fixed;left:8px;bottom:8px;color:#F2E6C9;background:#2a1e1ccc;padding:4px 8px;border-radius:5px;white-space:pre;font:11px ui-monospace,monospace}
+</style>
+<body><canvas id="world"></canvas><canvas id="map" width="600" height="708"></canvas><div id="info"></div>
+<script type="module" src="./map-lab.js"></script></body></html>

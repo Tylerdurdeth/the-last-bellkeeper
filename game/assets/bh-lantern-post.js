@@ -26,5 +26,6 @@ export default function (THREE, opts = {}) {
   g.traverse((n) => { const p = n.isMesh && n.geometry.attributes.position; if (!p) return; for (let i = 0; i < p.count; i++) box3.expandByPoint(v.fromBufferAttribute(p, i).applyMatrix4(n.matrixWorld)); });
   const c = box3.getCenter(new THREE.Vector3());
   g.children.forEach((o) => { o.position.x -= c.x; o.position.y -= box3.min.y; o.position.z -= c.z; });
+  g.userData.postTop = [-c.x, 2.95 + .07 - box3.min.y, -c.z]; // the copper knob on top of the post (rope anchor)
   return g;
 }

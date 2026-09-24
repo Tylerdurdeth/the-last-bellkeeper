@@ -42,12 +42,12 @@ export default function (THREE, opts = {}) {
   if (variant === 'sails') {
     // tail boom and tail sail at the back of the cap: pushing the tail turns the sails to the wind
     const boom = new THREE.Group(); cap.add(boom);
-    const b1 = add(new THREE.BoxGeometry(.16, .16, 4.4), dark, 0, -.35, -2.9, 0, -.42, 0, boom); void b1;
-    const b2 = add(new THREE.BoxGeometry(.1, .1, 3.2), timber, 0, -1.2, -2.2, 0, -.95, 0, boom); void b2;
-    const tail = new THREE.PlaneGeometry(1.7, 2.1, 2, 2); const tp = tail.attributes.position; for (let v = 0; v < tp.count; v++) tp.setX(v, tp.getX(v) + .12 * Math.cos(tp.getY(v) * 1.5)); tail.computeVertexNormals();
-    add(tail, coral, 0, -1.9, -4.7, 0, 0, 0, boom);
-    add(new THREE.BoxGeometry(.08, 2.3, .08), dark, 0, -1.9, -3.85, 0, 0, 0, boom);
-    add(new THREE.BoxGeometry(.08, .08, 1.8), dark, 0, -.85, -4.7, 0, 0, 0, boom); add(new THREE.BoxGeometry(.08, .08, 1.8), dark, 0, -2.95, -4.7, 0, 0, 0, boom);
+    // a light, low boom (no tall spar): it reads as part of the cap, not a foreground post
+    add(new THREE.BoxGeometry(.12, .12, 3.2), dark, 0, -.55, -2.9, 0, -.2, 0, boom);
+    add(new THREE.BoxGeometry(.07, .07, 2.4), timber, 0, -.95, -2.6, 0, -.55, 0, boom);
+    const tail = new THREE.PlaneGeometry(1.5, 1.6, 2, 2); const tp = tail.attributes.position; for (let v = 0; v < tp.count; v++) tp.setX(v, tp.getX(v) + .1 * Math.cos(tp.getY(v) * 1.5)); tail.computeVertexNormals();
+    add(tail, coral, 0, -1.45, -4.4, 0, 0, 0, boom);
+    add(new THREE.BoxGeometry(1.6, .06, .06), timber, 0, -.65, -4.4, 0, 0, 0, boom);
   }
   // rotor
   const rotor = new THREE.Group(); rotor.name = 'rotor'; rotor.position.set(0, .7, 2.3); cap.add(rotor);
