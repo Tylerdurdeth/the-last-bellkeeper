@@ -73,3 +73,15 @@ body.chart-tucked #map:not(.expanded){opacity:0;transform:scale(.25);visibility:
 @media(pointer:fine) and (min-width:701px) and (max-height:600px){body:is(.chart-tucked,.chart-shown) #mapToggle:not([hidden]){top:66px}}
 /* The ending card owns the left column: objective, charge and the duplicate caption step aside. */
 body:has(#ending:not([hidden])) #hud>div,body:has(#ending:not([hidden])) #charge,body:has(#ending:not([hidden])) #caption{visibility:hidden}
+
+/* v2: compact completion card (the ending lands on the bell, not on a menu), legacy save note, held-wind glow. */
+#ending.completion{position:absolute;left:50%;bottom:max(18px,env(safe-area-inset-bottom));top:auto;transform:translateX(-50%);z-index:45;width:min(520px,calc(100vw - 32px));padding:14px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;background:#243e37f2;border:1px solid #ae795199;border-top:3px solid #e9b949;border-radius:6px;color:var(--paper);box-shadow:0 10px 30px #142b3440}
+#ending.completion .eyebrow{flex-basis:100%;margin:0;color:#e9b949;font-size:10px}
+#ending.completion p:not(.eyebrow){margin:0;flex:1;font-size:15px;line-height:1.4;color:#f4e8cb}
+#ending.completion button{margin:0;padding:10px 16px;min-height:44px;font-size:13px}
+body:has(#ending:not([hidden])) #hud>div,body:has(#ending:not([hidden])) #charge{visibility:visible}
+body:has(#ending.completion:not([hidden])) #controls>button,body:has(#ending.completion:not([hidden])) #hint{visibility:hidden}
+.legacy-note{margin-top:10px;color:#d6b986!important;opacity:.95!important}
+body.wind-held #charge{border-color:#8fd3e0;box-shadow:0 0 0 2px #8fd3e055,0 6px 20px #142b3426}
+body.wind-held #chargeIcon{color:#8fd3e0;text-shadow:0 0 10px #8fd3e0}
+#action[data-kind=catch],#action[data-kind=give],#action[data-kind=vent],#action[data-kind=push]{background:linear-gradient(135deg,#e6f6f8,#a9dde6);border-color:#8fd3e0}

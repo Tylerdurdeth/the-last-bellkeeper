@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Bellkeeper · World look</title><link rel="icon" href="data:,">
+<script type="importmap">{"imports":{"three":"../vendor/three.module.js","three/addons/utils/BufferGeometryUtils.js":"../vendor/BufferGeometryUtils.js"}}</script>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#20302e;font:13px/1.3 system-ui,sans-serif;color:#f2e6c9}
+canvas{display:block;width:100vw;height:100vh}
+#ui{position:fixed;left:8px;top:8px;display:flex;flex-wrap:wrap;gap:4px;max-width:calc(100vw - 16px)}
+#ui button{background:#2c4a45cc;color:#f2e6c9;border:1px solid #f2e6c955;border-radius:6px;padding:5px 8px;font:inherit}
+#ui button[aria-pressed=true]{background:#c8894a;color:#2a1e1c}
+body.shot #ui{display:none}
+</style>
+<body><canvas id="c"></canvas><div id="ui"></div><script type="module" src="./world-look.js"></script></body></html>

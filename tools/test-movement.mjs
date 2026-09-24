@@ -81,3 +81,39 @@ console.log('PASS: walk/run, screen axes, stop, jump, landing, buffered jump, pa
 const arrowsOnly=fixture();for(const key of ['KeyW','KeyS','KeyD'])arrowsOnly.key(key);arrowsOnly.tick(.3);assert.equal(arrowsOnly.m.speed,0,'letter keys must not move the player');
 arrowsOnly.key('KeyA');arrowsOnly.tick(.15);assert(arrowsOnly.m.position.y>.6);assert.equal(arrowsOnly.m.position.x,0);assert.equal(arrowsOnly.m.position.z,0,'A must jump without strafing');arrowsOnly.m.dispose();
 console.log('PASS: arrows-only movement; A jumps without strafing');
+// ---- v2: layered ground, updraft columns, knock-back ----
+// ArrowRight with the default camera moves along (.788,-.615); a ledge band lies that way.
+const right=[.788,-.615],along=(x,z)=>x*right[0]+z*right[1];
+const ledgeTop=3,layered=(x,z,y)=>{const s=along(x,z);return s>1.4&&s<4&&y>=ledgeTop-.35?ledgeTop:0;};
+const seen=[];const under=fixture({sampleGround:layered,blocked:(x,z,r,y)=>{seen.push(y);return false;}});
+under.key('ArrowRight');under.tick(2.2);assert(along(under.m.position.x,under.m.position.z)>4.2,'walks under an overhead ledge');assert.equal(under.m.position.y,0);assert(under.m.grounded);
+assert(seen.length&&seen.every(Number.isFinite),'blocked() receives the current y');under.m.dispose();
+// Column: rises smoothly to its top, hovers, player steers out and lands on the ledge.
+const up=fixture({sampleGround:layered});const col=up.m.lift({x:0,z:0,radius:1.2,top:ledgeTop+.8,duration:4});
+assert(col&&col.active);let prevY=0,monotonic=true;let reached=false,overshoot=0;for(let i=0;i<90;i++){up.m.update(1/60);if(!reached&&up.m.position.y<prevY-1e-6)monotonic=false;reached||=up.m.position.y>ledgeTop+.6;overshoot=Math.max(overshoot,up.m.position.y-(ledgeTop+.8));prevY=up.m.position.y;}
+assert(overshoot<.5,'gentle hover overshoot '+overshoot);
+assert(monotonic,'rise is smooth, not a pop');assert(up.m.position.y>ledgeTop+.3&&up.m.position.y<ledgeTop+1.3,'hovers near the column top: '+up.m.position.y);assert(!up.m.grounded);assert.equal(up.m.mode,'lift');assert.equal(up.m.lifting,true);
+up.key('ArrowRight');up.tick(.9);up.key('ArrowRight',false);for(let i=0;i<240&&!up.m.grounded;i++)up.m.update(1/60);
+assert(up.m.grounded,'lands on the ledge');assert.equal(up.m.position.y,ledgeTop);assert(!up.m.recovered);up.tick(.5);assert.equal(up.m.checkpoint.y,ledgeTop,'ledge becomes the safe checkpoint');up.m.dispose();
+// Jumping inside the column adds lift above its normal hover height.
+const peaks=[];for(const jumpIn of [false,true]){const f=fixture();f.m.lift({x:0,z:0,radius:1.2,top:4,duration:4});f.tick(1.6);if(jumpIn)f.key('KeyA');let peak=0;for(let i=0;i<60;i++){f.m.update(1/60);peak=Math.max(peak,f.m.position.y);}peaks.push(peak);f.m.dispose();}
+assert(peaks[1]>peaks[0]+.8,'jump inside a column adds lift: '+peaks);
+// Column expiry: gravity resumes and the hero lands safely on the floor below (no recovery).
+const expire=fixture();expire.m.lift({x:0,z:0,radius:1.2,top:3.5,duration:2});expire.tick(1.8);assert(expire.m.position.y>2.8);let expireRecovered=false;for(let i=0;i<150;i++){expire.m.update(1/60);expireRecovered||=expire.m.recovered;}
+assert(expire.m.grounded&&expire.m.position.y===0&&!expireRecovered&&!expire.m.lifting);expire.m.dispose();
+// Lift height is frame-rate independent.
+const liftHeights=[];for(const hz of [30,60,120]){const f=fixture();f.m.lift({x:0,z:0,radius:1.2,top:5,duration:4});f.tick(1,hz);liftHeights.push(f.m.position.y);f.m.dispose();}
+assert(Math.max(...liftHeights)-Math.min(...liftHeights)<.06,'lift frame-rate independence '+liftHeights);
+// Knock-back to a known safe ledge: readable arc, input ignored, exact landing, new checkpoint.
+const knock=fixture();knock.m.knockback({to:[2,0,-1],duration:.8});knock.key('ArrowUp');knock.m.update(1/60);assert.equal(knock.m.mode,'knock');assert(knock.m.knocked);
+let arcPeak=0;for(let i=0;i<60&&!knock.m.grounded;i++){knock.m.update(1/60);arcPeak=Math.max(arcPeak,knock.m.position.y);}
+assert(arcPeak>1,'visible hop arc');knock.key('ArrowUp',false);assert(knock.m.grounded);assert(Math.hypot(knock.m.position.x-2,knock.m.position.z+1)<.05,'lands on the safe point');assert.equal(knock.m.checkpoint.x,2);knock.m.dispose();
+// Ballistic knock-back off a bank into the void recovers once to the safe bank.
+const shove=fixture({sampleGround:(x,z)=>x<.8?0:null});shove.tick(.5);shove.m.knockback({x:1,z:0,power:1});let shoveRecoveries=0;
+for(let i=0;i<240;i++){shove.m.update(1/120);if(shove.m.recovered)shoveRecoveries++;}assert.equal(shoveRecoveries,1);assert(shove.m.grounded&&shove.m.position.x<.8&&shove.m.position.y===0);shove.m.dispose();
+// Dropping off a 5 m ledge: the default 4 m budget recovers (v1), a v2 maxDrop lands on the floor.
+for(const [drop,expectRecover] of [[4,true],[12,false]]){const f=fixture({start:[0,5,0],sampleGround:(x,z)=>x<.8?5:0,maxDrop:drop});f.tick(.4);f.key('ArrowRight');let rec=0;for(let i=0;i<300;i++){f.m.update(1/120);if(f.m.recovered)rec++;}f.key('ArrowRight',false);f.tick(1.2);
+ if(expectRecover)assert(rec>=1);else{assert.equal(rec,0);assert(f.m.grounded);assert.equal(f.m.position.y,0);}f.m.dispose();}
+// reset() cancels a hop; columns are world physics and persist until they expire.
+const clear=fixture();clear.m.lift({x:5,z:5,top:4,duration:1});clear.m.knockback({to:[1,0,1]});clear.m.reset();assert(!clear.m.knocked);assert.equal(clear.m.columns.length,1);clear.tick(.5);assert(clear.m.grounded&&clear.m.position.y===0&&clear.m.position.x===0);clear.tick(.6);assert.equal(clear.m.columns.length,0);clear.m.dispose();
+console.log('PASS: v2 layered ground (walk under ledges, y passed to blocked), updraft rise/hover/steer-out landing, jump lift, expiry, frame-rate lift, knock-back arc and ballistic void recovery, maxDrop');
