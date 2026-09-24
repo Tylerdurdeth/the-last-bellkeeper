@@ -2,7 +2,7 @@
 export const STORY=[
  {heading:'A village built on a breath.',text:'High in the Heartwood, the village borrows the forest’s wind. It turns their wheels, carries their bridges, and wakes their morning bells.'},
  {heading:'This morning, silence.',text:'The wheels have stopped. Beneath the roots, an ancient guardian has closed the windworks. The forest is holding its breath.'},
- {heading:'One keeper. One apprentice.',text:'Mara stays behind to hold the bypass open. You take her bell staff into the roots—to discover what the wind is trying to say.'}
+ {heading:'One keeper. One apprentice.',text:'Mara stays behind to hold the bypass open. Her bell staff waits for you by the cottage door—and somewhere below, the wind is trying to say something.'}
 ];
 export function createOpening(){
  const $=s=>document.querySelector(s);let card=-1;

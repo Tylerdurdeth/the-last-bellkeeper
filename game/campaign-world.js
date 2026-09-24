@@ -22,7 +22,8 @@ export async function buildCampaignWorld(scene, art) {
   root.userData.integration={terrainCutout:'contains(x,z), south of z=-14 only; retain island overlap',collision:'campaign.ground !== undefined selects campaign ground AND blocked; null is void',islandSeam:[8,1.2,-12.8]};
   function mesh(geometry,mat,parent=root){const m=new T.Mesh(geometry,mat);m.castShadow=m.receiveShadow=true;parent.add(m);return m;}
   function box(x,y,z,w,h,d,mat=stone,parent=root){const m=mesh(new T.BoxGeometry(w,h,d),mat,parent);m.position.set(x,y,z);return m;}
-  function rail(a,b){const d=new T.Vector3(...b).sub(new T.Vector3(...a));const m=mesh(new T.BoxGeometry(.12,.14,d.length()),copper);m.position.fromArray(a).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),d.normalize());walls.push({a,b});for(const p of [a,b])box(p[0],p[1]-.38,p[2],.16,.9,.16,edge);}
+  // Every drawn rail is a wall collider; `when` limits it to a deck that exists.
+  function rail(a,b,parent=root,when){const d=new T.Vector3(...b).sub(new T.Vector3(...a));const m=mesh(new T.BoxGeometry(.12,.14,d.length()),copper,parent);m.position.fromArray(a).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),d.normalize());walls.push({a,b,when});for(const p of [a,b])box(p[0],p[1]-.38,p[2],.16,.9,.16,edge,parent);}
   // Closed wedge, flat underside, top exactly the linear height used by ground.
   function deck(name,x1,x2,z1,z2,y1,y2,rails=true,parent=root){
     const bottom=Math.min(y1,y2)-1.2;
@@ -42,10 +43,19 @@ export async function buildCampaignWorld(scene, art) {
   // Optional 1.6m straight jump; an unbroken 2.6m-wide west ramp bypasses it.
   deck('jump-takeoff',6.6,10,-39,-40,-.8,-.8,false);
   deck('jump-landing',6.6,10,-41.6,-43.2,-1.2,-1.2,false);
-  deck('accessible-step-path',3.8,6.4,-38.5,-43.2,-.74,-1.2);
+  const stepPath=deck('accessible-step-path',3.8,6.4,-38.5,-43.2,-.74,-1.2);
   deck('step-path-join',3.8,11,-43.2,-45.5,-1.2,-1.65,false);
   deck('chamber-neck',6.2,9.8,-45.5,-50,-1.65,-2.4,false);
   for(const x of [6.2,9.8])rail([x,-1.65+.78,-45.5],[x,-1.65-.75*2.5/4.5+.78,-48]);
+  // Low rails close every Rootway edge that is not a taught drop. The locked
+  // bridge gap and the optional hop's two lips stay open, exactly as before.
+  const deckY=(s,z)=>s.y1+(s.y2-s.y1)*(z-s.z1)/(s.z2-s.z1),named=n=>supports.find(s=>s.name===n);
+  const edgeRail=(n,x1,z1,x2,z2,parent,when)=>rail([x1,deckY(named(n),z1)+.78,z1],[x2,deckY(named(n),z2)+.78,z2],parent,when);
+  for(const [n,x1,z1,x2,z2] of [['source-landing',3.4,-19,6.6,-19],['source-landing',9.4,-19,10,-19],['wheel-landing',3.4,-29,6.4,-29],['wheel-landing',9.6,-29,10,-29],['service-landing',3.8,-34,6.4,-34],['service-landing',9.6,-34,11,-34],['service-landing',10,-39,11,-39],['jump-takeoff',10,-39,10,-40],['jump-landing',10,-41.6,10,-43.2],['step-path-join',10,-43.2,11,-43.2],['step-path-join',3.8,-43.2,3.8,-45.5],['step-path-join',11,-43.2,11,-45.5],['step-path-join',3.8,-45.5,6.2,-45.5],['step-path-join',9.8,-45.5,11,-45.5]])edgeRail(n,x1,z1,x2,z2);
+  // The turned service bridge carries its own rails and guide; they rise with it
+  // and only collide once its deck is real.
+  const bridgeKit=new T.Group();windBridge.mesh.add(bridgeKit);
+  for(const x of [6.4,9.6])edgeRail('wind-bridge',x,-29,x,-34,bridgeKit,()=>windBridge.enabled);
   const floor=mesh(new T.CylinderGeometry(11,10.2,1.4,64),stone);floor.position.set(8,-3.1,-59);floor.name='windworks-floor';
   const chamberY=-2.4;
   deck('home-lift-balcony',11,17,-48.5,-53,chamberY,chamberY,false);
@@ -67,7 +77,7 @@ export async function buildCampaignWorld(scene, art) {
   };
   const blocked=(x,z,r=.23)=>{
     if(!domain(x,z))return false;
-    return solidProps.some(p=>p.rx?Math.hypot((x-p.x)/(p.rx+r),(z-p.z)/(p.rz+r))<1:Math.hypot(x-p.x,z-p.z)<r+p.r)||walls.some(({a,b})=>{const dx=b[0]-a[0],dz=b[2]-a[2],u=T.MathUtils.clamp(((x-a[0])*dx+(z-a[2])*dz)/(dx*dx+dz*dz),0,1);return Math.hypot(x-a[0]-u*dx,z-a[2]-u*dz)<r+.08;});
+    return solidProps.some(p=>p.rx?Math.hypot((x-p.x)/(p.rx+r),(z-p.z)/(p.rz+r))<1:Math.hypot(x-p.x,z-p.z)<r+p.r)||walls.some(({a,b,when})=>{if(when&&!when())return false;const dx=b[0]-a[0],dz=b[2]-a[2],u=T.MathUtils.clamp(((x-a[0])*dx+(z-a[2])*dz)/(dx*dx+dz*dz),0,1);return Math.hypot(x-a[0]-u*dx,z-a[2]-u*dz)<r+.08;});
   };
   const xz={entry:[8,-17],source:[5,-22],bridgeWheel:[5,-28],service:[8,-37],chamberEntry:[8,-45],inspection:[4,-50],returnWheel:[0,-56],returnVane:[5,-59],outwardVane:[11,-59],guardian:[8,-63],finalBell:[8,-67],homeLift:[15,-50],secret:[5,-41]};
   const points=Object.fromEntries(Object.entries(xz).map(([k,[x,z]])=>[k,new T.Vector3(x,ground(x,z),z)]));
@@ -137,8 +147,19 @@ export async function buildCampaignWorld(scene, art) {
   // Reviewed masonry bodies sit entirely under the exact collision wedges.
   for(const s of supports)if(s!==windBridge){const p=platformProto.clone(true);p.scale.set((s.x2-s.x1)/4,.72,Math.abs(s.z2-s.z1)/4);p.position.set((s.x1+s.x2)/2,Math.min(s.y1,s.y2)-.84,(s.z1+s.z2)/2);dressing.add(p);}
   const terrace=terraceProto.clone(true);terrace.scale.set(5.43,1.15,5.43);terrace.position.set(8,chamberY-1.32,-59);dressing.add(terrace);
-  // Copper floor guidance crosses the OPEN centre of the shifted source arch.
-  for(let z=-21;z>=-27;z-=.55)box(8,ground(8,z)+.018,z,.08,.025,.38,copper);
+  // Copper floor guidance crosses the OPEN centre of the shifted source arch, the
+  // turned bridge, passes the tender and takes the west step path (never the hop).
+  function guide(line,parent=root,level){for(let i=1;i<line.length;i++){const [ax,az]=line[i-1],[bx,bz]=line[i],len=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.round(len/.55));for(let j=0;j<n;j++){const f=(j+.5)/n,x=ax+(bx-ax)*f,z=az+(bz-az)*f,y=q=>level??ground(x+(bx-ax)/len*q,z+(bz-az)/len*q),d=box(x,y(0)+.022,z,.1,.025,.38,copper,parent);d.rotation.set(-Math.atan2(y(.19)-y(-.19),.38),Math.atan2(bx-ax,bz-az),0,'YXZ');}}}
+  guide([[8,-21],[8,-29]]);guide([[8,-29],[8,-34]],bridgeKit,-.2);
+  guide([[8,-34],[8,-35.4],[5.4,-37.8],[5.4,-43.3],[8,-44.7],[8,-48.2]]);
+  // The accessible path reads as a stepped ramp: warm paving, timber nosings and
+  // edge curbs tucked under its rails (visual only; the rails are the colliders).
+  const pathStone=material('#D5BD8F','stone'),mark=Object.assign(material('#E2A447','plaster'),{side:T.DoubleSide});stepPath.mesh.material=pathStone;
+  for(let z=-39.1;z>=-43;z-=.55){const y=deckY(stepPath,z),nose=box(5.1,y+.012,z,2.3,.026,.09,edge);nose.rotation.x=-Math.atan2(stepPath.y1-stepPath.y2,stepPath.z1-stepPath.z2);}
+  for(const x of [3.93,6.27]){const a=deckY(stepPath,-38.5),b=deckY(stepPath,-43.2),curb=box(x,(a+b)/2+.04,-40.85,.14,.08,4.72,edge);curb.rotation.x=-Math.atan2(a-b,4.7);}
+  // Optional hop: ochre lips on takeoff and landing, pennants on rail posts.
+  for(const [z,y] of [[-39.93,-.8],[-41.67,-1.2]])box(8.3,y+.014,z,3.4,.03,.14,mark);
+  for(const x of [6.4,10]){box(x,-.8+.35,-40,.07,2.3,.07,edge);const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute([0,0,0,0,-.34,0,(x<8?.52:-.52),-.17,0],3));g.computeVertexNormals();const flag=mesh(g,mark);flag.position.set(x,-.8+1.45,-40);}
   let inspectionAmount=0,clearAmount=0;
   let bridgeAmount=0;
   function update(dt,t,pos,progress={}){
@@ -172,6 +193,7 @@ export async function buildCampaignWorld(scene, art) {
     else {child.updateMatrixWorld(true);const center=new T.Box3().setFromObject(child).getCenter(new T.Vector3());blocks[center.z>-33?0:center.z>-49?1:2].add(child);}
   }
   for(const block of blocks){block.updateMatrixWorld(true);const baked=bakeStatic(block);root.add(baked);}
+  windBridge.mesh.remove(bridgeKit);bridgeKit.updateMatrixWorld(true);windBridge.mesh.add(bakeStatic(bridgeKit));
   update(0,0,null,{});root.updateMatrixWorld(true);
   return {ground,blocked,update,points,root,owns:campaignContains};
 }

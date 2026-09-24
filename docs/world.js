@@ -124,6 +124,15 @@ export async function buildWorld(scene,art){
  const life=createWoodlandLife(T,{place,height,shoreClearance});
  const chunkList=[];for(const g of chunks.values()){const baked=bakeStatic(g);scene.add(baked);const center=new T.Box3().setFromObject(baked).getCenter(new T.Vector3());chunkList.push({o:baked,center});}
  let restored=false,bridgeLift=0,cottageOpacity=1,occlusionTimer=0;const cameraRay=new T.Raycaster();
+ // Generic see-through for solid props (arches, bells, pillars, baked campaign blocks): lit
+ // fragments nearer the lens than the hero, above the hero's feet and inside a hero-sized view
+ // ellipse are dithered away. Colour pass only; shadows, collision and ground are untouched.
+ const see={bkSeeHero:{value:new T.Vector3(0,0,-10)},bkSeeFeet:{value:new T.Vector3()},bkSeeUp:{value:new T.Vector3(0,1,0)},bkSeeSize:{value:new T.Vector2(.62,1.12)},bkSeeOn:{value:0}},seePatched=new WeakSet();
+ const seeGLSL=`if(bkSeeOn>0.){vec3 bkV=-vViewPosition;vec2 bkQ=(bkV.xy*(bkSeeHero.z/min(bkV.z,-.01))-bkSeeHero.xy)/bkSeeSize;float bkA=(1.-smoothstep(.5,1.,dot(bkQ,bkQ)))*smoothstep(bkSeeHero.z+.3,bkSeeHero.z+.6,bkV.z)*smoothstep(.08,.3,dot(bkV-bkSeeFeet,bkSeeUp))*bkSeeOn;if(bkA>.999*fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715)))))discard;}`;
+ function seeThrough(root,skip){root.traverse(o=>{if(!o.isMesh||skip?.(o))return;for(const m of Array.isArray(o.material)?o.material:[o.material]){if(!m||seePatched.has(m)||!(m.isMeshStandardMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial||m.isMeshToonMaterial))continue;seePatched.add(m);const prior=m.onBeforeCompile,key=m.customProgramCacheKey();m.onBeforeCompile=(shader,renderer)=>{prior?.call(m,shader,renderer);Object.assign(shader.uniforms,see);shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 bkSeeHero,bkSeeFeet,bkSeeUp;uniform vec2 bkSeeSize;uniform float bkSeeOn;').replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\n'+seeGLSL);};m.customProgramCacheKey=()=>key+':bk-see-v2';m.needsUpdate=true;}});}
+ // JS mirror of the shader test at full strength, for probes: true when a world point would be cut.
+ function seeCuts(p){if(see.bkSeeOn.value<.5)return false;const v=p.clone().applyMatrix4(seeView),s=see.bkSeeHero.value,qx=(v.x*s.z/Math.min(v.z,-.01)-s.x)/see.bkSeeSize.value.x,qy=(v.y*s.z/Math.min(v.z,-.01)-s.y)/see.bkSeeSize.value.y;return qx*qx+qy*qy<.5&&v.z>s.z+.6&&v.clone().sub(see.bkSeeFeet.value).dot(see.bkSeeUp.value)>.3;}
+ const seeView=new T.Matrix4();
  function ground(x,z){
   const land=terrainGround(x,z),deck=crossing.ground(x,z);
   // Water excludes decorative props before their support queries; a real bridge
@@ -132,7 +141,7 @@ export async function buildWorld(scene,art){
   return Math.max(land,deck??-Infinity,shelfGround(x,z)??-Infinity,rockGround(x,z)??-Infinity,scatterGround(x,z)??-Infinity);
  }
  function blocked(x,z,r){return ridgeBlocked(x,z,r)||colliders.some(c=>Math.hypot(x-c.x,z-c.z)<c.r+r);}
- function update(dt,t,pos,isRestored,gentle,camera,charged=false,complete=false){
+ function update(dt,t,pos,isRestored,gentle,camera,charged=false,complete=false,seeOn=false){
   life.update(dt,t,pos,gentle);
   brook.update(t,gentle);
   shortcutAwake=T.MathUtils.damp(shortcutAwake,charged||isRestored?1:0,3,dt);for(const f of shortcutFlowers){f.o.rotation.z=Math.sin(t*3-f.phase)*.16*shortcutAwake*(gentle?.2:1);for(const m of f.mats)m.emissiveIntensity=shortcutAwake*(.55+.3*Math.sin(t*2-f.phase));}
@@ -150,11 +159,14 @@ export async function buildWorld(scene,art){
    // Fade only actual geometry in the first5.5 metres of the view cone, before they fill the frame.
    if(!tree.userData.occluded){for(const [sx,sy] of [[-.72,.62],[0,.62],[.72,.62],[-.72,0],[0,0],[.72,0],[-.72,-.55],[0,-.55],[.72,-.55]]){cameraRay.setFromCamera(new T.Vector2(sx,sy),camera);cameraRay.far=5.5;if(cameraRay.intersectObject(tree,true).length){tree.userData.occluded=true;tree.userData.occludedUntil=t+.65;break;}}}
   }}
+  if(camera){seeView.copy(camera.matrixWorldInverse);see.bkSeeHero.value.set(pos.x,pos.y+.86,pos.z).applyMatrix4(seeView);see.bkSeeFeet.value.copy(pos).applyMatrix4(seeView);see.bkSeeUp.value.set(0,1,0).transformDirection(seeView);}see.bkSeeOn.value=T.MathUtils.damp(see.bkSeeOn.value,seeOn&&camera?1:0,6,dt);
   for(const tree of trees){tree.userData.fade=T.MathUtils.damp(tree.userData.fade,tree.userData.occluded?0:1,18,dt);tree.visible=tree.position.distanceTo(pos)<39&&tree.userData.fade>.012;for(const m of tree.userData.fadeMats){m.opacity=tree.userData.fade;m.depthWrite=m.opacity>=.99;}}
 
   for(const {o,center} of chunkList)o.visible=Math.hypot(center.x-pos.x,center.z-pos.z)<34;
   for(let i=0;i<birds.length;i++){const b=birds[i],near=b.home.distanceTo(pos)<2.1;b.flight=T.MathUtils.damp(b.flight,near?1:0,near?5:.35,dt);const q=t*2+b.phase;b.o.position.copy(b.home);b.o.position.y+=Math.max(0,Math.sin(q*3))*.11*(1-b.flight)+b.flight*(1.8+Math.sin(t*3)*.2);b.o.position.x+=Math.sin(q)*.22+b.flight*2;b.o.position.z+=b.flight*Math.cos(t+b.phase);b.o.rotation.y=q*.3;for(const name of ['leftWing','rightWing']){const j=b.o.getObjectByName(name);if(j)j.rotation.z=(name==='leftWing'?1:-1)*Math.sin(t*24)*b.flight*.9;}}
   lanterns.forEach((o,i)=>{o.rotation.z=gentle?0:Math.sin(t+i)*(.025+bridgeLift*.04);o.traverse(n=>{if(n.isMesh){for(const m of Array.isArray(n.material)?n.material:[n.material])if(m.emissive&&m.color.g>m.color.r*1.3&&m.color.b>m.color.r*1.2){m.emissive.setHex(0x75dfc2);m.emissiveIntensity=.12+bridgeLift*.65;}}});});
  }
- return {ground,blocked,keepsakePoint,shortcutPoint,update,bridge,wheel,chimes,landmarks:POINTS};
+ // Solid volumes the camera arm must clear (cottage body and roof), from the placed mesh bounds.
+ const cottageBox=new T.Box3().setFromObject(cottage),cameraSolids=[{x:cottage.position.x,z:cottage.position.z,r:Math.max(cottageBox.max.x-cottageBox.min.x,cottageBox.max.z-cottageBox.min.z)*.4,top:cottageBox.max.y}];
+ return {ground,blocked,keepsakePoint,shortcutPoint,update,bridge,wheel,chimes,landmarks:POINTS,seeThrough,seeCuts,trees,cameraSolids};
 }

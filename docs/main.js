@@ -6,7 +6,7 @@ import {createMovement} from './movement.js';
 import {loadCodeCharacter} from './code-character.js';
 import buildApprovedHero from './assets/hero-study-a.js';
 import {createAdventureMotion} from './adventure-motion.js';
-import {createWoodlandDiscoveries} from './woodland-discoveries.js';
+import {createWoodlandDiscoveries,storyZone} from './woodland-discoveries.js';
 import {createArtDirection} from './art-direction.js';
 import {buildWorld} from './world.js';
 import {createGarden} from './garden.js';
@@ -31,6 +31,8 @@ let cameraYaw=Math.atan2(.615,.788),cameraDrag=null;
 let hero,movement,animator,world,garden,discoveries,staff,staffHand,captionEnd=0,context=null,travel=0,visited=new Set(),fps=60,audio;
 let campaignWorld,campaign,campaignActors,mara,checkpoint=[...START],saveTimer=0,introTime=0,introActive=false,lastIntroBeat=-1,restoring=false;
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
+// Camera spring arm, subject framing and chart tucking state (see frame()).
+let armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,tuckUntil=0,hudTimer=0,safe=null;const subjects={},frameOffset=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
 const loadedSave=readSave();
 function save(){if(!state.started||introActive||restoring)return;writeSave(state,campaign,discoveries,checkpoint);}
 function setCheckpoint(p){if(p?.isVector3)checkpoint=p.toArray();else if(Array.isArray(p))checkpoint=[...p];save();}
@@ -63,7 +65,7 @@ function updateUI(){
 function start(skipIntro=false){if(!movement)return;unlockTitleMusic();opening.begin(skipIntro);if(skipIntro)titleMusic.fadeOut(2);state.started=true;state.paused=false;$('#title').hidden=true;for(const id of ['hud','charge','controls','hint','map','mapToggle'])$('#'+id).hidden=false;introActive=!skipIntro;introTime=0;lastIntroBeat=-1;$('#skipIntro').hidden=!introActive;document.body.classList.toggle('cinematic',introActive);caption('Mara is holding the bypass at the cottage. Read her note and follow the silent crossing.',6);soundscape.start().then(()=>sound('start')).catch(()=>{$('#audioUnlock').hidden=false;});if(matchMedia('(any-pointer: coarse)').matches)$('#audioUnlock').hidden=false;updateUI();}
 function endIntro(){opening.end();titleMusic.fadeOut(2.8);introActive=false;$('#skipIntro').hidden=true;document.body.classList.remove('cinematic');movement?.update(0,{enabled:state.started&&!state.paused});caption('Mara: “I can hold this bypass. Read my note by the cottage, then find what the roots remember.”',7);save();}
 function continueGame(){const d=readSave();if(!d)return;restoring=true;Object.assign(state,d.state);state.keepsakes=new Set(d.keepsakes?.filter(i=>Number.isInteger(i)&&i>=0&&i<3));discoveries.restore(d.discoveries);campaign.restore(d.campaign);checkpoint=d.checkpoint;movement.reset(checkpoint);animator.reset();restoring=false;start(true);caption('The woods remember where you left them.',4);}
-function pause(on){if(!state.started)return;state.paused=on;soundscape.setPaused(on);titleMusic.setPaused(on);$('#pausePanel').hidden=!on;$('#resume').textContent='Resume';$('#reset').hidden=false;mapCanvas.hidden=on;$('#mapToggle').hidden=on;if(on){save();mapCanvas.classList.remove('expanded');$('#mapToggle').setAttribute('aria-expanded','false');$('#mapToggle').textContent='Enlarge chart';}}
+function pause(on){if(!state.started)return;state.paused=on;soundscape.setPaused(on);titleMusic.setPaused(on);$('#pausePanel').hidden=!on;$('#resume').textContent='Resume';$('#reset').hidden=false;mapCanvas.hidden=on;$('#mapToggle').hidden=on;if(on){save();mapCanvas.classList.remove('expanded');$('#mapToggle').setAttribute('aria-expanded','false');chartUI();}}
 function beginAction(kind,callback){state.action=kind;state.actionTime=0;state.actionTarget=(context?.target|| (context?.kind==='wheel'?wheelPoint:context?.kind==='capture'?source:chimePoint)).clone();state.actionCallback=callback;sound(kind);}
 function action(){if(!state.started||state.paused||state.action||introActive)return;if(!context){caption('Listen. Watch the leaves. There is still a little wind here.',3);return;}
  if(context.kind==='campaign'){const selected={...context};beginAction(/source|Source|Gust/.test(context.id)?'capture':'release',()=>{campaign.interact(selected,state);updateUI();save();});return;}
@@ -116,12 +118,12 @@ function poseStaff(){
  staff.position.set(0,-.054,.026).sub(grip);
 }
 function findContext(){const p=movement.position;context=discoveries?.context(p,state)||null;
- if(!state.porchRead&&p.distanceTo(porchPoint)<1.55)context={kind:'porch',label:'Read the keeper’s note'};
+ if(!state.porchRead&&storyZone('porch',p))context={kind:'porch',label:'Read the keeper’s note'};
  for(let i=0;i<memories.length;i++)if(!state.keepsakes.has(i)&&p.distanceTo(memories[i].p)<(i===0?.72:1.4)&&Math.abs(p.y-memories[i].p.y)<(i<2?.25:2))context={kind:'memory',index:i,label:'Keep the memory'};
- if(state.porchRead&&!state.awakened&&p.distanceTo(chimePoint)<2.1)context={kind:'chime',label:'Ring the chimes'};
- if(state.awakened&&!state.charged&&!state.restored&&p.distanceTo(source)<1.8)context=discoveries.telemetry().echoSolved?{kind:'capture',label:'Catch the current'}:{kind:'bound',label:'Listen to the tangled current'};
- if(!state.restored&&p.distanceTo(wheelPoint)<2.2)context={kind:'wheel',label:state.charged?'Give the wind':'Listen to the wheel'};
- if(state.restored&&!campaign?.progress.entered&&p.distanceTo(finish)<1.65)context={kind:'finish',label:'Listen beyond the bough'};
+ if(state.porchRead&&!state.awakened&&storyZone('chime',p))context={kind:'chime',label:'Ring the chimes'};
+ if(state.awakened&&!state.charged&&!state.restored&&storyZone('garden',p))context=discoveries.telemetry().echoSolved?{kind:'capture',label:'Catch the current'}:{kind:'bound',label:'Listen to the tangled current'};
+ if(!state.restored&&storyZone('wheel',p))context={kind:'wheel',label:state.charged?'Give the wind':'Listen to the wheel'};
+ if(state.restored&&!campaign?.progress.entered&&storyZone('finish',p))context={kind:'finish',label:'Listen beyond the bough'};
  if(campaign?.progress.entered){const next=campaign.context(p,state.charged);if(next)context=next;}
  if(campaign?.progress.restored&&!state.complete&&p.distanceTo(porchPoint)<2)context={kind:'mara-end',label:'Let Mara hear the answer',target:porchPoint};
  $('#action').disabled=!context||!!state.action;$('#action').innerHTML=(context?.label||'Listen & explore')+' <span>SPACE</span>';
@@ -133,17 +135,49 @@ function drawMap(){
  if(campaign?.progress.entered&&movement.position.z<-16){drawCampaignMap(mapCtx,mapCanvas,movement.position,cameraYaw,campaignWorld.points,campaign.progress,movement.yaw);return;}
  drawWoodlandMap(mapCtx,mapCanvas,state,movement,cameraYaw);
 }
-$('#mapToggle').onclick=()=>{const expanded=mapCanvas.classList.toggle('expanded');$('#mapToggle').setAttribute('aria-expanded',String(expanded));$('#mapToggle').textContent=expanded?'Close chart':'Enlarge chart';drawMap();};
+// While the chart would cover the scene's subject it tucks into a corner button; the player can still open it.
+function chartUI(){const expanded=mapCanvas.classList.contains('expanded'),b=$('#mapToggle');document.body.classList.toggle('chart-tucked',chartTuck&&!chartOverride&&!expanded);document.body.classList.toggle('chart-shown',chartTuck&&chartOverride);b.textContent=chartTuck&&!expanded?(chartOverride?'Tuck chart':'Show chart'):expanded?'Close chart':'Enlarge chart';b.setAttribute('aria-expanded',String(expanded||chartTuck&&chartOverride));}
+$('#mapToggle').onclick=()=>{if(chartTuck&&!mapCanvas.classList.contains('expanded'))chartOverride=!chartOverride;else mapCanvas.classList.toggle('expanded');chartUI();drawMap();};
 function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
 // Drag empty scenery to look around; movement remains relative to the camera.
 canvas.addEventListener('pointerdown',e=>{if(!state.started||state.paused)return;cameraDrag={id:e.pointerId,x:e.clientX};canvas.setPointerCapture(e.pointerId);});
-canvas.addEventListener('pointermove',e=>{if(cameraDrag?.id!==e.pointerId)return;cameraYaw-=(e.clientX-cameraDrag.x)*.006;cameraDrag.x=e.clientX;});
+canvas.addEventListener('pointermove',e=>{if(cameraDrag?.id!==e.pointerId)return;cameraYaw-=(e.clientX-cameraDrag.x)*.006;cameraDrag.x=e.clientX;lastCameraInput=performance.now()/1000;});
 for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>cameraDrag=null);
-addEventListener('keydown',e=>{if(state.started&&!state.paused&&['KeyQ','KeyE'].includes(e.code)){cameraYaw+=(e.code==='KeyQ'?-1:1)*.13;e.preventDefault();}});
+addEventListener('keydown',e=>{if(state.started&&!state.paused&&['KeyQ','KeyE'].includes(e.code)){cameraYaw+=(e.code==='KeyQ'?-1:1)*.13;lastCameraInput=performance.now()/1000;e.preventDefault();}});
+// Spring arm: keep the fixed elevated view, but first raise then shorten the arm so no terrain,
+// ridge or deck lies between the look target and the lens. Height queries only, no raycasts.
+function viewGround(x,z,solids=true){const g=campaignWorld?.ground(x,z);if(g!==undefined)return g===null?-Infinity:g;let y=Math.max(height(x,z),-.6);if(solids)for(const c of world?.cameraSolids||[])if(Math.hypot(x-c.x,z-c.z)<c.r)y=Math.max(y,c.top);return y;}
+function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch);for(let i=1;i<=10;i++){const d=length*i/10;if(o.y+s*d<viewGround(o.x+sx*c*d,o.z+sz*c*d,d>2)+.35+.055*i)return d;}return 0;}
+function placeCamera(dt,sx,sz,pitch,length){let p=pitch,l=length;while(p<1.05&&armHit(cameraTarget,sx,sz,p,l))p+=.05;if(p>=1.05){p=1.05;const hit=armHit(cameraTarget,sx,sz,p,l);if(hit)l=Math.max(2.4,hit-.8);}
+ armPitch??=p;armLength??=l;armPitch=T.MathUtils.damp(armPitch,p,p>armPitch?12:2.4,dt);armLength=T.MathUtils.damp(armLength,l,l<armLength?12:2,dt);
+ const c=Math.cos(armPitch)*armLength;camera.position.set(cameraTarget.x+sx*c,cameraTarget.y+Math.sin(armPitch)*armLength,cameraTarget.z+sz*c);
+ let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,viewGround(camera.position.x+a,camera.position.z+b));camera.position.y=Math.max(camera.position.y,floor+.55);}
+function screenBox(box){let l=1e9,t=1e9,r=-1e9,b=-1e9;for(let i=0;i<8;i++){ndc.set(i&1?box.max.x:box.min.x,i&2?box.max.y:box.min.y,i&4?box.max.z:box.min.z).project(camera);if(ndc.z>1)return null;const x=(ndc.x+1)/2*innerWidth,y=(1-ndc.y)/2*innerHeight;l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}return {l,t,r,b};}
+// Play area left by the HUD: below the objective panel, above caption/buttons, left of an open chart.
+function hudSafe(){const s={l:12,t:12,r:innerWidth-12,b:innerHeight-12},top=$('#hud>div')?.getBoundingClientRect();if(top?.height)s.t=Math.max(s.t,top.bottom+10);
+ for(const el of document.querySelectorAll('#caption,#charge,#controls button,#stick,#hint')){if(el.hidden||el.id==='caption'&&el.style.opacity==='0'||getComputedStyle(el).visibility==='hidden')continue;const r=el.getBoundingClientRect();if(r.height&&r.top>innerHeight*.45)s.b=Math.min(s.b,r.top-10);}
+ if(!document.body.classList.contains('chart-tucked')&&!mapCanvas.hidden&&getComputedStyle(mapCanvas).visibility!=='hidden'){const r=mapCanvas.getBoundingClientRect();if(r.width&&r.left>innerWidth*.5)s.r=Math.min(s.r,r.left-10);}return s;}
+function encounterSubject(p){const pr=campaign?.progress,pts=campaignWorld?.points;if(!pr?.entered||!pts||introActive)return null;const near=q=>Math.hypot(p.x-q.x,p.z-q.z)<13;
+ return pr.returnCleared&&!pr.outwardAligned&&near(pts.guardian)?subjects.guardian:pr.bridge&&!pr.service&&near(pts.service)?subjects.service:null;}
+// Keep hero and encounter actor inside the HUD-free area: pan the look target, widen the arm, and
+// (not in gentle motion, not right after manual Q/E/drag) turn gently only when they cannot fit.
+function frameSubject(subject,pos,dt){
+ if(!subject){frameOffset.multiplyScalar(Math.exp(-dt*1.2));frameDist=T.MathUtils.damp(frameDist,0,1.2,dt);return;}
+ heroBox.min.set(pos.x-.35,pos.y,pos.z-.35);heroBox.max.set(pos.x+.35,pos.y+1.75,pos.z+.35);const a=screenBox(heroBox),b=screenBox(subject),s=safe||hudSafe();if(!a||!b)return;
+ const l=Math.min(a.l,b.l),r=Math.max(a.r,b.r),t=Math.min(a.t,b.t),bottom=Math.max(a.b,b.b),ppm=innerHeight/(2*Math.tan(T.MathUtils.degToRad(camera.fov/2))*(armLength||11)),k=Math.min(1,dt*2.5),sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw);
+ const ex=(l+r-s.l-s.r)/2/ppm,ey=(t+bottom-s.t-s.b-16)/2/ppm;frameOffset.x+=sz*ex*k;frameOffset.z-=sx*ex*k;frameOffset.y-=ey*k/Math.max(.4,Math.cos(armPitch||.45));if(frameOffset.length()>4.5)frameOffset.setLength(4.5);
+ const wide=(r-l)/(s.r-s.l),fit=Math.max(wide,(bottom-t)/(s.b-s.t-16))/.82;frameDist=T.MathUtils.clamp(frameDist+(fit-1)*(armLength||11)*Math.min(1,dt*1.5),0,9);
+ if(!state.gentle&&wide>.9&&frameDist>3&&performance.now()/1000-lastCameraInput>2.5){const c=subject.getCenter(tmpA),want=Math.atan2(pos.x-c.x,pos.z-c.z);cameraYaw+=T.MathUtils.clamp(Math.atan2(Math.sin(want-cameraYaw),Math.cos(want-cameraYaw)),-.35*dt,.35*dt);}
+}
+function objectiveTargets(){const pr=campaign?.progress,pts=campaignWorld?.points;if(pr?.entered&&pts){if(pr.restored)return [porchPoint];return [pts[!pr.bridge?(state.charged?'bridgeWheel':'source'):!pr.service?'service':!pr.inspection?(state.charged?'inspection':'chamberEntry'):!pr.returnCleared?'returnWheel':!pr.returnAligned?'returnVane':!pr.outwardAligned?'outwardVane':'finalBell']];}
+ return [state.restored?finish:state.charged?wheelPoint:state.awakened?source:state.porchRead?chimePoint:porchPoint];}
+function updateChart(pos){const now=performance.now()/1000;let hit=introActive||!!encounterSubject(pos);
+ if(!hit&&!mapCanvas.hidden){const m=mapCanvas.getBoundingClientRect();for(const p of [...objectiveTargets(),context?.target]){if(!p||p.distanceTo(pos)>28)continue;const r=screenBox(new T.Box3(tmpA.set(p.x-.6,p.y,p.z-.6),tmpB.set(p.x+.6,p.y+1.9,p.z+.6)));if(r&&r.r>m.left-16&&r.l<m.right+16&&r.b>m.top-16&&r.t<m.bottom+16){hit=true;break;}}}
+ if(hit)tuckUntil=now+1.6;const next=now<tuckUntil;if(next!==chartTuck){chartTuck=next;if(!next)chartOverride=false;chartUI();}}
 const cameraTarget=new T.Vector3(...START);let vista=0,last=performance.now(),wasGrounded=true,lastMode='idle';
 function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;last=now;const dt=Math.max(0,Math.min(.05,elapsed));fps=T.MathUtils.lerp(fps,1/Math.max(.001,elapsed),.03);
  if(hero&&movement){if(!state.paused){state.t+=dt;waterfall.update(state.t);art.update?.(state.t,state.gentle,movement.position);movement.update(dt,{enabled:state.started&&!introActive,actionSlow:!!state.action,faceTarget:state.action?state.actionTarget:null});if(movement.recovered){state.recoveryUntil=state.t+.9;caption('A little current catches you and carries you back.',3);sound('capture');}const p=movement.position;travel+=movement.speed*dt;hero.position.copy(p);hero.rotation.y=state.started?movement.yaw:.35;
- if(introActive){introTime+=dt;opening.update(introTime);const beat=introTime<27?Math.floor(introTime/9):3+Math.floor((introTime-27)/7);if(beat!==lastIntroBeat){lastIntroBeat=beat;if(!state.gentle&&beat>=3)cameraTarget.copy(beat===3?campaignWorld.points.guardian:porchPoint).y+=1;if(beat<3)caption('',0);else caption(beat===3?'The guardian has closed the outward channel. What is it protecting?':'Mara: “I can hold this bypass. Take the bell staff. Find what has stopped the wind from coming home.”',7);}if(introTime>=41)endIntro();}
+ if(introActive){introTime+=dt;opening.update(introTime);const beat=introTime<27?Math.floor(introTime/9):3+Math.floor((introTime-27)/7);if(beat!==lastIntroBeat){lastIntroBeat=beat;if(!state.gentle&&beat>=3)cameraTarget.copy(beat===3?campaignWorld.points.guardian:porchPoint).y+=1;if(beat<3)caption('',0);else caption(beat===3?'The guardian has sealed the windworks. Across the village, the wind falls still.':'Mara: “I can hold this bypass. My staff is on the peg by the door. Go down and find out why the windworks went quiet.”',7);}if(introTime>=41)endIntro();}
  campaign?.update(dt,state.t,p,state);campaignWorld?.update(dt,state.t,p,campaign.progress);campaignActors?.update(dt,state.t,p,{...state,introTime:introActive?Math.min(27.99,Math.max(0,introTime-13)):null},campaign.telemetry());saveTimer+=dt;if(saveTimer>12&&state.started&&!introActive){saveTimer=0;save();}if(state.started)updateUI();
  if(state.action){state.actionTime+=dt;if(state.actionTime>.38&&state.actionCallback){state.actionCallback();state.actionCallback=null;updateUI();save();}if(state.actionTime>.68)state.action=null;}
  animator.update(dt,{time:state.t,action:state.action,actionProgress:state.actionTime/.68,charged:state.charged});staff.visible=state.porchRead||state.awakened;poseStaff();discoveries?.update(dt,state.t,p,state);garden.update(dt,state.t,p,{...state,awakened:state.awakened&&discoveries.telemetry().echoSolved});soundscape.update(dt,{position:p,speed:movement.speed,grounded:movement.grounded,charged:state.charged,restored:state.restored,gardenDistance:p.distanceTo(source),waterDistance:waterDistance(p)});
@@ -156,9 +190,9 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  motes.rotation.y=state.gentle?0:Math.sin(state.t*.025)*.08;if(state.t>captionEnd)$('#caption').style.opacity='0';
  for(let i=0;i<54;i++){const h=insectHomes[i%insectHomes.length],a=i*2.39996+state.t*(.7+(i%3)*.12),r=.35+(i%9)*.08+Math.sin(state.t*1.7+i)*.06;insectPositions[i*3]=h[0]+Math.cos(a)*r;insectPositions[i*3+1]=height(h[0],h[1])+.52+(i%6)*.11+Math.sin(state.t*2.1+i)*.12;insectPositions[i*3+2]=h[1]+Math.sin(a)*r;}insectGeo.attributes.position.needsUpdate=true;
  }
- const pos=movement.position;vista=T.MathUtils.damp(vista,state.restored?1-T.MathUtils.smoothstep(pos.distanceTo(finish),2,7):0,3,dt);const ahead=.8+vista*1.5,sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw);let focus=new T.Vector3(pos.x-sx*ahead,pos.y+1+vista*.6,pos.z-sz*ahead);
+ const pos=movement.position;vista=T.MathUtils.damp(vista,state.restored?1-T.MathUtils.smoothstep(pos.distanceTo(finish),2,7):0,3,dt);const ahead=.8+vista*1.5,sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw);frameSubject(state.started?encounterSubject(pos):null,pos,dt);let focus=new T.Vector3(pos.x-sx*ahead,pos.y+1+vista*.6,pos.z-sz*ahead).add(frameOffset);
  if(introActive&&!state.gentle){focus=(introTime>=34?porchPoint:introTime>=27?campaignWorld.points.guardian:new T.Vector3(...START)).clone().add(new T.Vector3(0,1,0));}
- cameraTarget.lerp(focus,1-Math.exp(-dt*(introActive?1.8:7)));const portrait=camera.aspect<.85;const distance=(portrait?11.5:10.8)+vista*2.5;camera.position.copy(cameraTarget).add(new T.Vector3(sx,.48-vista*.13,sz).normalize().multiplyScalar(distance));camera.lookAt(cameraTarget);sun.position.set(cameraTarget.x-9,cameraTarget.y+20,cameraTarget.z+8);sun.target.position.copy(cameraTarget);camera.updateMatrixWorld(true);if(!state.paused)world.update(dt,state.t,pos,state.restored,state.gentle,camera,state.charged,state.complete);
+ cameraTarget.lerp(focus,1-Math.exp(-dt*(introActive?1.8:7)));const portrait=camera.aspect<.85;placeCamera(dt,sx,sz,Math.atan(.48-vista*.13),(portrait?11.5:10.8)+vista*2.5+frameDist);camera.lookAt(cameraTarget);sun.position.set(cameraTarget.x-9,cameraTarget.y+20,cameraTarget.z+8);sun.target.position.copy(cameraTarget);camera.updateMatrixWorld(true);if(!state.paused)world.update(dt,state.t,pos,state.restored,state.gentle,camera,state.charged,state.complete,state.started&&!introActive);if(state.started&&(hudTimer-=dt)<=0){hudTimer=.15;safe=hudSafe();updateChart(pos);}
  renderer.render(scene,camera);window.__READY__=true;window.__GAME__={pos:[pos.x,pos.z],y:pos.y,fps,speed:movement.speed,mode:movement.mode,grounded:movement.grounded,score:state.complete?1:0,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:state.charged,awakened:state.awakened,restored:state.restored,paused:state.paused,started:state.started,porchRead:state.porchRead,quietObserved:visited.has('quiet-pocket'),keepsakes:state.keepsakes.size,travel,context:context?.kind||null,discoveryId:context?.id||null,discoveries:discoveries?.telemetry(),campaign:campaign?.telemetry(),introActive,introTime,checkpoint:[...checkpoint],heroVersion:'approved-D',cameraYaw};
  }else renderer.render(scene,camera);
 }
@@ -169,6 +203,12 @@ try{
  memories[0].p.copy(world.keepsakePoint);if(world.shortcutPoint)memories[1].p.copy(world.shortcutPoint);hero=character.root;hero.userData.joints=hero.children[0].userData.joints;scene.add(hero);art.style(staff);staff.scale.setScalar(.73);staffHand=hero.userData.joints.rightHand;staffHand.add(staff);
  campaign=createCampaign({THREE:T,scene,points:campaignWorld.points,caption,sound,onChange:(_progress,event)=>campaignEvent(event)});
  art.style(mara);mara.position.set(-7.2,height(-7.2,11.3),11.3);mara.rotation.y=.55;scene.add(mara);
- movement=createMovement(T,{start:START,sampleGround:(x,z)=>{const g=campaignWorld.ground(x,z);return g===undefined?world.ground(x,z):g;},blocked:(x,z,r)=>campaignWorld.ground(x,z)===undefined?world.blocked(x,z,r):campaignWorld.blocked(x,z,r),stickElement:$('#stick'),jumpButton:$('#jump'),runButton:$('#run'),walkSpeed:1.65,runSpeed:5.8,acceleration:12,deceleration:16,turnResponse:12,cameraYaw:()=>cameraYaw});animator=createAdventureMotion(character,movement);hero.position.copy(movement.position);$('#startb').disabled=false;$('#startb').textContent=loadedSave?'Start a new adventure':'Start adventure';$('#continueb').hidden=!loadedSave;updateUI();window.__START__=()=>start(true);
+ movement=createMovement(T,{start:START,sampleGround:(x,z)=>{const g=campaignWorld.ground(x,z);return g===undefined?world.ground(x,z):g;},blocked:(x,z,r)=>campaignWorld.ground(x,z)===undefined?world.blocked(x,z,r):campaignWorld.blocked(x,z,r),stickElement:$('#stick'),jumpButton:$('#jump'),runButton:$('#run'),walkSpeed:1.65,runSpeed:5.8,acceleration:12,deceleration:16,turnResponse:12,cameraYaw:()=>cameraYaw});animator=createAdventureMotion(character,movement);hero.position.copy(movement.position);world.seeThrough(scene,o=>{for(let n=o;n;n=n.parent)if(n===hero)return true;return false;});for(const id of ['guardian','service']){const a=scene.getObjectByName(`campaign-${id}-actor`);if(a)subjects[id]=new T.Box3().setFromObject(a).expandByScalar(.15);}
+ // Read-only probe for camera acceptance captures: clearance, head projection, un-cut line-of-sight blockers.
+ window.__CAMERA_PROBE__=()=>{const p=movement.position,ray=new T.Raycaster(),blockers=[],vis=o=>{for(let n=o;n;n=n.parent){if(!n.visible||n===hero)return false;}return true;};let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,viewGround(camera.position.x+a,camera.position.z+b));
+  for(const h of [1.55,1.0]){const target=new T.Vector3(p.x,p.y+h,p.z),dir=target.clone().sub(camera.position),dist=dir.length();ray.set(camera.position,dir.normalize());ray.far=dist-.3;for(const hit of ray.intersectObject(scene,true)){const o=hit.object,m=Array.isArray(o.material)?o.material[0]:o.material;if(!o.isMesh||!vis(o)||m?.transparent&&m.opacity<.5||m?.isMeshBasicMaterial&&!m.depthWrite||world.seeCuts(hit.point))continue;blockers.push({name:o.name||o.parent?.name||'mesh',h,at:+hit.distance.toFixed(2),of:+dist.toFixed(2)});}}
+  const head=new T.Vector3(p.x,p.y+1.55,p.z).project(camera);heroBox.min.set(p.x-.35,p.y,p.z-.35);heroBox.max.set(p.x+.35,p.y+1.75,p.z+.35);
+  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:subjects.guardian?screenBox(subjects.guardian):null,service:subjects.service?screenBox(subjects.service):null,subject:encounterSubject(p)===subjects.guardian?'guardian':encounterSubject(p)?'service':null,chartTucked:document.body.classList.contains('chart-tucked'),safe};};
+ $('#startb').disabled=false;$('#startb').textContent=loadedSave?'Start a new adventure':'Start adventure';$('#continueb').hidden=!loadedSave;updateUI();window.__START__=()=>start(true);
 }catch(e){console.error(e);$('#error').hidden=false;$('#error').textContent='The woodland could not load. '+e.message;}
 requestAnimationFrame(frame);

@@ -1,6 +1,14 @@
 import * as T from 'three';
 import {ASSET} from './assetlib.js';
-import {height} from './world-layout.js';
+import {height,POINTS} from './world-layout.js';
+import {GARDEN_CATCH} from './garden.js';
+
+// Story prompts answer wherever the hero touches what is drawn, from any side:
+// [x,z,r] horizontal circles = visible footprint + hero radius + a small margin.
+// Porch covers the door AND the pinned note left of Mara; wheel covers its long
+// rotor; garden matches the painted catch ring; far bell covers the whole bell.
+const STORY_ZONES={porch:[[...POINTS.porch,1.55],[-8,11.9,1.2]],chime:[[...POINTS.chime,2.1]],garden:[[...POINTS.garden,GARDEN_CATCH]],wheel:[[...POINTS.wheel,2.3],[4.9,2.15,1.3],[6.95,3.15,1.3]],finish:[[...POINTS.overlook,2.1]]};
+export function storyZone(id,p){return STORY_ZONES[id].some(([x,z,r])=>Math.hypot(p.x-x,p.z-z)<r&&Math.abs(p.y-height(x,z))<2);}
 
 // Optional woodland play. Every solid shape is a clone of a reviewed recipe
 // asset; the only new geometry is a small non-colliding pollen particle field.

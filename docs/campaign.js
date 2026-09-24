@@ -12,6 +12,12 @@ export function createCampaign({THREE:T,scene,points,caption=()=>{},sound=()=>{}
  let position=null,active=false,chargeOrigin=null,announcement='',lastTime=null;
  const encounters={service:{clock:0,cycle:-1,phase:'telegraph',warned:false},guardian:{clock:0,cycle:-1,phase:'telegraph',warned:false}};
  const near=(a,b,r=range)=>a&&Math.hypot(a.x-b.x,a.z-b.z)<=r&&Math.abs(a.y-b.y)<=2;
+ // A prompt answers wherever the hero touches what is drawn, not one exact spot:
+ // the floor ring (range) plus [dx,dz,r] circles over each offset prop, matching
+ // campaign-world placement (wheels -.8/-.65, pipe -.7/.8, vanes 0/-.95, bell 0/-.5).
+ const catches=new Set(['source','chamberSource','serviceGust','guardianGust']),reach={service:2.1};
+ const wheel=[[-1.45,-.65,.95],[-.8,-.65,.95],[-.15,-.65,.95]],footprint={bridgeWheel:wheel,inspection:wheel,returnWheel:wheel,source:[[-.7,.8,1.3]],returnVane:[[0,-.95,1.4]],outwardVane:[[0,-.95,1.4]],finalBell:[[0,-.5,2.1]]};
+ const inside=(a,c)=>near(a,c.target,reach[c.id])||(footprint[c.id]||[]).some(([dx,dz,r])=>near(a,{x:p[c.id].x+dx,y:p[c.id].y,z:p[c.id].z+dz},r));
  const running=s=>s?.started===true&&!s.paused&&!s.complete;
  const emit=(text,cue='chime')=>{caption(text,5);sound(cue);};
  function changed(event={}){onChange({...progress},event);}
@@ -49,12 +55,13 @@ export function createCampaign({THREE:T,scene,points,caption=()=>{},sound=()=>{}
  }
  function context(pos,charged){
   position=pos?.clone()||null;
-  // Preserve priority of catch targets over nearby inspection prompts.
-  return available(charged).find(c=>near(position,c.target))||null;
+  // Catch targets keep priority over nearby inspection prompts; otherwise nearest.
+  const d=c=>Math.hypot(position.x-c.target.x,position.z-c.target.z);
+  return available(charged).filter(c=>inside(position,c)).sort((a,b)=>catches.has(b.id)-catches.has(a.id)||d(a)-d(b))[0]||null;
  }
  function interact(ctx,state){
   if(!running(state)||!position||ctx?.kind!=='campaign')return;
-  const current=available(state.charged).find(c=>c.id===ctx.id&&near(position,c.target));
+  const current=available(state.charged).find(c=>c.id===ctx.id&&inside(position,c));
   if(!current)return;
   const id=current.id;
   if(['source','chamberSource','serviceGust','guardianGust'].includes(id)){

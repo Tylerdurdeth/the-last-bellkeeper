@@ -66,3 +66,10 @@ body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;oversc
 .volume-setting{display:flex;align-items:center;gap:16px;color:#eee0bb;padding:10px 2px;font-size:14px}.volume-setting input{accent-color:#b76f48;min-width:0;flex:1;min-height:34px}
 #title{top:50%;bottom:auto;transform:translateY(-50%);max-height:calc(100dvh - 24px);overflow-y:auto;scrollbar-width:thin}
 @media(max-height:500px){#title{left:50%;right:auto;transform:translate(-50%,-50%);width:min(680px,calc(100vw - 32px));max-width:none;display:grid;grid-template-columns:1.15fr 1fr;gap:5px 24px;padding:18px 24px}#title .eyebrow{grid-column:1;grid-row:1;margin-bottom:4px}#title h1{grid-column:1;grid-row:2/5;font-size:42px;margin:0}#title p:not(.eyebrow):not(.fine){grid-column:1;grid-row:5;font-size:12px;line-height:1.4;margin:0}#title .fine{grid-column:1/3;grid-row:6;margin:5px 0 0}#title button{grid-column:2;margin:0;min-height:44px;padding:11px 15px}#continueb{grid-row:1}#startb{grid-row:2}#settingsb{grid-row:3}#creditsb{grid-row:4}}
+/* Subject-aware field chart: it tucks into a corner button while it would cover the scene's subject. */
+#map{transition:opacity .3s ease,transform .3s ease;transform-origin:top right}
+body.chart-tucked #map:not(.expanded){opacity:0;transform:scale(.25);visibility:hidden;transition:opacity .3s ease,transform .3s ease,visibility 0s .3s}
+@media(pointer:fine) and (min-width:701px){body:is(.chart-tucked,.chart-shown) #mapToggle:not([hidden]){display:block;position:absolute;right:28px;top:84px;min-height:36px;padding:7px 14px;font:11px system-ui;letter-spacing:.06em;color:var(--paper);background:var(--ink);border:1px solid var(--copper);border-radius:4px;z-index:2}}
+@media(pointer:fine) and (min-width:701px) and (max-height:600px){body:is(.chart-tucked,.chart-shown) #mapToggle:not([hidden]){top:66px}}
+/* The ending card owns the left column: objective, charge and the duplicate caption step aside. */
+body:has(#ending:not([hidden])) #hud>div,body:has(#ending:not([hidden])) #charge,body:has(#ending:not([hidden])) #caption{visibility:hidden}
