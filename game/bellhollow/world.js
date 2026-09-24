@@ -634,8 +634,8 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const galY = (a) => 4 - 8 * galEase((a - GAL.a0) / (GAL.a1 - GAL.a0));
   B.railArc('gallery-inner', {r: H.gallery.r0 + .15, a0: GAL.a0 + .5, a1: 311, yfn: (f) => galY(GAL.a0 + .5 + f * (311 - GAL.a0 - .5)), style: 'parapet', step: 4});
   // Rings.
-  B.deckAnnulus('ring-high', {r0: H.high.r0, r1: H.high.r1, a0: 100, a1: 350, y0: H.high.y, bottom: H.mid.y - .6, mat: 'paving', side: 'stoneShade', capMat: 'bark', step: 3});
-  B.deckAnnulus('ring-mid', {r0: H.mid.r0, r1: H.mid.r1, a0: 100, a1: 350, y0: H.mid.y, bottom: H.low.y - .6, mat: 'paving', side: 'stoneCool', capMat: 'bark', step: 3});
+  B.deckAnnulus('ring-high', {r0: H.high.r0, r1: H.high.r1, a0: 100, a1: 350, y0: H.high.y, bottom: H.mid.y - .6, mat: 'paving', side: 'stoneShade', capMat: 'barkShade', step: 3});
+  B.deckAnnulus('ring-mid', {r0: H.mid.r0, r1: H.mid.r1, a0: 100, a1: 350, y0: H.mid.y, bottom: H.low.y - .6, mat: 'paving', side: 'stoneCool', capMat: 'barkShade', step: 3});
   B.deckDisc('ring-low', {r: H.low.r, y: H.low.y, th: 1.4, mat: 'paving', side: 'stoneShade', seg: 36});
   B.deckAnnulus('well-front', {r0: H.low.r - .05, r1: H.floorFront, a0: -10, a1: 100, y0: H.low.y, th: 1.4, mat: 'paving', side: 'stoneShade', step: 3});
   for (const [id, ring] of [['high', H.high], ['mid', H.mid]]) {
