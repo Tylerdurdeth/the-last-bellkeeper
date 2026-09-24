@@ -44,7 +44,7 @@ const stand = {
   'well.low.vent': new T.Vector3(R.low.vent.x, R.low.vent.y, R.low.vent.z), 'well.mid.vent': new T.Vector3(R.mid.vent.x, R.mid.vent.y, R.mid.vent.z),
   'pairedBells.stand': P.pairedBells.stand, 'terraceView.maraStand': P.terraceView.maraStand,
   'sails.capSail': P.sails.capSail, 'sails.frag2From': P.sails.frag2From, 'pipes.valve': P.pipes.valve, 'pipes.frag3From': P.pipes.frag3From, 'pipes.frag3To': P.pipes.frag3To,
-  'gallery.source': P.gallery.source, 'well.top': P.guardianWell.rings.top,
+  'gallery.source': P.gallery.source, 'well.top': P.guardianWell.rings.top, 'well.top.safe': R.top.safe, 'well.top.vaneStand': R.top.vaneStand,
 };
 setAll(OPEN);
 let pointChecks = 0;
@@ -72,6 +72,7 @@ for (const c of P.gallery.carvings) check(c.intake?.isVector3 && c.intake.distan
 check(P.gallery.source?.isVector3 && P.gallery.source.distanceTo(P.gallery.carvings[0].stand) < 20, 'gallery source near the carvings');
 check(P.sails.capTarget.y - P.sails.capSail.y > 3, 'cap tail sail above the stand (clear of the hero)');
 for (const m of validateWorld(w)) log('quest contract: missing ' + m);
+for (const k of ['low', 'mid', 'high', 'top']) { const r = P.guardianWell.rings[k]; check(r.vane && r.vaneStand && r.safe && Math.hypot(r.vane.x - r.vaneStand.x, r.vane.z - r.vaneStand.z) <= 1.6 && Math.abs(r.vane.y - r.vaneStand.y) < .1, `ring ${k}: vane, vaneStand (within 1.6 m, same level) and safe required`); }
 for (const v of w.vents) check(v.ledge && Math.abs(v.top - v.ledge.y - .8) < .01, `vent ${v.id}: top must be ledge + 0.8`);
 
 // ---------------------------------------------------------------- routes
@@ -185,6 +186,7 @@ const routes = [
   ['well updraft mid->high', 'vent', 'ring2', G(280, 7.6, -4)],
   ['well to ring3 grille', 'walk', [R.high.safe, ...arc(250, 186, 7.3, -4), G(184, 8, -4)]],
   ['well updraft high->top', 'vent', 'ring3', R.top],
+  ['well top perch vane', 'walk', [R.top, R.top.safe, R.top, R.top.vaneStand]],
   ['gallery source', 'walk', [P.hollowGateInside, P.gallery.top, P.gallery.source]],
   ['mid ring widened stretch', 'walk', [G(230, 3.7, -9), G(260, 3.7, -9), G(260, 5.6, -9)]],
 ];
