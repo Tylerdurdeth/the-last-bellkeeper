@@ -56,7 +56,7 @@ export default function (THREE, opts = {}) {
     for (let k = 0; k < 4; k++) tube(base, [[s * .1 - .035, .12 + k * .038, .066], [s * .1, .128 + k * .038, .074], [s * .1 + .035, .12 + k * .038, .066]], .005, .005, C(0xE8D6B0));   // laces
   }
   // Skirt: soft bell with a hem fold, mid-calf.
-  lathe(base, [[.24, .84], [.285, .76], [.3, .66], [.3, .5], [.305, .38], [.305, .325], [.292, .305], [.275, .3]], (v, o) => o.copy(SKIRT).lerp(SKIRT_SH, v.y < .3 ? .5 : Math.max(0, Math.sin(Math.atan2(v.x, v.z) * 9) * .35)), 0, 0, 0, .86, 36);
+  lathe(base, [[.24, .84], [.285, .76], [.3, .66], [.3, .5], [.305, .38], [.305, .325], [.292, .305], [.27, .302]], (v, o) => o.copy(SKIRT).lerp(SKIRT_SH, v.y < .3 ? .5 : Math.max(0, Math.sin(Math.atan2(v.x, v.z) * 9) * .35)), 0, 0, 0, .86, 36, cloth);
   // Apron: curved cloth panel with rounded lower corners, darker hem, two patch pockets with stitching and tools.
   {
     const g = new T.PlaneGeometry(1, 1, 18, 14), p = g.attributes.position;
@@ -108,6 +108,10 @@ export default function (THREE, opts = {}) {
     tube(chest, [[-.012, .19, .25], [-.02, .26, .245]], .005, .005, C(0x3C3C3C));                                        // pencil
     for (const s of [-1, 1]) tube(chest, [[s * .09, .32, .19], [s * .13, .42, .08], [s * .12, .44, -.06], [s * .02, .3, -.2], [-s * .1, .08, -.2]], .014, .014, APRON_SH, cloth, 6, 16);
   }
+  // Spectacles hanging on a cord over the bib: two round copper rims catching light.
+  for (const k of [-1, 1]) mesh(solid(new T.TorusGeometry(.022, .003, 6, 18), C(0xD9955A)), chest, k * .027, .3, .262, -.15, 0, 0, shiny);
+  tube(chest, [[-.006, .302, .265], [0, .306, .267], [.006, .302, .265]], .0025, .0025, C(0xD9955A), shiny, 4, 4);
+  for (const k of [-1, 1]) tube(chest, [[k * .048, .31, .258], [k * .07, .38, .2], [k * .07, .44, .09], [k * .04, .46, -.02]], .0018, .0018, C(0x5A4030), paint, 4, 10);
   // Neck and coral neckerchief: collar roll, a knot and two folded tails.
   const neck = group('neck', 0, .445, .012, chest);
   lathe(neck, [[.06, -.02], [.057, .03], [.054, .06]], SKIN, 0, 0, 0, 1, 14);
@@ -157,6 +161,11 @@ export default function (THREE, opts = {}) {
     root.userData.faceSurface = true;
   }
   const HY = .11; // head centre inside the head pivot
+  { // a clear gentle smile: dark mouth line on the surface with upturned corners, soft lower lip
+    const pts = []; for (let i = 0; i <= 12; i++) { const x = -.031 + i * .062 / 12; pts.push([x, HY - .054 + 13 * x * x, .102 - 16 * x * x]); }
+    tube(head, pts, .0021, .0021, C(0x6E3A30), paint, 5, 16);
+    for (const k of [-1, 1]) ell(head, C(0xC98C69), k * .036, HY - .04, .093, .003, .004, .002);   // smile dimples
+  }
   for (const s of [-1, 1]) { ell(head, SKIN, s * .088, HY + .005, -.004, .017, .03, .014); ell(head, SKIN_SH, s * .092, HY + .004, .002, .007, .016, .005); }  // ears
   // Eyes (own pivot for blinks): sclera, iris, pupil, catchlight; smiling upper lids; brows.
   const eyes = group('eyes', 0, HY + .016, 0, head);
@@ -185,10 +194,6 @@ export default function (THREE, opts = {}) {
     mesh(solid(new T.TorusGeometry(.05, .011, 8, 22), HAIR_SH), head, 0, HY + .12, -.05, Math.PI / 2 - .3);
     mesh(solid(new T.TorusGeometry(.053, .007, 6, 22), CORAL), head, 0, HY + .108, -.05, Math.PI / 2 - .3);     // coral ribbon round the bun
     for (const s of [-1, 1]) tube(head, [[s * .02, HY + .1, -.1], [s * .035, HY + .07, -.115], [s * .03, HY + .045, -.11]], .006, .004, CORAL, cloth, 5, 6);
-    // Spectacles pushed up on the head: two round copper rims and a bridge, catching light.
-    for (const s of [-1, 1]) mesh(solid(new T.TorusGeometry(.019, .0028, 6, 18), C(0xD9955A)), head, s * .026, HY + .1, .07, -1.05, 0, 0, shiny);
-    tube(head, [[-.008, HY + .104, .077], [0, HY + .107, .08], [.008, HY + .104, .077]], .0022, .0022, C(0xD9955A), shiny, 4, 4);
-    for (const s of [-1, 1]) tube(head, [[s * .045, HY + .1, .062], [s * .085, HY + .085, .02], [s * .092, HY + .06, -.03]], .002, .002, C(0xD9955A), shiny, 4, 6);
     tube(head, [[-.09, HY + .17, -.03], [0, HY + .168, -.05], [.085, HY + .158, -.075]], .0055, .0045, C(0xD9955A), shiny);
     mesh(solid(new T.TorusGeometry(.016, .0045, 6, 14), C(0xD9955A)), head, -.1, HY + .173, -.026, 0, 1.2, 0, shiny);
     ell(head, CORAL, -.1, HY + .158, -.024, .006, .009, .005);
