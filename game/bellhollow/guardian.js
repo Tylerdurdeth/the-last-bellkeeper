@@ -124,7 +124,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
       const goal = charged ? v : breathSrc();
       if (onFloor && goal) { const ga = Math.atan2(goal.z - hero.z, goal.x - hero.x), pa = ang(hero); c0 = pa + Math.PI + (wrap(ga - pa) > 0 ? -.9 : .9); }
       // The second sweep comes from the other side of the first.
-      const s = kind === 'sweep2' ? -(lanes.sweep?.dir || 1) : (cycle % 2 ? 1 : -1), half = .78, e = extent(0, c0);
+      const s = kind === 'sweep2' ? -(lanes.sweep?.dir || 1) : (cycle % 2 ? 1 : -1), half = .5, e = extent(0, c0);   // ~57 deg wedge: only the swept danger, not the whole floor
       return { kind: 'sweep', dir: s, ring: 0, a0: c0 - half * s, a1: c0 + half * s, lo: e.lo, hi: Math.min(e.hi, R.outer), width: 1.7, end: at(c0 + half * s * .92, Math.min(e.hi, R.outer) - 2.0, R.y) };
     }
     // Ring lanes are stretches of ledge the breath runs along (a travelling front), painted end to end.
@@ -540,7 +540,7 @@ function createBands(T, scene) {
   geo.setAttribute('aLen', new T.BufferAttribute(len, 1).setUsage(T.DynamicDrawUsage));
   geo.setIndex(new T.BufferAttribute(idx, 1).setUsage(T.DynamicDrawUsage));
   const col = h => ({ value: new T.Color(h) }); // sRGB hex -> linear; output converted by three/look like any material
-  const uniforms = { uTime: { value: 0 }, uInk: col(0x2A1E1C), uDeep: col(0x7E2519), uHot: col(0xA93624), uCream: col(0xFBE7C4), uHalo: col(0x2C4A45) };
+  const uniforms = { uTime: { value: 0 }, uInk: col(0x2A1E1C), uDeep: col(0x9A4A3A), uHot: col(0xC0725A), uCream: col(0xFBE7C4), uHalo: col(0x2C4A45) };
   const mat = new T.ShaderMaterial({
     uniforms, transparent: true, depthWrite: false, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
     vertexShader: `attribute vec4 aLane; attribute vec4 aStyle; attribute float aLen; varying vec4 vL; varying vec4 vS; varying float vLen;
@@ -559,16 +559,16 @@ function createBands(T, scene) {
         float mid=1.-abs(ac-.5)*2.;                                   // painted gradient: deep at the rims, warm in the middle
         vec3 painted=mix(deep,hot,.25+.55*mid*mid);
         vec3 c=mix(mix(deep,cream,.35),painted,fill);                 // unfilled = pale coral wash
-        float a=mix(.42,.86,fill);
+        float a=mix(.2,.6,fill);                                        // painterly: the floor mosaic shows through
         float spd=vS.y>.5?9.:1.2+vL.w*3.;
         float ch=fract((vL.x+abs(ac-.5)*min(w,2.2)*.9)/1.7-uTime*spd*.8);
         float chev=smoothstep(.0,.03,ch)*(1.-smoothstep(.17,.21,ch))*smoothstep(.3,.36,e)*step(abs(ac-.5)*w,.95);
-        c=mix(c,cream,chev*mix(.45,.85,fill)); a=max(a,chev*mix(.55,.9,fill));
-        c=mix(c,vec3(1.,.93,.7),lead*.9); a=max(a,lead);              // bright leading edge of the fill
+        c=mix(c,cream,chev*mix(.35,.7,fill)); a=max(a,chev*mix(.3,.65,fill));
+        c=mix(c,vec3(1.,.93,.7),lead*.9); a=max(a,lead*.95);              // bright leading edge of the fill
         c=mix(c,hot*1.25,flash*fill*.35);
-        float border=1.-smoothstep(.1,.15,e), soft=smoothstep(0.,.03,e); // dark ink border, soft outer edge
+        float border=1.-smoothstep(.07,.11,e), soft=smoothstep(0.,.03,e); // dark ink border, soft outer edge
         c=mix(c,uInk,border);
-        a=mix(a,.95,border)*soft;
+        a=mix(a,.92,border)*soft;                                        // the ink edge carries the >=3:1 contrast
         gl_FragColor=vec4(c,a*vS.x);
         #include <colorspace_fragment>
       }`,
