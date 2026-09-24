@@ -14,10 +14,11 @@
 //   rotorGlow 0..1 (0 warm gold ember, 1 blazing wind cyan)  rotor (angle, radians)  trail (sway, radians)
 // opts: {pose:'calm'|'inhale'|'exhale'|'slump'|'tend', variant:'a'|'b'|'c'}
 export default function (THREE, opts = {}) {
-  const T = THREE, variant = opts.variant || 'b';
+  const T = THREE, variant = opts.variant || 'd';
   const V = { // candidate proportions (a: slender reference, b: chunkier readable, c: wide skirt heavy hood)
     a: { skirtLen: 1.45, skirtWid: .72, hoodLen: .86, hoodWid: .5, armR: .05, finger: .26, waist: .22, shoulder: .40 },
     b: { skirtLen: 1.5, skirtWid: .84, hoodLen: .98, hoodWid: .6, armR: .062, finger: .31, waist: .26, shoulder: .46 },
+    d: { skirtLen: 1.55, skirtWid: 1.12, hoodLen: 1.08, hoodWid: .78, armR: .075, finger: .34, waist: .31, shoulder: .54 },
     c: { skirtLen: 1.62, skirtWid: .95, hoodLen: 1.08, hoodWid: .68, armR: .066, finger: .34, waist: .28, shoulder: .5 },
   }[variant] || {};
   const root = new T.Group(); root.name = 'bh-guardian';
@@ -41,7 +42,7 @@ export default function (THREE, opts = {}) {
     const o = new T.Mesh(geo, mat); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = o.receiveShadow = true; parent.add(o); return o;
   }
   // Closed petal shell: a deformed sphere. Local +Y = length, +Z = inner (cupped) face.
-  function petal({ len, wid, thick = .05, cup = .35, bend = 0, outer = IVORY, inner = IVORY_SH, base = null, seg = [12, 10], shape = .55 }) {
+  function petal({ len, wid, thick = .05, cup = .35, bend = 0, outer = IVORY, inner = IVORY_SH, base = null, seg = [12, 10], shape = .55, rim = null }) {
     const g = new T.SphereGeometry(1, seg[0], seg[1]), p = g.attributes.position, col = new Float32Array(p.count * 3), c = new T.Color();
     for (let i = 0; i < p.count; i++) {
       const x = p.getX(i), y = p.getY(i), z = p.getZ(i), v = (y + 1) / 2;
@@ -49,6 +50,7 @@ export default function (THREE, opts = {}) {
       const X = x * w, Z = z * thick * (1 - .5 * v) + cup * x * x * w + bend * v * v * len, Y = v * len;
       p.setXYZ(i, X, Y, Z);
       if (z > 0) { c.copy(inner); if (base) c.lerp(base, Math.max(0, 1 - v * 2.2)); } else { c.copy(outer); c.lerp(IVORY_SH, Math.max(0, .5 - v) * .9); }
+      if (rim && z < .2 && (Math.abs(x) > .93 || v > .94) && v > .45) c.copy(rim);
       col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
     }
     g.setAttribute('color', new T.BufferAttribute(col, 3)); g.computeVertexNormals(); return g;
@@ -90,15 +92,16 @@ export default function (THREE, opts = {}) {
   // Honey-timber core (visible between the front petals), pointed like a seed.
   mesh(lathe([[0, -V.skirtLen * .92], [.12, -V.skirtLen * .8], [.3, -V.skirtLen * .45], [V.waist + .06, -.1], [V.waist, .02]], 18,
     (v, i, c) => c.copy(TIMBER).lerp(TIMBER_SH, .5 + .5 * Math.sin(Math.atan2(v.x, v.z) * 7 + v.y * 5) > .82 ? .6 : 0)), paint, skirt);
+  mesh(solid(new T.TorusGeometry(V.waist + .06, .065, 8, 28), COPPER), metal, skirt, 0, .04, 0, Math.PI / 2, 0, 0); // copper waist band
   // Coral cloth tongue at the waist front (R-guardian).
   { const g = petal({ len: .62, wid: .34, thick: .03, cup: .15, bend: .06, outer: CORAL, inner: CORAL, seg: [10, 8], shape: .9 });
     const o = mesh(g, paint, skirt, 0, .02, V.waist + .03, Math.PI - .12, 0, 0); o.scale.set(1, 1, 1); }
-  const SK = 6;
+  const SK = 7;
   for (let i = 0; i < SK; i++) {
     // Front gap: petals avoid the +Z front sector so the timber core and coral read, as in the reference.
     const a = (i - (SK - 1) / 2) * (2 * Math.PI - .9) / SK + Math.PI;
     const pv = new T.Group(); pv.position.set(Math.sin(a) * (V.waist - .02), .06, Math.cos(a) * (V.waist - .02)); pv.rotation.y = a; skirt.add(pv);
-    const g = petal({ len: V.skirtLen, wid: V.skirtWid * (i === 0 || i === SK - 1 ? .9 : 1), thick: .07, cup: .28, bend: -.14, outer: IVORY, inner: IVORY_SH, base: TIMBER, seg: [14, 12], shape: .5 });
+    const g = petal({ len: V.skirtLen, wid: V.skirtWid * (i === 0 || i === SK - 1 ? .9 : 1), thick: .12, cup: .3, bend: -.2, outer: IVORY, inner: IVORY_SH, base: TIMBER_SH, seg: [14, 12], shape: .62, rim: COPPER });
     mesh(g, paint, pv, 0, 0, 0, Math.PI - .34, 0, (i % 2 ? .04 : -.04));
   }
 
@@ -108,9 +111,10 @@ export default function (THREE, opts = {}) {
   mesh(lathe([[V.waist, -.02], [V.waist + .02, .14], [V.waist + .1, chestY - .05], [V.shoulder - .08, chestY + .14], [V.shoulder - .12, shY], [.12, shY + .1], [.1, shY + .12]], 20,
     (v, i, c) => { const a = Math.atan2(v.x, v.z), grain = Math.sin(a * 5 + v.y * 9 + Math.sin(a * 3) * 1.5); return c.copy(TIMBER).lerp(TIMBER_SH, grain > .8 ? .55 : grain < -.9 ? .25 : 0); }), paint, torso);
   // Rotor housing: ivory plate + copper ring set into the chest.
-  mesh(ball(.25, IVORY, 1, 1.15, .45, 16, 10), paint, torso, 0, chestY, V.waist + .07);
-  mesh(solid(new T.TorusGeometry(.2, .045, 8, 24), COPPER), metal, torso, 0, chestY, V.waist + .15);
-  mesh(solid(new T.TorusGeometry(.13, .02, 6, 20), VERD), metal, torso, 0, chestY, V.waist + .16);
+  mesh(ball(.32, IVORY, 1, 1.1, .45, 16, 10), paint, torso, 0, chestY, V.waist + .07);
+  mesh(solid(new T.TorusGeometry(.27, .06, 8, 28), COPPER), metal, torso, 0, chestY, V.waist + .15);
+  mesh(solid(new T.TorusGeometry(.19, .025, 6, 24), VERD), metal, torso, 0, chestY, V.waist + .17);
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; mesh(ball(.03, COPPER), metal, torso, Math.cos(a) * .27, chestY + Math.sin(a) * .27, V.waist + .21); }
   // High timber collar (two flared leaves) and coral scarf.
   for (const s of [-1, 1]) {
     const g = petal({ len: .42, wid: .34, thick: .04, cup: .3, bend: -.12, outer: TIMBER, inner: TIMBER_SH, seg: [10, 8] });
@@ -134,9 +138,9 @@ export default function (THREE, opts = {}) {
 
   // ---------------- rotor heart ----------------
   const rotor = group('rotor', 0, chestY, V.waist + .19, body);
-  mesh(new T.SphereGeometry(.075, 12, 8), glow, rotor);
+  mesh(new T.SphereGeometry(.1, 12, 8), glow, rotor);
   for (let i = 0; i < 4; i++) { // curved pinwheel blades
-    const b = new T.SphereGeometry(1, 10, 6); b.scale(.11, .035, .018); b.translate(.1, .02, 0);
+    const b = new T.SphereGeometry(1, 10, 6); b.scale(.15, .045, .022); b.translate(.13, .025, 0);
     const p = b.attributes.position; for (let k = 0; k < p.count; k++) { const x = p.getX(k); p.setY(k, p.getY(k) + x * x * 2.2); }
     b.computeVertexNormals(); const o = mesh(b, glow, rotor); o.rotation.z = i * Math.PI / 2;
   }
@@ -149,20 +153,27 @@ export default function (THREE, opts = {}) {
     mesh(petal({ len: .26, wid: .15, thick: .03, cup: .2, bend: -.1, outer: VERD, inner: VERD_SH, seg: [8, 6] }), metal, pv, 0, 0, 0, -.9, 0, 0);
   }
   // Face mask inside the bud: calm ivory mask, glowing eye slits (revealed when the hood blooms).
-  const face = group('face', 0, .3, .02, hood);
-  mesh(ball(.17, IVORY, .9, 1.15, .7, 16, 12), paint, face);
-  mesh(ball(.2, IVORY_SH, 1.05, .45, .8, 14, 8), paint, face, 0, .19, -.03); // brow cap
-  for (const s of [-1, 1]) { const e = new T.SphereGeometry(1, 10, 6); e.scale(.052, .018, .02); const o = mesh(e, glow, face, s * .07, .03, .115); o.rotation.z = s * -.18; }
-  const pistil = new T.SphereGeometry(.07, 10, 8); mesh(pistil, glow, face, 0, .3, -.02);
+  const face = group('face', 0, .3, .1, hood); // the mask sits at the front of the hood, under the petals
+  { // calm carved mask: flattened oval, soft brow ridge, long nose ridge, closed-smile mouth line
+    const g = new T.SphereGeometry(1, 20, 16), p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); p.setXYZ(i, x * .2 * (1 - .18 * Math.max(0, -y)), y * .26, z * (z > 0 ? .14 : .1) - .03 * y * y); }
+    g.computeVertexNormals(); mesh(colorize(g, (v, i, c) => c.copy(IVORY).lerp(IVORY_SH, v.z < .02 ? .5 : 0)), paint, face);
+  }
+  mesh(ball(.2, IVORY_SH, 1.05, .32, .5, 14, 8), paint, face, 0, .09, .05);          // brow ridge
+  mesh(ball(.034, IVORY, 1, 3.2, 1.3, 8, 8), paint, face, 0, -.025, .135);             // nose ridge
+  mesh(taper([[-.06, -.15, .115], [0, -.168, .125], [.06, -.15, .115]], .01, .01, 5, 6, TIMBER_SH), paint, face); // mouth line
+  const eyes = group('eyes', 0, .02, .12, face);
+  for (const s of [-1, 1]) { const e = new T.SphereGeometry(1, 12, 6); e.scale(.07, .024, .025); const o = mesh(e, glow, eyes, s * .085, 0, .012); o.rotation.z = s * -.16; }
+  mesh(new T.SphereGeometry(.045, 10, 8), glow, face, 0, .3, -.14);                 // pistil light above the brow
   joints.petals = [];
   const HP = 6;
   for (let i = 0; i < HP; i++) {
-    const innerRing = i % 2, a = i / HP * Math.PI * 2 + (innerRing ? 0 : .05);
-    const pv = new T.Group(); pv.name = 'hoodPetal' + i; pv.position.set(Math.sin(a) * (innerRing ? .1 : .16), .06, Math.cos(a) * (innerRing ? .1 : .16)); pv.rotation.y = a + Math.PI; hood.add(pv);
+    const innerRing = i % 2, a = Math.PI + (i - (HP - 1) / 2) * (Math.PI * 2 - 1.5) / HP; // hood: open at the front like a cowl around the face
+    const pv = new T.Group(); pv.name = 'hoodPetal' + i; pv.position.set(Math.sin(a) * (innerRing ? .12 : .2), .06, Math.cos(a) * (innerRing ? .12 : .2)); pv.rotation.y = a + Math.PI; hood.add(pv);
     const tilt = new T.Group(); tilt.name = 'hoodPetalTilt' + i; pv.add(tilt);
     const len = V.hoodLen * (innerRing ? .9 : 1), wid = V.hoodWid * (innerRing ? .9 : 1);
-    mesh(petal({ len, wid, thick: .06, cup: .42, bend: -.06, outer: IVORY, inner: BLUSH, base: CORAL, seg: [14, 12], shape: .45 }), paint, tilt);
-    tilt.userData.inner = !!innerRing; tilt.userData.len = len;
+    mesh(petal({ len, wid, thick: .08, cup: .45, bend: -.08, outer: IVORY, inner: BLUSH, base: CORAL, seg: [14, 12], shape: .55 }), paint, tilt);
+    tilt.userData.inner = !!innerRing; tilt.userData.len = len; tilt.userData.front = Math.cos(a) > .3;
     joints.petals.push(tilt); joints['hoodPetal' + i] = tilt;
   }
 
@@ -236,10 +247,11 @@ export default function (THREE, opts = {}) {
     J.hood.scale.setScalar(1 + .08 * bloom);
     for (const p of J.petals) {
       // closed bud tilt +0.3 (tips meet); bloom 1 = petals thrown out past horizontal like R-guardian-inhale.
-      const closed = p.userData.inner ? .36 : .27, open = p.userData.inner ? -1.05 : -1.5;
+      const closed = p.userData.front ? .05 : p.userData.inner ? .36 : .27, open = p.userData.inner ? -1.05 : -1.5;
       p.rotation.x = closed + (open - closed) * Math.max(0, bloom) + Math.min(0, bloom) * -.5 + .1 * slump;
     }
-    J.face.scale.setScalar(.85 + .15 * Math.max(0, bloom));
+    J.face.scale.setScalar(1.2 + .1 * Math.max(0, bloom));
+    J.eyes.scale.set(1 + .15 * rg, Math.max(.08, q.eyes ?? 1) * (1 + .35 * rg), 1);
     for (const s of ['left', 'right']) {
       const k = s === 'left' ? -1 : 1, A = J[s + 'Arm'], F = J[s + 'Forearm'], H = J[s + 'Hand'];
       // Rest: hanging slightly out and forward; spread: flung wide and up; thrust: pushed forward.
@@ -255,7 +267,7 @@ export default function (THREE, opts = {}) {
   const POSES = {
     calm: {}, inhale: { crouch: .9, bloom: 1, spread: 1, lean: -.12, swell: .8, rotorGlow: 1, look: { x: -.4, y: 0 } },
     exhale: { thrust: 1, bloom: .35, lean: .5, rotorGlow: .8, look: { x: -.35, y: 0 } }, slump: { slump: 1, bloom: -.2, rotorGlow: .05 },
-    tend: { fold: 1, crouch: .3, lean: .45, look: { x: -.5, y: 0 }, bloom: .15, rotorGlow: .15 },
+    tend: { fold: 1, crouch: .3, lean: .35, look: { x: -.35, y: 0 }, bloom: .5, rotorGlow: .15, eyes: .12 },
   };
   root.userData.setPose = setPose; root.userData.poses = POSES; root.userData.glowMaterial = glow;
   root.userData.animation = { front: '+Z', joints: Object.keys(joints), pose: 'userData.setPose' };

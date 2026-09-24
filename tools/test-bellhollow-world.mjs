@@ -1,0 +1,266 @@
+// Bellhollow v2 world contract test (Node, no browser).
+//   node tools/test-bellhollow-world.mjs [out.json]
+// Checks: build time; every named stand point is on ground and unobstructed; continuous
+// walkable routes between consecutive beat anchors (sampled every 5 cm, step <= .28,
+// rails/solids respected), with rises only at vents and falls only at declared drops;
+// every rail bounds a drop (ground on one side at its base, none/lower on the other);
+// layered ground at every overlap; dynamic pieces gate their routes.
+import assert from 'node:assert/strict';
+import * as T from 'three';
+import {writeFile} from 'node:fs/promises';
+import {buildBellhollow} from '../game/bellhollow/world.js';
+import {validateWorld} from '../game/bellhollow/quest.js';
+
+const t0 = performance.now();
+const w = buildBellhollow({THREE: T, scene: new T.Scene()});
+const buildMs = performance.now() - t0;
+const fails = [], log = (m) => fails.push(m);
+const check = (cond, msg) => { if (!cond) log(msg); return cond; };
+const P = w.points, R = P.guardianWell.rings;
+const setAll = (o) => w.update(1 / 60, 0, o);
+const OPEN = {terraceGate: 1, sailBridge: 1, pipesBridge: 1, ladderShutter: 1, skyPlanks: 3, hollowGate: 1};
+const CLOSED = {terraceGate: 0, sailBridge: 0, pipesBridge: 0, ladderShutter: 0, skyPlanks: 0, hollowGate: 0};
+
+check(buildMs < 2500, `build ${buildMs.toFixed(0)} ms >= 2500`);
+
+// ---------------------------------------------------------------- stand points
+const stand = {
+  start: P.start, morningBell: P.morningBell, maraLever: P.maraLever, maraOutlet: P.maraOutlet, maraStand: P.maraStand,
+  seedWheel: P.seedWheel, terraceGateInside: P.terraceGateInside, loftVent: P.loftVent, loftLedge: P.loftLedge, loftView: P.loftView,
+  'sails.branchStart': P.sails.branchStart, 'sails.source': P.sails.source, 'sails.bridgePush': P.sails.bridgePush,
+  'sails.bridgeFrom': P.sails.bridgeFrom, 'sails.bridgeTo': P.sails.bridgeTo, 'sails.restore': P.sails.restore,
+  'pipes.branchStart': P.pipes.branchStart, 'pipes.source': P.pipes.source, 'pipes.wheelA': P.pipes.wheelA, 'pipes.gapFrom': P.pipes.gapFrom,
+  'pipes.gapTo': P.pipes.gapTo, 'pipes.outletA': P.pipes.outletA, 'pipes.wheelB': P.pipes.wheelB, 'pipes.outletB': P.pipes.outletB, 'pipes.restore': P.pipes.restore,
+  ...Object.fromEntries(P.ladders.gusts.map((g, i) => ['ladders.gust' + i, g])), seedOutlet: P.seedOutlet, finaleSpot: P.finaleSpot, bellOut: P.bellOut, bellReturn: P.bellReturn,
+  'ladders.vent0': P.ladders.vent0, 'ladders.ledge0': P.ladders.ledge0,
+  'ladders.vent1': P.ladders.vent1, 'ladders.ledge1': P.ladders.ledge1, 'ladders.shutterLever': P.ladders.shutterLever,
+  'ladders.vent2': P.ladders.vent2, 'ladders.ledge2': P.ladders.ledge2, 'ladders.restore': P.ladders.restore,
+  fragment1: P.fragment1, fragment2: P.fragment2, fragment3: P.fragment3,
+  'bridge.start': P.bridge.start, 'bridge.end': P.bridge.end,
+  ...Object.fromEntries(P.bridge.stages.map((s) => ['bridge.stage' + s.k, s.mid])),
+  hollowGate: P.hollowGate, hollowGateInside: P.hollowGateInside, 'gallery.top': P.gallery.top, 'gallery.bottom': P.gallery.bottom,
+  ...Object.fromEntries(P.gallery.carvings.map((c) => ['gallery.' + c.id, c.stand])),
+  ...Object.fromEntries(['low', 'mid', 'high'].flatMap((k) => [[`well.${k}.safe`, R[k].safe], [`well.${k}.vaneStand`, R[k].vaneStand], [`well.${k}.catch`, R[k].catchPoint]])),
+  'well.low.vent': new T.Vector3(R.low.vent.x, R.low.vent.y, R.low.vent.z), 'well.mid.vent': new T.Vector3(R.mid.vent.x, R.mid.vent.y, R.mid.vent.z),
+  'pairedBells.stand': P.pairedBells.stand, 'terraceView.maraStand': P.terraceView.maraStand,
+};
+setAll(OPEN);
+let pointChecks = 0;
+for (const [k, p] of Object.entries(stand)) {
+  assert(p && p.isVector3, 'missing point ' + k);
+  const g = w.ground(p.x, p.z, p.y);
+  check(g !== null && Math.abs(g - p.y) < .05, `point ${k} not on ground: y=${p.y.toFixed(2)} ground=${g}`);
+  check(!w.blocked(p.x, p.z, .23, p.y), `point ${k} blocked by ${w.blocker(p.x, p.z, .23, p.y)}`);
+  pointChecks++;
+}
+// Objects/anchors that must exist (not stood on).
+for (const k of ['morningBellObject', 'maraLeverObject', 'maraOutletMouth', 'seedWheelObject', 'farBell']) check(P[k]?.isVector3, 'missing anchor ' + k);
+for (const k of ['bridgeSail', 'resetLever', 'mill']) check(P.sails[k]?.isVector3, 'missing millSails.' + k);
+for (const k of ['wheelAObject', 'wheelBObject', 'mill']) check(P.pipes[k]?.isVector3, 'missing pipes.' + k);
+for (const k of ['shutter', 'mill']) check(P.ladders[k]?.isVector3, 'missing millLadders.' + k);
+check(P.terraceView.pos.isVector3 && P.terraceView.target.isVector3, 'terraceView camera');
+check(P.farBell.distanceTo(P.start) > 80, 'far bell is distant');
+check(w.vents.length >= 6, 'vents');
+for (const m of validateWorld(w)) log('quest contract: missing ' + m);
+for (const v of w.vents) check(v.ledge && Math.abs(v.top - v.ledge.y - .8) < .01, `vent ${v.id}: top must be ledge + 0.8`);
+
+// ---------------------------------------------------------------- routes
+// Route legs: ['walk', a, b, ...waypoints] | ['vent', ventId, dest] | ['drop', a, b]
+const V = (p) => (p.isVector3 ? p : new T.Vector3(p[0], p[1], p[2]));
+let routeSamples = 0;
+function walk(label, pts) {
+  let y = pts[0].y, prev = null;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / .05));
+    for (let j = 1; j <= n; j++) {
+      const x = a.x + (b.x - a.x) * j / n, z = a.z + (b.z - a.z) * j / n, g = w.ground(x, z, y);
+      routeSamples++;
+      if (!check(g !== null, `${label}: void at ${x.toFixed(2)},${z.toFixed(2)} (y ${y.toFixed(2)})`)) return false;
+      if (!check(Math.abs(g - y) < .28, `${label}: step ${(g - y).toFixed(2)} at ${x.toFixed(2)},${z.toFixed(2)} (y ${y.toFixed(2)})`)) return false;
+      y = g;
+      if (!check(!w.blocked(x, z, .23, y), `${label}: blocked by ${w.blocker(x, z, .23, y)} at ${x.toFixed(2)},${z.toFixed(2)},${y.toFixed(2)}`)) return false;
+      prev = [x, z];
+    }
+    if (!check(Math.abs(y - b.y) < .08, `${label}: waypoint ${i} height ${y.toFixed(2)} vs ${b.y.toFixed(2)}`)) return false;
+  }
+  void prev; return true;
+}
+function vent(label, id, dest) {
+  const v = w.vents.find((vv) => vv.id === id);
+  if (!check(v, `${label}: no vent ${id}`)) return false;
+  check(v.top >= dest.y + .2 && v.top - v.y >= 3.5 && v.top - v.y <= 6.5, `${label}: vent ${id} lift ${(v.top - v.y).toFixed(2)} to ${dest.y}`);
+  // steer from the column top to the destination ledge: the first sample over ground at the
+  // ledge height must be within 2.6 m of the vent centre, and the rest of the way walkable.
+  const n = 200; let reach = null;
+  for (let j = 0; j <= n; j++) {
+    const x = v.x + (dest.x - v.x) * j / n, z = v.z + (dest.z - v.z) * j / n, g = w.ground(x, z, v.top);
+    if (w.blocked(x, z, .23, v.top)) { log(`${label}: column path blocked by ${w.blocker(x, z, .23, v.top)} at ${x.toFixed(2)},${z.toFixed(2)}`); return false; }
+    if (g !== null && Math.abs(g - dest.y) < .1) { reach = Math.hypot(x - v.x, z - v.z); break; }
+  }
+  check(reach !== null && reach <= 2.6, `${label}: ledge not reachable from vent ${id} column (reach ${reach})`);
+  // and the vent itself must be the only way: without the vent, the ledge is > 2.5 m above
+  check(dest.y - v.y > 2.5, `${label}: ledge is not an updraft gap`);
+  return true;
+}
+function jumpGap(label, a, b) {
+  // an intended running-jump gap: void (no surface at this level) for 1.5..2.1 m along the line,
+  // same height both sides, and no rail/solid across it (the lip is open and marked).
+  const n = Math.ceil(a.distanceTo(b) / .05); let voidLen = 0, y = a.y;
+  for (let j = 1; j <= n; j++) { const x = a.x + (b.x - a.x) * j / n, z = a.z + (b.z - a.z) * j / n; if (w.blocked(x, z, .23, y)) { log(`${label}: blocked by ${w.blocker(x, z, .23, y)}`); return false; } const g = w.ground(x, z, y); if (g === null || g < y - .5) voidLen += a.distanceTo(b) / n; }
+  check(voidLen > 1.5 && voidLen < 2.1, `${label}: gap ${voidLen.toFixed(2)} m (want 1.5..2.1, jump reach ~3.7 running)`);
+  check(Math.abs(a.y - b.y) < .05, `${label}: lips at different heights`);
+  return true;
+}
+function drop(label, a, b) {
+  // walk from a towards b at a's level until the ground falls away; must land on b's level
+  const n = Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / .05); let y = a.y, fell = false, settle = 0;
+  for (let j = 1; j <= n; j++) {
+    const x = a.x + (b.x - a.x) * j / n, z = a.z + (b.z - a.z) * j / n, g = w.ground(x, z, y);
+    if (settle > 0) settle--; else if (w.blocked(x, z, .23, y)) { log(`${label}: drop path blocked by ${w.blocker(x, z, .23, y)}`); return false; }
+    if (g === null) { log(`${label}: drop into void at ${x.toFixed(2)},${z.toFixed(2)}`); return false; }
+    if (y - g > .3) { fell = true; settle = 8; }
+    y = g;
+  }
+  check(fell, `${label}: no drop found`); check(Math.abs(y - b.y) < .08, `${label}: landed at ${y.toFixed(2)} not ${b.y.toFixed(2)}`);
+  return true;
+}
+const at = (az, r, y) => { const a = az * Math.PI / 180; return new T.Vector3(r * Math.sin(a), y, r * Math.cos(a)); };
+const G = (az, r, y) => { const p = at(az, r, y); p.y = w.ground(p.x, p.z, y); return p; };
+const arc = (a0, a1, r, y, step = 6) => { const out = [], n = Math.max(1, Math.ceil(Math.abs(a1 - a0) / step)); for (let i = 0; i <= n; i++) out.push(G(a0 + (a1 - a0) * i / n, r, y + 0)); return out; };
+const galArc = (a0, a1) => { const out = []; for (let a = a0; a <= a1; a += 5) { const g0 = 4 - 8 * Math.min(1, (a - 100) / 250 / .9); out.push(G(a, 10.5, g0 + .1)); } return out; };
+const routes = [
+  
+  ['beat1 bell', 'walk', [P.start, G(-47.5, 20.3, 0), P.morningBell]],
+  ['plaza steps anywhere', 'walk', [G(-52, 20, 0), G(-52, 16.4, 1), G(-44, 16.4, 1), G(-44, 20, 0)]],
+  ['beat1 bell->mara->wheel', 'walk', [P.morningBell, G(-47.5, 17.8, 1), G(-47.5, 20.2, 0), G(-62, 20.2, 0), G(-73, 21.2, 0), P.maraOutlet, P.maraStand, P.maraLever, G(-80, 20.2, 0), P.seedWheel]],
+  ['beat2 wheel->gate->vent', 'walk', [P.seedWheel, G(-83.5, 20.1, 0), P.terraceGate, P.terraceGateInside, P.seedOutlet, P.loftVent]],
+  ['beat2 updraft to loft', 'vent', 'loft', P.loftLedge],
+  ['loft views', 'walk', [P.loftLedge, P.loftView]],
+  ['loft drop to yard', 'drop', P.loftLedge.clone().add(new T.Vector3(0, 0, 0)), G(-92.5, 17.5, 0)],
+  // Mill of Sails
+  ['sails branch', 'walk', [P.loftView, P.sails.branchStart, P.sails.source, P.sails.bridgePush, P.sails.bridgeFrom]],
+  ['sails bridge crossing', 'walk', [P.sails.bridgeFrom, P.sails.bridgeTo, G(-115.8, 36.9, 7.5), P.sails.restore]],
+  ['fragment1 spur', 'walk', [P.sails.source, G(-110.6, 25.4, 6), G(-108.6, 26.6, 6), P.fragment1]],
+  // Mill of Pipes
+  ['pipes branch', 'walk', [P.loftLedge, P.pipes.source, P.loftLedge, P.pipes.branchStart, ...P.pipes.path, P.pipes.gapFrom]],
+  ['pipes jump gap', 'jump', P.pipes.gapFrom, P.pipes.gapTo],
+  ['pipes island', 'walk', [...P.pipes.islandPath]],
+  ['fragment2 balcony', 'walk', [P.pipes.wheelA, P.pipes.path.at(-2), P.fragment2]],
+  // Mill of Ladders
+  ['ladders to vent0', 'walk', [P.start, P.ladders.vent0]],
+  ['ladders updraft 0', 'vent', 'ladders1', P.ladders.ledge0],
+  ['ladders L0', 'walk', [P.ladders.ledge0, P.ladders.vent1]],
+  ['ladders updraft 1', 'vent', 'ladders2', P.ladders.ledge1],
+  ['ladders ledge1', 'walk', [P.ladders.ledge1, P.ladders.vent2, P.ladders.shutterLever]],
+  ['fragment3 perch', 'walk', [P.ladders.ledge1, G(1, 19.4, 9.1), P.fragment3]],
+  ['ladders updraft 2', 'vent', 'ladders3', P.ladders.ledge2],
+  ['ladders mill', 'walk', [...P.ladders.path]],
+  ['ladders drop L2->L1', 'drop', P.ladders.ledge2, G(3.5, 16.4, 9.1)],
+  ['ladders drop L1->L0', 'drop', P.ladders.ledge1, G(-7.5, 16.3, 4.6)],
+  ['ladders drop L0->terrace', 'drop', P.ladders.ledge0, G(-15.5, 16.3, 0)],
+  // Sky Bridge and the Hollow
+  ['sky bridge', 'walk', [P.start, G(-12, 22, 0), P.bridge.start, ...arc(-8, 86, 22, 0, 4).map((p) => G(Math.atan2(p.x, p.z) * 180 / Math.PI, 22, 4.2)).map((p, i, A) => { const a = -8 + 94 * i / (A.length - 1); return G(a, 22, (a + 8) / 94 * 4 + .1); }), P.bridge.end, P.hollowGate, P.hollowGateInside]],
+  ['gallery descent', 'walk', [P.hollowGateInside, P.gallery.top, ...galArc(105, 340), P.gallery.bottom, G(340, 7.3, -4), ...arc(340, 250, 7.3, -4), R.high.safe, P.pairedBells.stand, ...arc(225, 300, 7.3, -4), R.high.vaneStand]],
+  ['well drop high->mid', 'drop', G(250, 7.2, -4), G(250, 5.2, -9)],
+  ['well mid ring', 'walk', [G(250, 5.2, -9), G(250, 5.0, -9), R.mid.catchPoint, ...arc(245, 130, 5.0, -9), R.mid.safe, ...arc(130, 220, 5.0, -9), R.mid.vaneStand]],
+  ['well drop mid->low', 'drop', G(200, 4.8, -9), G(200, 3.6, -14)],
+  ['well low ring', 'walk', [G(200, 3.6, -14), R.low.catchPoint, R.low.vaneStand, R.low.safe]],
+  ['well updraft low->mid', 'vent', 'ring1', G(200, 5.4, -9)],
+  ['well updraft mid->high', 'vent', 'ring2', G(280, 7.6, -4)],
+];
+setAll(OPEN);
+const routeResults = [];
+for (const [label, kind, a, b] of routes) {
+  const before = fails.length;
+  if (kind === 'walk') walk(label, a.map(V)); else if (kind === 'vent') vent(label, a, V(b)); else if (kind === 'jump') jumpGap(label, V(a), V(b)); else drop(label, V(a), V(b));
+  routeResults.push({label, kind, ok: fails.length === before});
+}
+
+// ---------------------------------------------------------------- gating by dynamic state
+setAll(CLOSED);
+const blockedLeg = (label, a, b) => { const n = Math.ceil(a.distanceTo(b) / .05); let y = a.y; for (let j = 1; j <= n; j++) { const x = a.x + (b.x - a.x) * j / n, z = a.z + (b.z - a.z) * j / n, g = w.ground(x, z, y); if (g === null || Math.abs(g - y) >= .28 || w.blocked(x, z, .23, y)) return true; y = g; } log(`${label}: passable while closed`); return false; };
+blockedLeg('gate closed', P.seedWheel, P.terraceGateInside);
+blockedLeg('sail bridge away', P.sails.bridgeFrom, P.sails.bridgeTo);
+blockedLeg('sky bridge absent', P.bridge.start, P.bridge.stages[0].mid);
+blockedLeg('hollow gate shut', P.hollowGate, P.hollowGateInside);
+// A closed/missing bridge is never an open edge: the barrier stops the walker before the lip.
+for (const [label, a, b] of [['sails lip', P.sails.bridgePush, P.sails.bridgeTo], ['sky lip', P.start, P.bridge.stages[0].mid]]) {
+  const n = Math.ceil(a.distanceTo(b) / .05); let y = a.y;
+  for (let j = 1; j <= n; j++) { const x = a.x + (b.x - a.x) * j / n, z = a.z + (b.z - a.z) * j / n; if (w.blocked(x, z, .23, y)) break; const g = w.ground(x, z, y); if (g === null) { log(`${label}: walker can step into the void while closed`); break; } y = g; }
+}
+for (let k = 1; k <= 3; k++) { setAll({...CLOSED, skyPlanks: k}); const s = P.bridge.stages[k - 1]; check(w.ground(s.mid.x, s.mid.z, s.mid.y) !== null, `sky stage ${k - 1} present at planks=${k}`); if (k < 3) check(w.ground(P.bridge.stages[k].mid.x, P.bridge.stages[k].mid.z, P.bridge.stages[k].mid.y) === null, `sky stage ${k} absent at planks=${k}`); }
+setAll(OPEN);
+
+// ---------------------------------------------------------------- rails bound drops
+let railSamples = 0; const railIssues = [];
+for (const rail of w.rails) {
+  if (rail.kind !== 'edge') continue;
+  if (typeof rail.enabled === 'function' && !rail.enabled()) continue;
+  const p = rail.pts;
+  for (let i = 1; i < p.length; i++) {
+    const a = p[i - 1], b = p[i], L = Math.hypot(b[0] - a[0], b[2] - a[2]); if (L < .3) continue;
+    const nx = -(b[2] - a[2]) / L, nz = (b[0] - a[0]) / L;
+    for (const f of [.3, .5, .7]) {
+      const x = a[0] + (b[0] - a[0]) * f, z = a[2] + (b[2] - a[2]) * f, y = a[1] + (b[1] - a[1]) * f;
+      const s1 = w.ground(x + nx * .45, z + nz * .45, y), s2 = w.ground(x - nx * .45, z - nz * .45, y);
+      const on = (g) => g !== null && Math.abs(g - y) < .2, off = (g) => g === null || g < y - .45;
+      railSamples++;
+      if (!((on(s1) && off(s2)) || (on(s2) && off(s1)))) railIssues.push(`${rail.id} @${x.toFixed(1)},${z.toFixed(1)} y${y.toFixed(1)}: sides ${s1?.toFixed?.(2) ?? s1}/${s2?.toFixed?.(2) ?? s2}`);
+    }
+  }
+}
+for (const r of railIssues.slice(0, 25)) log('rail: ' + r);
+if (railIssues.length > 25) log(`rail: ... ${railIssues.length - 25} more`);
+
+// ---------------------------------------------------------------- layered ground
+const layerCases = [
+  ['loft over yard', at(-97.5, 18, 0), [5, 0]],
+  ['pipes branch over yard', at(-98.2, 25.8, 0), [null, 0]],
+  ['ladders L0 over terrace', at(-12, 17, 0), [4.6, 0]],
+  ['ladders L1 over L0', at(-5.5, 17, 0), [9.1, 4.6]],
+  ['ladders L2 over L1', at(5.5, 17, 0), [13.6, 9.1]],
+  ['gallery vs high ring (adjacent radii)', at(200, 10.4, 0), [null]],
+];
+let layerChecks = 0;
+for (const [label, p, hs] of layerCases) {
+  const L = w.layers(p.x, p.z).map((l) => +l.h.toFixed(2));
+  if (hs[0] === null) { check(L.length >= 1, `${label}: no layers`); layerChecks++; continue; }
+  for (const h of hs) { const g = w.ground(p.x, p.z, h + .1); check(g !== null && Math.abs(g - h) < .05, `${label}: ground(y=${h}) = ${g} (layers ${L})`); layerChecks++; }
+  // walking under an upper deck is allowed (head room) and its body blocks entry from the side only
+  check(!w.blocked(p.x, p.z, .23, hs.at(-1)), `${label}: lower level blocked by ${w.blocker(p.x, p.z, .23, hs.at(-1))}`);
+}
+// Deck bodies are solid: stepping into a ring's side from below is blocked.
+check(w.blocked(...[at(200, 4.3, -14)].map((p) => [p.x, p.z])[0], .23, -14), 'mid ring body blocks the low floor walker');
+check(w.blocked(...[at(250, 6.6, -9)].map((p) => [p.x, p.z])[0], .23, -9), 'high ring body blocks the mid ring walker');
+
+// ---------------------------------------------------------------- edge safety scan
+// Every walkable spot, on every layer: stepping 0.4 m in any direction must either be blocked
+// by something drawn, stay on ground, or fall onto ground below (a safe drop). Falling into
+// the void is allowed only across the declared Pipes jump gap.
+setAll(OPEN);
+let edgeSamples = 0; const voidEdges = [];
+const jumpLips = [P.pipes.gapFrom, P.pipes.gapTo];
+for (let x = -52; x <= 52; x += .5) for (let z = -52; z <= 52; z += .5) {
+  for (const {h} of w.layers(x, z)) {
+    if (w.ground(x, z, h) !== h || w.blocked(x, z, .23, h)) continue;
+    edgeSamples++;
+    for (let k = 0; k < 8; k++) {
+      const a = k * Math.PI / 4, nx = x + Math.cos(a) * .45, nz = z + Math.sin(a) * .45;
+      if (w.blocked(nx, nz, .23, h)) continue;
+      if (w.ground(nx, nz, h) !== null) continue;
+      if (jumpLips.some((l) => Math.hypot(l.x - x, l.z - z) < 3.2)) continue;
+      voidEdges.push(`${x.toFixed(1)},${z.toFixed(1)} y${h.toFixed(1)} -> void`); break;
+    }
+  }
+}
+for (const e of voidEdges.slice(0, 20)) log('unsafe edge: ' + e);
+if (voidEdges.length > 20) log(`unsafe edge: ... ${voidEdges.length - 20} more`);
+
+// ---------------------------------------------------------------- stats
+let tris = 0, meshes = 0; w.root.traverse((o) => { if (o.isMesh) { meshes++; tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); } });
+check(meshes <= 450, `mesh count ${meshes} > 450`); check(tris <= 700000, `triangles ${tris} > 700k`);
+
+const result = {timestamp: new Date().toISOString(), pass: fails.length === 0, buildMs: Math.round(buildMs), meshes, tris: Math.round(tris), pointChecks, routeSamples, railSamples, layerChecks, edgeSamples, routes: routeResults, failures: fails};
+if (process.argv[2]) await writeFile(process.argv[2], JSON.stringify(result, null, 2));
+console.log(JSON.stringify({...result, routes: routeResults.filter((r) => !r.ok).map((r) => r.label)}, null, 2));
+process.exit(fails.length ? 1 : 0);
