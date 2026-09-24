@@ -12,6 +12,7 @@ import {createWind} from './bellhollow/wind.js';
 import {createQuest} from './bellhollow/quest.js';
 import {MODULES} from './bellhollow/manifest.js';
 import {createMap} from './bellhollow/map.js';
+import {trunkSolid} from './bellhollow/kit/trunk.js';
 import {adaptWorld} from './bellhollow/adapt-world.js';
 import buildMara from './assets/bh-mara.js';
 import buildPairedBells from './assets/bh-paired-bells.js';
@@ -148,16 +149,24 @@ function viewGround(x,z){const g=world?.cameraGround?world.cameraGround(x,z):wor
 function floorUnder(x,z,y){const g=world?.ground(x,z,y);return typeof g==='number'&&Number.isFinite(g)?g:-Infinity;}
 // Layered worlds (world.layers): a sample is blocked when it sits just above a surface or up to a
 // metre below one (inside its slab). Otherwise the single top-most height is used.
-function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch),layered=!!world?.layers;for(let i=1;i<=20;i++){const d=length*i/20;if(d<=2)continue;const x=o.x+sx*c*d,z=o.z+sz*c*d,h=o.y+s*d,pad=.35+.03*i;
+// The great trunk (bark shell, Hollow walls and ceiling) is solid for the lens too: world kit's trunkSolid, padded.
+const inTrunk=(x,z,h)=>!world?.stub&&[[0,0],[.35,0],[-.35,0],[0,.35],[0,-.35]].some(([a,b])=>trunkSolid(x+a,z+b,h));
+function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch),layered=!!world?.layers;for(let i=1;i<=20;i++){const d=length*i/20;if(d<=1.2)continue;const x=o.x+sx*c*d,z=o.z+sz*c*d,h=o.y+s*d,pad=.35+.03*i;
+ if(inTrunk(x,z,h))return d;if(d<=2)continue;
  if(layered){for(const L of world.layers(x,z))if(L.h>h-pad&&L.h<h+1.1)return d;}else if(h<viewGround(x,z)+pad)return d;}return 0;}
 function placeCamera(dt,sx,sz,pitch,length){// Test the arm from a point kept above the floor: framing may pan the look target below a descending deck.
  armOrigin.copy(cameraTarget);armOrigin.y=Math.max(armOrigin.y,floorUnder(armOrigin.x,armOrigin.z,armOrigin.y)+.9);let p=pitch,l=length;
  // Raise first (the usual fix); under an overhang, also try lowering the arm beneath it.
- if(armHit(armOrigin,sx,sz,p,l)){let found=false;for(let k=1;k<=18&&!found;k++){for(const q of [pitch+k*.05,pitch-k*.05]){if(q>1.05||q<.1)continue;if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;break;}}}
-  if(!found){p=Math.min(1.05,pitch+.3);const hit=armHit(armOrigin,sx,sz,p,l);if(hit)l=Math.max(3.2,hit-.8);}}
+ // Blocked: raise the arm a little first, then pull it in (never through walls), then try lower pitches.
+ if(armHit(armOrigin,sx,sz,p,l)){let found=false;
+  for(let k=1;k<=6&&!found;k++){const q=pitch+k*.05;if(q<=1.05&&!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;}}
+  if(!found){const hit=armHit(armOrigin,sx,sz,pitch,l);if(hit&&hit-.7>=3.2&&!armHit(armOrigin,sx,sz,pitch,hit-.7)){l=hit-.7;found=true;}}
+  for(let k=1;k<=18&&!found;k++){for(const q of [pitch+(k+6)*.05,pitch-k*.05]){if(q>1.05||q<.1)continue;if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;break;}}}
+  if(!found){p=Math.min(1.05,pitch+.3);const hit=armHit(armOrigin,sx,sz,p,l);if(hit)l=Math.max(2.2,hit-.8);}}
  armPitch??=p;armLength??=l;armPitch=T.MathUtils.damp(armPitch,p,p>armPitch?12:2.4,dt);armLength=T.MathUtils.damp(armLength,l,l<armLength?12:2,dt);
  const c=Math.cos(armPitch)*armLength;camera.position.set(cameraTarget.x+sx*c,cameraTarget.y+Math.sin(armPitch)*armLength,cameraTarget.z+sz*c);
- let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));camera.position.y=Math.max(camera.position.y,floor+1.1);}
+ let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));camera.position.y=Math.max(camera.position.y,floor+1.1);
+ for(let i=0;i<12&&inTrunk(camera.position.x,camera.position.z,camera.position.y);i++)camera.position.lerp(cameraTarget,.18);}
 function screenBox(box){let l=1e9,t=1e9,r=-1e9,b=-1e9;for(let i=0;i<8;i++){ndc.set(i&1?box.max.x:box.min.x,i&2?box.max.y:box.min.y,i&4?box.max.z:box.min.z).project(camera);if(ndc.z>1)return null;const x=(ndc.x+1)/2*innerWidth,y=(1-ndc.y)/2*innerHeight;l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}return {l,t,r,b};}
 // Play area left by the HUD: below the objective panel, above caption/buttons, left of an open chart.
 function hudSafe(){const s={l:12,t:12,r:innerWidth-12,b:innerHeight-12},top=$('#hud>div')?.getBoundingClientRect();if(top?.height)s.t=Math.max(s.t,top.bottom+10);
@@ -288,7 +297,7 @@ try{
  window.__CAMERA_PROBE__=()=>{const p=movement.position,ray=new T.Raycaster(),blockers=[],vis=o=>{for(let n=o;n;n=n.parent){if(!n.visible||n===hero)return false;}return true;};let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));
   for(const h of [1.55,1.0]){const target=new T.Vector3(p.x,p.y+h,p.z),dir=target.clone().sub(camera.position),dist=dir.length();ray.set(camera.position,dir.normalize());ray.far=dist-.3;for(const hit of ray.intersectObject(scene,true)){const o=hit.object,m=Array.isArray(o.material)?o.material[0]:o.material;if(!o.isMesh||!vis(o)||m?.transparent&&m.opacity<.5||m?.isMeshBasicMaterial&&!m.depthWrite||m?.isShaderMaterial)continue;blockers.push({name:o.name||o.parent?.name||'mesh',h,at:+hit.distance.toFixed(2),of:+dist.toFixed(2)});}}
   const head=new T.Vector3(p.x,p.y+1.55,p.z).project(camera);heroBox.min.set(p.x-.35,p.y,p.z-.35);heroBox.max.set(p.x+.35,p.y+1.75,p.z+.35);const g=quest.subject();
-  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe};};
+  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe,insideTrunk:inTrunk(camera.position.x,camera.position.z,camera.position.y)};};
  // Lazy-load the prologue illustrations once the game is ready (not counted against start-up).
  (window.requestIdleCallback||setTimeout)(()=>{for(const n of [1,2,3]){const i=new Image();i.src=new URL(`./textures/v2/card${n}.webp`,import.meta.url).href;}});
  // After ready (never blocking it): villagers, then the chart bake from the live scene.
