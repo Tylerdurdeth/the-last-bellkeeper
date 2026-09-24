@@ -153,7 +153,8 @@ async function ride(vent, name) {
     let g = await read();
     if (!(g.lifting && g.y > vent.ledge.y + .3)) { await waitFor(() => !window.__GAME__.knocked && window.__GAME__.grounded, 'settle', 6000).catch(() => {}); continue; }
     if (name && attempt === 0) await burst(name, 2, 220);
-    await go(vent.ledge.x, vent.ledge.z, 'steer onto ledge ' + vent.id, { tol: .7 });
+    // Steer out of the column onto the ledge: aim a little past its anchor, away from the grille.
+    { const dx = vent.ledge.x - vent.x, dz = vent.ledge.z - vent.z, L = Math.hypot(dx, dz) || 1; await go(vent.ledge.x + dx / L * .6, vent.ledge.z + dz / L * .6, 'steer onto ledge ' + vent.id, { tol: .35 }); }
     const landed = await page.waitForFunction(y => window.__GAME__.grounded && !window.__GAME__.lifting, { timeout: 6000, polling: 50 }).then(() => true, () => false);
     g = await read();
     if (landed && Math.abs(g.y - vent.ledge.y) < .1) return;

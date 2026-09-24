@@ -137,3 +137,8 @@ for (const key of ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight']) {
 // Walking into an ordinary wall (sideways steps exist) never triggers the failsafe.
 { const f = fixture({ blocked: (x, z, r) => x + r > .5 }); f.key('ArrowRight'); let rec = false; for (let i = 0; i < 240; i++) { f.m.update(1 / 60); rec ||= f.m.recovered; } assert(!rec, 'no failsafe against a plain wall'); f.m.dispose(); }
 console.log('PASS: stuck regressions — depenetration out of an overlapping barrier (4 directions, <1 s), held-input failsafe at ~2 s, no false trigger against walls');
+// Releasing Shift while still holding Up keeps walking (character report: 'idle' after Shift release).
+{ const f = fixture({ walkSpeed: 1.65, runSpeed: 5.8, acceleration: 12, deceleration: 16 }); f.key('ArrowUp'); f.key('ShiftLeft'); f.tick(.8); assert.equal(f.m.mode, 'run');
+  f.key('ShiftLeft', false); let walkAt = null; for (let i = 0; i < 90; i++) { f.m.update(1 / 60); assert.notEqual(f.m.mode, 'idle', 'never idle while Up is held'); if (walkAt === null && f.m.mode === 'walk') walkAt = i / 60; }
+  assert(walkAt !== null && walkAt < .6, 'settles into walk'); assert(Math.abs(f.m.speed - 1.65) < .05); f.m.dispose(); }
+console.log('PASS: Shift release while holding an arrow continues walking');

@@ -8,6 +8,9 @@ import { validateWorld } from './quest.js';
 const v3 = a => !a ? null : Array.isArray(a) ? { x: a[0], y: a[1], z: a[2] } : { x: a.x, y: a.y, z: a.z };
 
 export function adaptWorld(world, { THREE: T } = {}) {
+  // Data gaps other modules rely on (filled even for a world that meets the contract natively).
+  const top = world?.points?.guardianWell?.rings?.top;
+  if (top && !top.safe) { const v = world.vents?.find(x => x.id === 'ring3'); if (v?.ledge) top.safe = { x: v.ledge.x, y: v.ledge.y, z: v.ledge.z }; }
   if (!world || !validateWorld(world).length || !world.setState) return world;
   const wp = world.points, notes = [];
   const G = (x, z, y) => { const g = world.ground(x, z, y); return typeof g === 'number' && Number.isFinite(g) ? g : null; };
