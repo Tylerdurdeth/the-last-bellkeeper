@@ -55,7 +55,7 @@ guardian.position.set(well.x ?? 0, (W.low.safe.y ?? -14) + 1, well.z ?? 0); scen
 let look = null;
 if (useLook) {
   look = createLook({ THREE, renderer, scene, camera, tier: q.get('tier') || undefined });
-  look.applyTo(hero, 'character'); look.applyTo(guardian, 'outline', { dynamic: true });
+  look.applyTo(hero, 'character'); look.applyTo(guardian, 'outline', { dynamic: true, occluder: false });
   await look.ready;
 }
 const portrait = () => camera.aspect < .85;
@@ -72,7 +72,7 @@ let last = performance.now(), t = 0;
 function frame(now) {
   const dt = Math.min(.1, (now - last) / 1000); last = now; t += dt;
   character.update(dt, 0); world.update(dt, t, wstate);
-  if (look) { look.update(dt, { area, restored, t }); look.render(); } else renderer.render(scene, camera);
+  if (look) { look.setFocus(q.get('fade') === '0' ? null : { hero: hero.position }); look.update(dt, { area, restored, t }); look.render(); } else renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -90,7 +90,7 @@ function bench(n = 40) {
   for (let i = 0; i < 5; i++) draw(); sync(); const a = performance.now(); for (let i = 0; i < n; i++) { draw(); sync(); } return (performance.now() - a) / n;
 }
 window.__LOOKDEV__ = {
-  ready: true, scene, renderer, valueStats, bench, shot, zone, area,
+  ready: true, scene, renderer, probe: () => look?.focusProbe(), valueStats, bench, shot, zone, area,
   snap() { if (look) for (let i = 0; i < 40; i++) look.update(.25, { area, restored }); },
   perf: () => ({}), info: () => ({ draws: renderer.info.render.calls, tris: renderer.info.render.triangles, tier: look?.tier ?? 'v1', buildMs: Math.round(buildMs), worldStats: world.stats, shot, zone, area }),
 };

@@ -19,6 +19,9 @@ import { createToon } from './toon.js';
 import { createOutlines } from './outline.js';
 import { createSky } from './sky.js';
 import { createWindMaterial } from './wind-material.js';
+import { createWindFx, DISTORT_LAYER } from './fx/wind-fx.js';
+import { createFireFx } from './fx/fire.js';
+import { createWaterFx } from './fx/water.js';
 export { createWindMaterial };
 import { setPaintedCel } from '../art-direction.js';
 
@@ -28,17 +31,17 @@ const C = (THREE, h) => new THREE.Color(h);
 function baseRigs(THREE) {
   const c = h => C(THREE, h), v = (x, y, z) => new THREE.Vector3(x, y, z).normalize();
   const rig = o => ({
-    keyDir: v(.86, .62, .34), keyColor: c('#FFE2BE'), keyIntensity: 2.9,
-    skyColor: c('#CFE2DF'), groundColor: c('#5A7466'), hemiIntensity: 1.6,
-    fogColor: c('#D2DCD0'), fogSun: c('#F8D8AE'), fogDensity: .014, fogShape: new THREE.Vector2(14, .7), fogHeight: new THREE.Vector3(-3, 6, .6),
+    keyDir: v(.52, .62, .68), keyColor: c('#FFE0B6'), keyIntensity: 2.9,
+    skyColor: c('#C8D8EA'), groundColor: c('#86705A'), hemiIntensity: 1.6,
+    fogColor: c('#DCE0D8'), fogSun: c('#F8D8AE'), fogDensity: .014, fogShape: new THREE.Vector2(14, .7), fogHeight: new THREE.Vector3(-3, 6, .6),
     skyTop: c('#8FC3D6'), skyHorizon: c('#F6D9B0'), skyBelow: c('#B8B79E'), sunColor: c('#FFD49A'), cloudAmt: .85,
     cloud: c('#FFF0DA'), cloudShade: c('#C8B6B3'),
     bands: new THREE.Vector4(.10, .46, .045, .52),
-    shadowTint: c('#B2C0CC'), shade: c('#2C4A45'), shadeAmt: .18, ambSteps: .6,
+    shadowTint: c('#B4BED6'), shade: c('#2C4A45'), shadeAmt: .1, ambSteps: .6,
     height: new THREE.Vector4(-100, -99, 1, 1), lowTint: c('#FFFFFF'),
     rim: c('#FFB870'), rimIntensity: .9,
     exposure: 1.0,
-    lift: new THREE.Vector3(.004, .018, .022), gain: new THREE.Vector3(1.03, 1.0, .96), sat: 1.04, contrast: 1.08,
+    lift: new THREE.Vector3(.004, .018, .022), gain: new THREE.Vector3(1.03, 1.0, .96), sat: .98, contrast: 1.08,
     vignette: .20, ink: c('#2A1E1C'),
     skyMapMix: 1, mapTint: c('#FFFFFF'), backMix: 1, backTint: c('#FFFFFF'), hazeAmt: .22,
     restoreExposure: 1.24, restoreWarm: 1, shadowIntensity: 1, postGain: 1,   // how hard restoration brightens / warms this area
@@ -108,7 +111,8 @@ const TEX = n => new URL(`../textures/v2/${n}.webp`, import.meta.url).href;
 
 export function createLook({ THREE, renderer, scene, camera, tier: forcedTier, pixelWidth = 1.5, sky: skyOpts = true, autoTiles = true } = {}) {
   setPaintedCel(false);   // the old art-direction cel ramp would stack on top of the toon bands
-  const toon = createToon(THREE), ink = createOutlines(THREE), sky = createSky(THREE);
+  const toon = createToon(THREE), sky = createSky(THREE);
+  const ink = createOutlines(THREE, { bkFocusA: toon.uniforms.bkFocusA, bkFocusB: toon.uniforms.bkFocusB, bkFocusCount: toon.uniforms.bkFocusCount });
   const rigs = baseRigs(THREE), restoredRigs = {};
   for (const k in rigs) restoredRigs[k] = restoredOf(THREE, rigs[k]);
   const cur = cloneRig(rigs['terrace-dawn']), target = cloneRig(cur), blendTmp = cloneRig(cur);
@@ -125,6 +129,9 @@ export function createLook({ THREE, renderer, scene, camera, tier: forcedTier, p
   }
   if (!scene.fog?.isFogExp2) scene.fog = new THREE.FogExp2(0xffffff, .016);
   scene.add(sky.mesh);
+  // Natural elements (not toon): wind streams/particles/updrafts, lantern flames, water. See game/render/fx/*.
+  const fxWind = createWindFx({ THREE, scene });
+  const fx = { wind: fxWind, fire: createFireFx({ THREE, scene }), water: createWaterFx({ THREE, wind: fxWind }) };
   // Atlas painted sky + distant valley (≈125 KB, async, never blocks the first frame). Pass sky:false to skip.
   const ready = skyOpts ? Promise.all([
     sky.setTexture(skyOpts.sky ?? TEX('sky-dawn'), skyOpts.skyOptions),
@@ -152,21 +159,44 @@ export function createLook({ THREE, renderer, scene, camera, tier: forcedTier, p
     rt.texture.name = 'look-color';
     return rt;
   }
+  // Heat shimmer: wind FX on DISTORT_LAYER render once, half res, into an offset buffer (rg = .5 + offset).
+  let distRT = null; const NEUTRAL_OFFSET = new THREE.Color().setRGB(.5, .5, 0, THREE.LinearSRGBColorSpace);   // raw .5 = no offset
+  const distortMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, tDepth: { value: null }, uRes: { value: new THREE.Vector2(1, 1) } },
+    vertexShader: `attribute vec4 color; varying vec2 vUv; varying float vA;
+void main() { vUv = uv; vA = color.a > 0.0 ? color.a : 1.0; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
+    fragmentShader: `uniform float uTime; uniform sampler2D tDepth; uniform vec2 uRes; varying vec2 vUv; varying float vA;
+float h( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
+float n( vec2 p ) { vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f ); return mix( mix( h( i ), h( i + vec2( 1, 0 ) ), f.x ), mix( h( i + vec2( 0, 1 ) ), h( i + vec2( 1, 1 ) ), f.x ), f.y ); }
+void main() {
+  if ( gl_FragCoord.z > texture2D( tDepth, gl_FragCoord.xy / uRes ).x + 1e-5 ) discard;   // behind the world
+  vec2 q = vec2( vUv.x * 1.6 - uTime * 2.2, vUv.y * 3.0 + uTime * 0.7 );
+  vec2 o = vec2( n( q ) - 0.5, n( q + 17.3 ) - 0.5 );
+  float across = 1.0 - smoothstep( 0.2, 0.5, abs( vUv.y - 0.5 ) );
+  gl_FragColor = vec4( 0.5 + o * 0.9 * vA * across, 0.0, 1.0 );
+}`,
+    depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+  });
+  distortMat.userData.look = false;
   const post = new THREE.ShaderMaterial({
     uniforms: {
       tColor: { value: null }, tDepth: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uNear: { value: .1 }, uFar: { value: 100 },
       uPx: { value: 1 }, uInk: { value: new THREE.Color('#2A1E1C') }, uInkAmt: { value: .92 }, uFade: { value: new THREE.Vector2(18, 55) },
-      uLift: { value: new THREE.Vector3() }, uPostGain: { value: 1 }, uGain: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 }, uContrast: { value: 1 }, uVignette: { value: 0 },
+      uLift: { value: new THREE.Vector3() }, uPostGain: { value: 1 }, tDistort: { value: null }, uDistort: { value: .006 }, uGain: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 }, uContrast: { value: 1 }, uVignette: { value: 0 },
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4( position.xy, 0.0, 1.0 ); }',
     fragmentShader: `#include <common>
-uniform sampler2D tColor, tDepth; uniform vec2 uRes, uFade; uniform float uNear, uFar, uPx, uInkAmt, uSat, uContrast, uVignette;
+uniform sampler2D tColor, tDepth, tDistort; uniform float uDistort; uniform vec2 uRes, uFade; uniform float uNear, uFar, uPx, uInkAmt, uSat, uContrast, uVignette;
 uniform vec3 uInk, uLift, uGain; uniform float uPostGain; varying vec2 vUv;
 float linZ( vec2 uv ) { float d = texture2D( tDepth, uv ).x; return uNear * uFar / ( uFar - d * ( uFar - uNear ) ); }
 vec3 toSRGB( vec3 c ) { return mix( c * 12.92, 1.055 * pow( c, vec3( 1.0 / 2.4 ) ) - 0.055, step( 0.0031308, c ) ); }
 void main() {
   vec4 src = texture2D( tColor, vUv );
   vec3 col = src.rgb;
+  #ifdef BK_DISTORT
+    vec2 dOff = texture2D( tDistort, vUv ).rg - 0.5;
+    if ( dot( dOff, dOff ) > 1e-6 ) col = texture2D( tColor, vUv + dOff * uDistort ).rgb;   // heat shimmer inside wind
+  #endif
   float e = 0.0;
   #ifdef BK_EDGES
     vec2 px = uPx / uRes;
@@ -181,6 +211,7 @@ void main() {
     float crease = smoothstep( 0.012, 0.03, lap ) * 0.8 * smoothstep( 0.6, 0.9, src.a );   // terrain (a=.5): silhouettes only
     e = max( sil, crease ) * ( 1.0 - smoothstep( uFade.x, uFade.y, z0 ) );
     e *= step( z0, uFar * 0.85 );
+    e *= smoothstep( 0.3, 0.4, src.a );   // no ink on fading occluders (alpha .25 marker)
   #endif
   #ifdef TONE_MAPPING
     col = toneMapping( col );
@@ -213,7 +244,9 @@ void main() {
   // World surface materials (bellhollow kit, userData.bhKey) get painted tiles automatically; pass autoTiles:false to opt out.
   const AUTO_TILES = autoTiles ? { bark: 'bark', barkShade: 'bark', deck: 'timber', stone: 'stone-wall', stoneShade: 'stone-wall' } : {};
   // Modelled cobble paving is ground: silhouette ink only (no crease ink on every cobble).
-  const AUTO_ROLES = { paving: 'terrain' };
+  // The world's mist sea (flat, far below) is painted as a distant forest canopy in drifting mist.
+  const AUTO_ROLES = { paving: 'terrain', mist: 'mist' };
+  const lanternGlass = o => o.isInstancedMesh && /^bh-lanterns-/.test(o.name);
   const tiled = new WeakSet();
   const scan = () => {
     toon.patchObject(scene);
@@ -221,6 +254,8 @@ void main() {
       if (!o.isMesh || o.userData.lookHull) return;
       for (const m of [].concat(o.material)) {
         if (m && AUTO_ROLES[m.userData?.bhKey]) toon.patch(m, AUTO_ROLES[m.userData.bhKey]);
+        if (m && lanternGlass(o) && toon.roleOf(m) !== 'glow') toon.patch(m, 'glow');
+        if (o.name === 'bellhollow-wind' && !fx.wind.attached.has(o)) fx.wind.attach(o);   // zero-wiring fallback for wind.js
         const role = m && AUTO_TILES[m.userData?.bhKey];
         if (role && !tiled.has(m)) { tiled.add(m); toon.setTile(m, tile(role)); }
       }
@@ -260,12 +295,14 @@ void main() {
   const hulls = new Set();
   function applyTo(object, role = 'scene', opts = {}) {
     if (!object) return object;
+    if (opts.occluder === false) object.traverse(o => { if (o.isMesh && !o.userData.lookHull) for (const m of [].concat(o.material)) toon.setNoFade(m); });
     if (role === 'character') {
+      characters.add(object);
       toon.patchObject(object, 'character');
       if (!object.userData.lookHulled) { object.userData.lookHulled = true; ink.hullCharacter(object, opts); hulls.add(object); }
     } else if (role === 'outline') {
       toon.patchObject(object);
-      if (!object.userData.lookHulled) { object.userData.lookHulled = true; (opts.dynamic ? ink.hullCharacter : ink.hullStatic)(object, opts); hulls.add(object); }
+      if (!object.userData.lookHulled) { object.userData.lookHulled = true; (opts.dynamic ? ink.hullCharacter : ink.hullStatic)(object, { ...opts, fade: opts.occluder !== false }); hulls.add(object); }
     } else if (role === 'glow' || role in GLOW) {
       const color = new THREE.Color(opts.color || GLOW[role] || '#E9B949'), strength = opts.strength ?? (role === 'wind' ? 1.1 : 1.6);
       object.traverse(o => {
@@ -299,7 +336,7 @@ void main() {
     if (slowWindows >= 2) { tier = { high: 'low', low: 'grade', grade: 'min' }[tier] || 'min'; slowWindows = 0; console.info('[look] degraded to', tier, 'at', fps.toFixed(1), 'fps'); }
   }
 
-  const lin = new THREE.Color(), tmp = new THREE.Vector3();
+  const lin = new THREE.Color(), tmp = new THREE.Vector3(), WHITE = new THREE.Color(1, 1, 1);
   function apply(r) {
     const U = toon.uniforms;
     sun.color.copy(r.keyColor); sun.intensity = r.keyIntensity; sun.shadow.intensity = r.shadowIntensity;
@@ -312,6 +349,7 @@ void main() {
     U.bkBands.value.copy(r.bands); chroma(U.bkShadowTint.value, r.shadowTint); chroma(U.bkShade.value, r.shade); U.bkShadeAmt.value = r.shadeAmt;
     U.bkAmbSteps.value = r.ambSteps; U.bkHeight.value.copy(r.height); U.bkLowTint.value.copy(r.lowTint);
     U.bkRimColor.value.copy(r.rim).multiplyScalar(r.rimIntensity);
+    U.bkMist.value.copy(r.fogColor).lerp(WHITE, .35);
     U.bkSunDir.value.copy(r.keyDir);
     const S = sky.uniforms;
     S.uTop.value.copy(r.skyTop); S.uHorizon.value.copy(r.skyHorizon); S.uBelow.value.copy(r.skyBelow); S.uSunColor.value.copy(r.sunColor);
@@ -326,7 +364,7 @@ void main() {
   }
 
   /** dt seconds; area name; restored bool or 0..1; t unused for now (reserved for animated sky). */
-  function update(dt = 0, { area: a = area, restored = 0, t } = {}) {
+  function update(dt = 0, { area: a = area, restored = 0, t, gentle = false } = {}) {
     if (a && rigs[a]) area = a;
     const rTarget = typeof restored === 'number' ? restored : restored ? 1 : 0;
     restoredNow = snapped ? THREE.MathUtils.damp(restoredNow, rTarget, 1.2, dt) : rTarget;
@@ -335,12 +373,78 @@ void main() {
     else lerpRig(cur, cur, target, 1 - Math.exp(-dt * 1.4));
     apply(cur);
     windClock = Number.isFinite(t) ? t : windClock + dt;
+    fx.wind.update(dt, windClock, { gentle }); fx.fire.update(dt, windClock); fx.water.update(dt, windClock, cur.keyDir);
+    toon.uniforms.bkTime.value = windClock; toon.uniforms.bkFlicker.value = fx.fire.flicker.value;
+    fx.wind.particleMaterial.uniforms.uScale.value = size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
     for (const m of winds.values()) m.uniforms.uTime.value = windClock;
     if ((scanTimer -= dt) <= 0) { scanTimer = .5; scan(); }
     watchFps(dt);
   }
 
+  // ---------- camera-to-hero occluder fade ----------
+  // main.js: look.setFocus({hero: heroFeetPosition, extra: [maraFeet, ...]}) every frame (or null to disable).
+  let focus = null, focusExplicit = false, autoHero = null; const autoFeet = new THREE.Vector3(), characters = new Set(), camPos = new THREE.Vector3();
+  const fA = toon.uniforms.bkFocusA.value, fB = toon.uniforms.bkFocusB.value, pv = new THREE.Vector3(), pw = new THREE.Vector3();
+  /** f = {hero: feet Vector3, heroObject?: Object3D (excluded from the probe), extra?: [feet Vector3...]} or null. */
+  function setFocus(f) { focusExplicit = true; focus = f && f.hero ? f : null; }
+  function projectPx(p, out) { pv.copy(p).project(camera); out.set((pv.x * .5 + .5) * size.x, (pv.y * .5 + .5) * size.y, pv.z); return out; }
+  const pFeet = new THREE.Vector3(), pHead = new THREE.Vector3(), pMid = new THREE.Vector3();
+  function focusEllipse(feet, strength, i) {
+    projectPx(feet, pFeet); projectPx(pw.copy(feet).setY(feet.y + 1.7), pHead);
+    if (pFeet.z > 1 || pHead.z > 1) return false;   // behind the camera
+    const mid = pw.copy(feet).setY(feet.y + .95), depth = -mid.clone().applyMatrix4(camera.matrixWorldInverse).z;
+    projectPx(mid, pMid);
+    const scale = Math.max(.75, size.y / 1080), bodyPx = Math.hypot(pHead.x - pFeet.x, pHead.y - pFeet.y);
+    fA[i].set(pMid.x, pMid.y, depth, Math.max(60 * scale, bodyPx * .8));
+    fB[i].set(feet.y, .8, strength, 0);
+    return true;
+  }
+  function updateFocus() {
+    let n = 0;
+    // Until the host calls setFocus, focus the first object registered as 'character' (main.js registers the hero first).
+    if (!focusExplicit && characters.size) {
+      // Fallback: the registered character nearest the camera (the follow camera stays ~11 m from the hero).
+      camera.getWorldPosition(camPos); let best = Infinity;
+      for (const c of characters) { if (!c.parent || !c.visible) continue; const d = c.getWorldPosition(pw).distanceToSquared(camPos); if (d < best) { best = d; autoHero = c; } }
+      focus = autoHero ? { hero: autoHero.getWorldPosition(autoFeet) } : null;
+    }
+    if (focus) {
+      camera.updateMatrixWorld(); renderer.getDrawingBufferSize(size);
+      if (focusEllipse(focus.hero, .92, n)) n++;
+      for (const e of focus.extra || []) { if (n >= 4) break; if (e && focusEllipse(e, .8, n)) n++; }
+    }
+    toon.uniforms.bkFocusCount.value = n;
+  }
+  /** Test/telemetry: can the camera see the hero's head? Rays to 5 head points; a ray counts as blocked if the first
+   *  non-character hit would stay (fade < 60%) under the shader's fade rule. Raycasts the scene: call sparingly. */
+  const ray = new THREE.Raycaster();
+  function focusProbe() {
+    if (!focus) return null;
+    const feet = focus.hero, cam = camera.getWorldPosition(new THREE.Vector3()), right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+    const heroDepth = -pw.copy(feet).setY(feet.y + .95).applyMatrix4(camera.matrixWorldInverse).z;
+    const pts = [[0, 1.5], [-.12, 1.5], [.12, 1.5], [0, 1.62], [0, 1.38]].map(([x, y]) => feet.clone().addScaledVector(right, x).setY(feet.y + y));
+    let raw = 0, after = 0; const names = [];
+    for (const p of pts) {
+      const dir = p.clone().sub(cam), dist = dir.length(); dir.normalize(); ray.set(cam, dir); ray.far = dist - .05;
+      const hits = ray.intersectObject(scene, true).filter(h => {
+        const o = h.object, m = Array.isArray(o.material) ? o.material[h.face?.materialIndex ?? 0] : o.material;
+        if (!o.visible || o.userData.lookHull || o === sky.mesh || !m || m.transparent || m.isShaderMaterial || m.visible === false) return false;
+        for (let q = o; q; q = q.parent) if (q === focus.heroObject || q === autoHero || !q.visible) return false;   // the hero and what it carries
+        return toon.roleOf(m) !== 'character';
+      });
+      if (!hits.length) continue;
+      raw++;
+      const h = hits[0], hitDepth = -h.point.clone().applyMatrix4(camera.matrixWorldInverse).z;
+      const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+      const m = Array.isArray(h.object.material) ? h.object.material[0] : h.object.material;
+      const fade = m?.userData && toon.isPatched(m) ? ss(.4, 1.1, heroDepth - hitDepth) * ss(feet.y + .15, feet.y + .6, h.point.y) * .92 : 0;
+      if (fade < .6) { after++; names.push(`${h.object.name || h.object.type}:${(heroDepth - hitDepth).toFixed(1)}m`); }
+    }
+    return { rays: pts.length, blockedRaw: raw, blockedAfterFade: after, headVisible: after <= 2, blockers: [...new Set(names)].slice(0, 3) };
+  }
+
   function render() {
+    updateFocus();
     // Key direction is owned by the rig; the host keeps choosing the shadow focus via sun.target.
     sun.position.copy(sun.target.position).addScaledVector(cur.keyDir, 30);
     sun.target.updateMatrixWorld();
@@ -356,6 +460,23 @@ void main() {
     if (tier === 'min') { renderer.setRenderTarget(null); renderer.render(scene, camera); return; }
     const rtT = ensureTarget();
     renderer.setRenderTarget(rtT); renderer.render(scene, camera);
+    // Shimmer pass (high tier, only when a wind object on DISTORT_LAYER is visible).
+    let distort = false;
+    if (tier === 'high') {
+      scene.traverseVisible(o => { if (!distort && o.layers.isEnabled(DISTORT_LAYER) && (o.isMesh || o.isPoints) && o.geometry) distort = true; });
+      if (distort) {
+        const w = Math.max(1, rtT.width >> 1), h = Math.max(1, rtT.height >> 1);
+        if (!distRT || distRT.width !== w || distRT.height !== h) { distRT?.dispose(); distRT = new THREE.WebGLRenderTarget(w, h, { depthBuffer: false }); }
+        const mask = camera.layers.mask, auto = renderer.shadowMap.autoUpdate, clear = renderer.getClearColor(new THREE.Color()), clearA = renderer.getClearAlpha();
+        renderer.shadowMap.autoUpdate = false; camera.layers.set(DISTORT_LAYER); scene.overrideMaterial = distortMat;
+        distortMat.uniforms.tDepth.value = rtT.depthTexture; distortMat.uniforms.uRes.value.set(w, h); distortMat.uniforms.uTime.value = windClock;
+        info.autoReset = false;
+        renderer.setRenderTarget(distRT); renderer.setClearColor(NEUTRAL_OFFSET, 1); renderer.render(scene, camera);
+        scene.overrideMaterial = null; camera.layers.mask = mask; renderer.shadowMap.autoUpdate = auto; renderer.setClearColor(clear, clearA);
+      }
+    }
+    if (post.defines.BK_DISTORT !== undefined !== distort) { if (distort) post.defines.BK_DISTORT = ''; else delete post.defines.BK_DISTORT; post.needsUpdate = true; }
+    post.uniforms.tDistort.value = distort ? distRT.texture : null;
     renderer.setRenderTarget(null);
     info.autoReset = false;
     setEdges(tier === 'high' || tier === 'low');
@@ -366,9 +487,9 @@ void main() {
     info.autoReset = auto;
   }
 
-  return {
+  const api = {
     update, render, applyTo,
-    ready,
+    ready, setFocus, focusProbe, fx,
     /** Shared animated wind material (options: see wind-material.js); time is advanced by look.update(). */
     windMaterial,
     /** Painted sky strip: (urlOrTexture, {range:[minY,maxY], azimuthDeg, mix}). Defaults to textures/v2/sky-dawn.webp. */
@@ -387,4 +508,7 @@ void main() {
     areas: Object.keys(rigs),
     dispose() { rt?.dispose(); post.dispose(); scene.remove(sky.mesh); },
   };
+  // Dev/test telemetry handle (read-only use: focusProbe, tier, area). Harmless in production.
+  if (typeof window !== 'undefined') window.__LOOK__ = api;
+  return api;
 }

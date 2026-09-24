@@ -9,20 +9,25 @@
  */
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
-export function createOutlines(THREE) {
+export function createOutlines(THREE, focus = {}) {
   const U = {
     uInk: { value: new THREE.Color('#2A1E1C') },
     uWidth: { value: 1.5 },            // pixels in the drawing buffer
     uRes: { value: new THREE.Vector2(1280, 720) },
     uPush: { value: .05 },
   };
-  const material = new THREE.ShaderMaterial({
-    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog]),
-    vertexShader: `#include <common>
+  // Two shell materials: props fade with the occluder focus (same rule as toon.js), characters never do.
+  function makeMaterial(fade) {
+    const m = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog]),
+      defines: fade ? { BK_FADE: '' } : {},
+      vertexShader: `#include <common>
 #include <fog_pars_vertex>
 uniform float uWidth, uPush; uniform vec2 uRes;
+varying float vDepth; varying float vWorldY;
 void main() {
   vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+  vDepth = - mvPosition.z; vWorldY = ( modelMatrix * vec4( position, 1.0 ) ).y;
   // Push the hull slightly away from the eye: it survives at silhouettes but loses the depth test inside concavities
   // (eye sockets, door recesses), which is where inverted hulls otherwise leak ink over detail.
   mvPosition.xyz += normalize( mvPosition.xyz ) * uPush;
@@ -35,19 +40,35 @@ void main() {
   gl_Position = clip;
   #include <fog_vertex>
 }`,
-    fragmentShader: `#include <common>
+      fragmentShader: `#include <common>
 #include <fog_pars_fragment>
-uniform vec3 uInk;
+uniform vec3 uInk; varying float vDepth; varying float vWorldY;
+uniform vec4 bkFocusA[ 4 ]; uniform vec4 bkFocusB[ 4 ]; uniform int bkFocusCount;
 void main() {
+  #ifdef BK_FADE
+  {
+    float ign = fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
+    for ( int i = 0; i < 4; i ++ ) {
+      if ( i >= bkFocusCount ) break;
+      vec4 A = bkFocusA[ i ], B = bkFocusB[ i ];
+      vec2 d = ( gl_FragCoord.xy - A.xy ) / vec2( A.w * B.y, A.w );
+      float f = ( 1.0 - smoothstep( 0.45, 1.0, length( d ) ) ) * smoothstep( 0.4, 1.1, A.z - vDepth ) * smoothstep( B.x + 0.15, B.x + 0.6, vWorldY ) * B.z;
+      if ( f > ign ) discard;
+    }
+  }
+  #endif
   gl_FragColor = vec4( uInk, 1.0 );
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
   #include <fog_fragment>
 }`,
-    side: THREE.BackSide, fog: true,
-  });
-  Object.assign(material.uniforms, U);
-  material.userData.look = false;
+      side: THREE.BackSide, fog: true,
+    });
+    Object.assign(m.uniforms, U, focus);
+    m.userData.look = false;
+    return m;
+  }
+  const material = makeMaterial(true), characterMaterial = makeMaterial(false);
 
   const smoothCache = new WeakMap();
   /** Position+normal only, normals averaged across coincident vertices. */
@@ -75,7 +96,7 @@ void main() {
   const visibleChain = o => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
 
   /** Articulated: parts that share a parent (a joint) move rigidly together → one merged hull per joint. */
-  function hullCharacter(root, { minRadius = .03 } = {}) {
+  function hullCharacter(root, { minRadius = .03, fade = false } = {}) {
     root.updateMatrixWorld(true);
     const byParent = new Map();
     root.traverse(o => {
@@ -89,7 +110,7 @@ void main() {
       const parts = meshes.map(o => smoothGeometry(o.geometry, inv.clone().multiply(o.matrixWorld)));
       const g = parts.length === 1 ? parts[0] : BufferGeometryUtils.mergeGeometries(parts, false);
       if (!g) continue;
-      const hull = new THREE.Mesh(g, material);
+      const hull = new THREE.Mesh(g, fade ? material : characterMaterial);
       hull.userData.lookHull = true; hull.castShadow = hull.receiveShadow = false; hull.name = 'ink-hull-joint';
       parent.add(hull); n++;
     }
@@ -110,5 +131,5 @@ void main() {
     root.add(hull);
     return 1;
   }
-  return { uniforms: U, material, hullCharacter, hullStatic };
+  return { uniforms: U, material, characterMaterial, hullCharacter, hullStatic };
 }
