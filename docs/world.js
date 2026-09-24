@@ -4,7 +4,9 @@ import {createWoodlandLife} from './woodland-life.js';
 import {buildBackdrop} from './backdrop.js';
 import {ASSET,bakeStatic} from './assetlib.js';
 import {carvePassage,passageDressing} from './terrain-passage.js';
-import {height,pathDistance,POINTS,TERRAIN,terrainGround,ridgeBlocked,shoreClearance} from './world-layout.js';
+import {height,pathDistance,POINTS,TERRAIN,terrainGround,ridgeBlocked,shoreClearance,MORNING_BELL,bypassLine} from './world-layout.js';
+import buildMorningBell from './assets/morning-bell.js';
+import buildBypass from './assets/bypass.js';
 
 // The named deck survives recipe loading. Only its real triangles support feet;
 // ropes and posts never become an invisible floor. World matrices follow the rise.
@@ -41,6 +43,8 @@ export async function buildWorld(scene,art){
   if(passageDressing(x,z,name==='tree'?3:name==='rock'?scale:0))return new T.Group();
   // Bank dressing must not overhang the clear channel or create stepping stones.
   if(name!=='bridge'&&!shoreClearance(x,z,name==='rock'?scale*1.15:name==='tree'?.8:.15))return new T.Group();
+  // Keep the morning bell frame and the bypass catch ring readable (no rnd() drift: args are already drawn).
+  if(['fern','flower','hosta','rock','bramble'].includes(name)&&(Math.hypot(x-POINTS.morningBell[0],z-POINTS.morningBell[1])<1.5||Math.hypot(x-POINTS.outlet[0],z-POINTS.outlet[1])<2.1))return new T.Group();
   const o=prototypes[name].clone(true);for(const [key,val] of Object.entries(prototypes[name].userData)){if(val?.isObject3D)o.userData[key]=o.getObjectByName(val.name);}
   o.position.set(x,y,z);o.scale.multiplyScalar(scale);o.rotation.y=rotation;
   if(dynamic){scene.add(o);animated.push(o);}else{const key=Math.floor(x/10)+':'+Math.floor(z/10);if(!chunks.has(key))chunks.set(key,new T.Group());chunks.get(key).add(o);}return o;
@@ -51,6 +55,14 @@ export async function buildWorld(scene,art){
  const bridge=place('bridge',TERRAIN.bridge.x,TERRAIN.bridge.z,1,0,{dynamic:true,y:0});
  const crossing=createBridgeCrossing(bridge);
  const chimes=place('chimes',-9.5,-14.5,1.05,0,{dynamic:true});
+ // Morning round props: procedural, baked to a few draws with only the moving parts kept apart.
+ function bakeParts(root,names){const out=new T.Group(),parts={};out.position.copy(root.position);out.rotation.copy(root.rotation);root.position.set(0,0,0);root.rotation.set(0,0,0);for(const n of names){const p=root.getObjectByName(n),pos=p.position.clone(),rot=p.rotation.clone();root.remove(p);p.position.set(0,0,0);p.rotation.set(0,0,0);p.updateMatrixWorld(true);const b=bakeStatic(p);b.name=n;b.position.copy(pos);b.rotation.copy(rot);out.add(b);parts[n]=b;}root.updateMatrixWorld(true);out.add(bakeStatic(root));scene.add(out);return parts;}
+ const [mbx,mbz]=POINTS.morningBell,bellRaw=buildMorningBell(T);art.style(bellRaw);bellRaw.position.set(mbx,height(mbx,mbz)-.03,mbz);bellRaw.rotation.y=MORNING_BELL.rotation;
+ const bellParts=bakeParts(bellRaw,['morning-bell','morning-rope']),bellRopeY=bellParts['morning-rope'].position.y,bellRopeZ=bellParts['morning-rope'].position.z;
+ {const c=Math.cos(MORNING_BELL.rotation),s=Math.sin(MORNING_BELL.rotation);for(const [lx,lz,r] of [[-.6,0,.16],[.6,0,.16],[0,0,.34]])colliders.push({x:mbx+lx*c+lz*s,z:mbz-lx*s+lz*c,r});}
+ const line=bypassLine(),bypassRaw=buildBypass(T,line);art.style(bypassRaw);const bypassParts=bakeParts(bypassRaw,['bypass-lever']);
+ colliders.push({x:line.valve[0],z:line.valve[2],r:.3},{x:line.post[0],z:line.post[2],r:.16});
+ let bellAge=99,leverOpen=0;
  // Reviewed moss rocks frame dry banks; actual rock surfaces replace circular
  // ravine blockers. The eight metre channels remain completely clear.
  for(const [x,z,s] of [[-5.5,-8,.8],[5.2,-9,.7],[12.8,-9,.75],[24.5,-8,.8]]){
@@ -141,7 +153,7 @@ export async function buildWorld(scene,art){
   return Math.max(land,deck??-Infinity,shelfGround(x,z)??-Infinity,rockGround(x,z)??-Infinity,scatterGround(x,z)??-Infinity);
  }
  function blocked(x,z,r){return ridgeBlocked(x,z,r)||colliders.some(c=>Math.hypot(x-c.x,z-c.z)<c.r+r);}
- function update(dt,t,pos,isRestored,gentle,camera,charged=false,complete=false,seeOn=false){
+ function update(dt,t,pos,isRestored,gentle,camera,charged=false,complete=false,seeOn=false,bypassOpen=false){
   life.update(dt,t,pos,gentle);
   brook.update(t,gentle);
   shortcutAwake=T.MathUtils.damp(shortcutAwake,charged||isRestored?1:0,3,dt);for(const f of shortcutFlowers){f.o.rotation.z=Math.sin(t*3-f.phase)*.16*shortcutAwake*(gentle?.2:1);for(const m of f.mats)m.emissiveIntensity=shortcutAwake*(.55+.3*Math.sin(t*2-f.phase));}
@@ -152,6 +164,9 @@ export async function buildWorld(scene,art){
   const view=camera?camera.position.clone().sub(pos).setY(0).normalize():new T.Vector3(.615,0,.788),cdx=cottage.position.x-pos.x,cdz=cottage.position.z-pos.z,front=cdx*view.x+cdz*view.z,side=Math.abs(cdx*view.z-cdz*view.x);cottageOpacity=T.MathUtils.damp(cottageOpacity,front> -1&&front<12&&side<3.4?.025:1,12,dt);for(const m of cottageMats){m.opacity=cottageOpacity;m.depthWrite=cottageOpacity>.98;}
   const rotor=wheel.userData.rotor||wheel.getObjectByName('rotor');if(rotor?.rotation)rotor.rotation.z+=dt*(restored?1.4:.05);
   chimes.rotation.z=gentle?0:Math.sin(t*1.7)*.055;
+  // Dull note: one short heavy swing that dies quickly. Rope follows the yoke arm tip.
+  bellAge+=dt;const swing=bellAge<2.4?Math.sin(bellAge*7.5)*Math.exp(-bellAge*2.1)*(gentle?.25:.5)+Math.max(0,1-bellAge*4)*.12:0;bellParts['morning-bell'].rotation.x=swing;bellParts['morning-rope'].position.y=bellRopeY-.36*Math.sin(swing)-(bellAge<.35?Math.sin(bellAge/.35*Math.PI)*.18:0);bellParts['morning-rope'].position.z=bellRopeZ*Math.cos(swing);
+  leverOpen=T.MathUtils.damp(leverOpen,bypassOpen?1:0,4,dt);bypassParts['bypass-lever'].rotation.z=.75-leverOpen*1.5;
   // Keep fade materials transparent from their first shader compilation so alpha is honored during transitions.
   // Clear the action window around hands, staff and the nearby interactable, not only the torso centre.
   occlusionTimer-=dt;if(camera&&occlusionTimer<=0){occlusionTimer=.12;for(const tree of trees){tree.userData.occluded=(tree.userData.occludedUntil||0)>t;if(tree.position.distanceTo(pos)>21)continue;for(const [side,h,forward] of [[0,.45,0],[0,1.25,0],[-1.35,1.05,0],[1.35,1.05,0],[0,1.1,1.8]]){const target=new T.Vector3(pos.x+side*.788-forward*.615,pos.y+h,pos.z-side*.615-forward*.788),dir=target.sub(camera.position),dist=dir.length();cameraRay.set(camera.position,dir.normalize());cameraRay.far=dist-.15;if(cameraRay.intersectObject(tree,true).length){tree.userData.occluded=true;tree.userData.occludedUntil=t+.65;break;}}
@@ -168,5 +183,5 @@ export async function buildWorld(scene,art){
  }
  // Solid volumes the camera arm must clear (cottage body and roof), from the placed mesh bounds.
  const cottageBox=new T.Box3().setFromObject(cottage),cameraSolids=[{x:cottage.position.x,z:cottage.position.z,r:Math.max(cottageBox.max.x-cottageBox.min.x,cottageBox.max.z-cottageBox.min.z)*.4,top:cottageBox.max.y}];
- return {ground,blocked,keepsakePoint,shortcutPoint,update,bridge,wheel,chimes,landmarks:POINTS,seeThrough,seeCuts,trees,cameraSolids};
+ return {ground,blocked,keepsakePoint,shortcutPoint,update,bridge,wheel,chimes,landmarks:POINTS,seeThrough,seeCuts,trees,cameraSolids,ringMorningBell(){bellAge=0;},bypassLine:line};
 }

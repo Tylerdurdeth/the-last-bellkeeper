@@ -30,8 +30,8 @@ export function drawWoodlandMap(ctx, canvas, state, movement, cameraYaw) {
   const ink = '#283f39', copper = '#965b38', paper = '#eee0bb';
   const cx = 150, cy = 151, radius = 105;
   const locations = [
-    ['C', 'Cottage', POINTS.cottage], ['W', 'Wind wheel', POINTS.wheel],
-    ['B', 'Root chime', POINTS.chime], ['G', 'Wind garden', POINTS.garden],
+    ['M', 'Morning bell', POINTS.morningBell], ['C', 'Mara’s bypass', POINTS.cottage],
+    ['W', 'Seed wheel', POINTS.wheel], ['G', 'Listening garden', POINTS.garden],
     ['F', 'Far bell', POINTS.overlook],
   ];
   const all = [...PATH, ...Object.values(POINTS)];
@@ -83,7 +83,10 @@ export function drawWoodlandMap(ctx, canvas, state, movement, cameraYaw) {
     ctx.strokeStyle=muted?'#777768':copper;ctx.lineWidth=1.2;ctx.stroke();
     text(label,x,y+3,9,muted?'#777768':ink,'center');
   };
-  for (const [label,,[x,z]] of locations) badge(label,...project(x,z),label==='F'&&!state.restored);
+  // Mara's copper channel, drawn from her valve to the outlet beside the seed wheel.
+  line([POINTS.bypass,[-1.15,9.4],POINTS.outlet],copper,1.4,[2,2]);
+  // The listening garden is optional: a muted badge until its song is played.
+  for (const [label,,[x,z]] of locations) badge(label,...project(x,z),label==='F'&&!state.restored||label==='G'&&!state.gardenSolved);
   const [px,py]=project(p.x,p.z);
   const [dx,dy]=projectMap(Math.sin(movement.yaw),Math.cos(movement.yaw),cameraYaw);
   ctx.save();ctx.translate(px,py);ctx.rotate(Math.atan2(dy,dx)+Math.PI/2);
@@ -103,6 +106,6 @@ export function drawWoodlandMap(ctx, canvas, state, movement, cameraYaw) {
   text('▲ You / facing',164,331,10);
   text(state.restored?'CROSSING RESTORED · OPEN':'CROSSING LOCKED · FIND WIND',150,266,10,state.restored?'#315f50':copper,'center');
   ctx.restore();
-  const description=`Woodland map, camera-up. Directional marker shows your facing. Crossing ${state.restored?'restored and open':'locked; carry wind to the wheel'}. C cottage, W wind wheel, B root chime, G wind garden, F far bell.`;
+  const description=`Woodland map, camera-up. Directional marker shows your facing. Crossing ${state.restored?'restored and open':'locked; carry wind to the wheel'}. M morning bell, C Mara's cottage and bypass, W seed wheel, G optional listening garden, F far bell.`;
   if(canvas.getAttribute('aria-label')!==description)canvas.setAttribute('aria-label',description);
 }

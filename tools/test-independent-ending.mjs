@@ -13,12 +13,12 @@ async function go(x,z,label,tol=.38,jump=false){let stuck=0,old=await read();for
 async function act(kind,id){const s=await read();if(s.context!==kind||(id&&s.discoveryId!==id))throw Error(`Context ${kind}/${id} expected; got ${s.context}/${s.discoveryId} at ${s.pos}`);if(touch)await page.tap('#action');else await page.keyboard.press('Space');await sleep(850);result.steps.push({label:id||kind,state:await read()});}
 try{
  result.kind=touch?'Known-route real-touch full adventure in phone emulation':'Known-route real-keyboard full adventure';await page.setViewport({width:touch?390:1360,height:touch?844:900,deviceScaleFactor:1,isMobile:touch,hasTouch:touch});await page.goto('http://127.0.0.1:4173/the-last-bellkeeper/');await page.waitForFunction(()=>window.__READY__&&document.querySelector('#startb').disabled===false,{timeout:60000});await page[touch?'tap':'click']('#startb');await page[touch?'tap':'click']('#skipIntro');if(touch)stick=await page.$eval('#stick',e=>{const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2,r:Math.min(r.width,r.height)*.36};});await shot('arrival');
- for(const p of [[-5,13],[-6.5,11]])await go(...p,'porch');await act('porch');
- for(const p of [[-4,8],[-10,5],[-15,0],[-16,-7],[-10,-10]])await go(...p,'woodland-path');
- for(const [i,x,z]of [[0,-8.8,-10.9],[1,-7.97,-11.13],[2,-7.14,-11.36]]){await go(x,z,'instrument-'+i,.2);await act('discovery','stone-'+i);}
- await go(-10,-10,'root-approach');await go(-8,-15,'root-chime');await act('chime');
- for(const p of [[-9,-19.5],[-11,-19.5],[-13.2,-17.5]])await go(...p,'garden');await act('capture');
- for(const p of [[-11,-16],[-10,-13],[-10,-10],[-16,-7],[-15,0],[-10,5],[-4,8],[0,6],[4,4],[5,3.7]])await go(...p,'wheel-return');await act('wheel');
+ // Morning round: pull the bell rope, take Mara's staff, catch her bypass gust beside the seed wheel,
+ // give it to the wheel. Exactly two required interactions precede the first capture.
+ await go(-0.1,15.8,'morning-bell');await act('bell');await shot('morning-bell');
+ for(const p of [[-1.5,16.4],[-5,13],[-6.3,11.7]])await go(...p,'porch');await act('porch');await page.waitForFunction(()=>__GAME__.bypassOpen,{timeout:5000});await shot('mara-bypass');
+ for(const p of [[-3.5,9.2],[0,7.3],[3.9,6.4]])await go(...p,'bypass-outlet');await shot('bypass-ring');await act('capture');if(!(await read()).charged)throw Error('Bypass gust not held');
+ await go(5,3.7,'wheel');await act('wheel');if(!(await read()).restored)throw Error('Seed wheel did not open the crossing');
  for(const p of [[8,4],[8,.1],[8,-3.35],[8,-6.5],[8,-10]])await go(...p,'bridge');await act('finish');await shot('sanctuary');
  for(const p of [[8,-12],[8,-17],[5,-22]])await go(...p,'rootway');await act('campaign','source');await go(8,-22,'rootway-arch-approach');await go(8,-25,'rootway-arch');await go(5,-28,'bridge-wheel');await act('campaign','bridgeWheel');await go(8,-28,'crossing-approach');await sleep(1500);await go(8,-35,'crossing');await shot('service');
  // Wait within the catch range at the end of the vent, then return its own gust.

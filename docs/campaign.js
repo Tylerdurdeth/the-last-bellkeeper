@@ -95,26 +95,56 @@ export function createCampaign({THREE:T,scene,points,caption=()=>{},sound=()=>{}
   emit(lines[key],'restore');
   return changed({checkpoint:p[key==='bridge'?'entry':key==='service'?'chamberEntry':key==='outwardAligned'?'finalBell':'chamberEntry'].clone()});
  }
- // Six inexpensive ribbon meshes, no replacement creature/environment models.
+ // Six inexpensive ribbon meshes, no replacement creature/environment models. The two
+ // encounter lanes each carry one child vent plume (drawn only inside the lane footprint).
  const fx=new T.Group();fx.name='campaign-wind-effects';scene.add(fx);
- function ribbon(name,color){const g=new T.BufferGeometry(),a=new Float32Array(24*6),idx=[];for(let i=0;i<23;i++){const n=i*2;idx.push(n,n+1,n+2,n+1,n+3,n+2);}g.setAttribute('position',new T.BufferAttribute(a,3));g.setIndex(idx);const m=new T.MeshBasicMaterial({color,side:T.DoubleSide,transparent:true,opacity:.75,depthWrite:false});const mesh=new T.Mesh(g,m);mesh.name=name;mesh.frustumCulled=false;mesh.visible=false;fx.add(mesh);return mesh;}
- const ribbons={service:ribbon('service-lane',0xffcf85),guardian:ribbon('guardian-lane',0xffcf85),source:ribbon('rootway-current',0x8be5d0),chamber:ribbon('inspection-current',0x8be5d0),return:ribbon('return-flow',0x8be5d0),outward:ribbon('outward-flow',0xffe6ad)};
+ // Painted lane shader: uMode 0 telegraph band (saturated coral, chevrons scrolling toward
+ // the vent end, a filling timing sweep and cream edges), 1 vent, 2 recovery catch glow,
+ // 3 vent plume streaks, 4 calm flowing current. Visual only; footprint comes from strip().
+ function fxMaterial(color,opacity=.75){const m=new T.MeshBasicMaterial({color,side:T.DoubleSide,transparent:true,opacity,depthWrite:false});const u=m.userData.u={uTime:{value:0},uMode:{value:4},uFill:{value:0}};
+  m.onBeforeCompile=shader=>{Object.assign(shader.uniforms,u);
+   shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vBkLane;').replace('#include <begin_vertex>','#include <begin_vertex>\nvBkLane=uv;');
+   shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vBkLane;uniform float uTime,uMode,uFill;').replace('#include <color_fragment>',`#include <color_fragment>
+    float bkA=vBkLane.x,bkX=abs(vBkLane.y-.5)*2.;
+    if(uMode<.5){float chev=step(.5,fract(bkA*9.-bkX*.9-uTime*1.8));float sweep=1.-step(uFill,bkA);
+     diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*.62,chev*(1.-sweep)*.55)+vec3(.06,.0,0.)*sweep;
+     diffuseColor.rgb=mix(diffuseColor.rgb,vec3(1.,.93,.74),smoothstep(.80,.92,bkX));diffuseColor.a=mix(.95,.99,sweep);}
+    else if(uMode<1.5){float st=step(.45,fract(bkA*6.-bkX*.9-uTime*7.));diffuseColor.rgb*=.8+.35*st;diffuseColor.rgb=mix(diffuseColor.rgb,vec3(1.,.93,.74),smoothstep(.80,.92,bkX));diffuseColor.a=.96;}
+    else if(uMode<2.5){diffuseColor.rgb+=vec3(.25,.35,.3)*smoothstep(.55,1.,bkA)*(.6+.4*sin(uTime*6.));diffuseColor.a*=mix(.35,1.,bkA);}
+    else if(uMode<3.5){float st=smoothstep(.2,.8,fract(bkA*5.-uTime*9.+vBkLane.y*.5));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(1.,.95,.82),.3*st*vBkLane.y);diffuseColor.a*=(.82+.18*st)*smoothstep(0.,.1,bkA)*(1.-smoothstep(.88,1.,bkA));}
+    else{float st=.5+.5*sin((bkA*14.-uTime*3.)*3.14159);diffuseColor.rgb*=.85+.3*st;diffuseColor.a*=(.55+.45*st)*(1.-.6*bkX);}`);};
+  m.customProgramCacheKey=()=>'bk-fx-lane-v1';return m;}
+ function strips(n){const g=new T.BufferGeometry(),a=new Float32Array(n*24*6),uv=new Float32Array(n*24*4),idx=[];for(let k=0;k<n;k++)for(let i=0;i<24;i++){uv.set([i/23,0,i/23,1],(k*24+i)*4);if(i<23){const q=(k*24+i)*2;idx.push(q,q+1,q+2,q+1,q+3,q+2);}}g.setAttribute('position',new T.BufferAttribute(a,3));g.setAttribute('uv',new T.BufferAttribute(uv,2));g.setIndex(idx);return g;}
+ function ribbon(name,color){const mesh=new T.Mesh(strips(1),fxMaterial(color));mesh.name=name;mesh.frustumCulled=false;mesh.visible=false;fx.add(mesh);return mesh;}
+ const ribbons={service:ribbon('service-lane',0xa3261a),guardian:ribbon('guardian-lane',0xa3261a),source:ribbon('rootway-current',0x8be5d0),chamber:ribbon('inspection-current',0x8be5d0),return:ribbon('return-flow',0x8be5d0),outward:ribbon('outward-flow',0xffe6ad)};
+ const plumes={};for(const id of ['service','guardian']){const m=new T.Mesh(strips(3),fxMaterial(0xff7a3d,.95));m.name=id+'-vent-plume';m.frustumCulled=false;m.visible=false;m.material.userData.u.uMode.value=3;ribbons[id].add(m);plumes[id]=m;}
  // Piecewise-linear taper matches the actual 24-section mesh, including ends.
  function laneWidth(f,width){const sample=f*23,i=Math.min(22,Math.floor(sample)),u=sample-i;const taper=n=>.35+.65*Math.sin(n/23*Math.PI);return width*(taper(i)*(1-u)+taper(i+1)*u);}
  function strip(mesh,a,b,width,time,wave=false){const attr=mesh.geometry.attributes.position,dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz)||1;for(let i=0;i<24;i++){const f=i/23,x=a.x+dx*f,y=a.y+(b.y-a.y)*f+.12+(wave?.15*Math.sin(f*9-time*2):0),z=a.z+dz*f;const w=laneWidth(f,width);attr.setXYZ(i*2,x-dz/len*w,y,z+dx/len*w);attr.setXYZ(i*2+1,x+dz/len*w,y,z-dx/len*w);}attr.needsUpdate=true;}
+ // Three spiralling blades form one thick rolling vent. Every vertex stays within the
+ // lane's own half-width, so the drawn gust never reaches past the buffet footprint.
+ function plume(mesh,a,b,height,grow,time,gentle){const attr=mesh.geometry.attributes.position,dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz)||1,sx=-dz/len,sz=dx/len,spin=gentle?4:13;
+  for(let k=0;k<3;k++)for(let i=0;i<24;i++){const f=i/23*grow,x=a.x+dx*f,z=a.z+dz*f,y=a.y+(b.y-a.y)*f+height*(1-.72*f),r=laneWidth(f,.65)*.92,th=f*7-time*spin+k*2.094,c=Math.cos(th),s=Math.sin(th);
+   const o=(k*24+i)*2;attr.setXYZ(o,x+sx*c*r,y+s*r*.8,z+sz*c*r);attr.setXYZ(o+1,x+sx*c*r*.12,y+s*r*.1,z+sz*c*r*.12);}attr.needsUpdate=true;}
  function draw(time,state){
   fx.visible=progress.entered;for(const m of Object.values(ribbons))m.visible=false;
+  for(const m of Object.values(ribbons))m.material.userData.u.uTime.value=state.gentle?time*.35:time;
   if(!progress.entered)return;
   for(const id of ['service','guardian']){
    const enabled=id==='service'?progress.bridge&&!progress.service:progress.returnCleared&&!progress.outwardAligned;
-   const e=encounters[id],m=ribbons[id],ph=phase(e);m.visible=enabled&&ph!=='rest';
-   const end=endpoint(id);m.material.color.setHex(ph==='recovery'?0x8be5d0:0xffcf85);
+   const e=encounters[id],m=ribbons[id],ph=phase(e),c=e.clock%cycle,u=m.material.userData.u;m.visible=enabled&&ph!=='rest';
+   const end=endpoint(id);m.material.color.setHex(ph==='recovery'?0x8be5d0:ph==='vent'?0xd8502a:0xa3261a);
+   u.uMode.value=ph==='telegraph'?0:ph==='vent'?1:2;u.uFill.value=ph==='telegraph'?c/3:1;
    // Telegraph and active lane use the SAME footprint; recovery contracts to
    // the catch endpoint rather than suggesting the entire lane is catchable.
-   strip(m,ph==='recovery'?end.clone().lerp(p[id],.12):p[id],end,ph==='telegraph'?.2+.45*(e.clock%cycle)/3:.65,time,ph==='recovery'&&!state.gentle);
+   strip(m,ph==='recovery'?end.clone().lerp(p[id],.12):p[id],end,ph==='telegraph'?.2+.45*c/3:.65,time,ph==='recovery'&&!state.gentle);
+   // Vent plume: snaps to full length in .12 s, rolls for the vent, then thins out
+   // over the first .6 s of recovery (the same window the lane contracts to its end).
+   const pl=plumes[id],vt=c-3;pl.visible=m.visible&&vt>=0&&vt<1.6;
+   if(pl.visible){pl.material.userData.u.uTime.value=state.gentle?time*.35:time;pl.material.opacity=.92*(vt<1?1:1-(vt-1)/.6);plume(pl,p[id],end,id==='guardian'?1.35:.55,Math.min(1,vt/.12),time,state.gentle);}
   }
   for(const [id,key,enabled] of [['source','source',!state.charged],['chamber','chamberEntry',progress.service&&!state.charged]]){const m=ribbons[id];m.visible=enabled;const a=p[key],b=a.clone();b.y+=.9;b.x+=.3;strip(m,a,b,.16,time,!state.gentle);}
-  for(const [id,key,enabled] of [['return','returnVane',progress.returnAligned],['outward','outwardVane',progress.outwardAligned]]){const m=ribbons[id];m.visible=enabled;strip(m,id==='return'?p.guardian:p[key],id==='return'?p[key]:p.guardian,.16,time,!state.gentle);}
+  for(const [id,key,enabled] of [['return','returnVane',progress.returnAligned],['outward','outwardVane',progress.outwardAligned]]){const m=ribbons[id];m.visible=enabled;strip(m,id==='return'?p.guardian:p[key],id==='return'?p[key]:p.guardian,progress.restored?.26:.16,time,!state.gentle);}
  }
  function update(dt,t,pos,state){
   position=pos?.clone()||null;active=running(state);
@@ -154,7 +184,7 @@ export function createCampaign({THREE:T,scene,points,caption=()=>{},sound=()=>{}
   const saved=data?.version===1&&data.progress&&typeof data.progress==='object'?data.progress:{};
   let valid=true;for(const k of steps){valid=valid&&saved[k]===true;progress[k]=valid;}progress.secret=progress.bridge&&saved.secret===true;
   chargeOrigin=['source','chamberSource','serviceGust','guardianGust'].includes(data?.chargeOrigin)?data.chargeOrigin:null;
-  position=null;active=false;restart();for(const m of Object.values(ribbons))m.visible=false;fx.visible=progress.entered;
+  position=null;active=false;restart();for(const m of Object.values(ribbons))m.visible=false;for(const m of Object.values(plumes))m.visible=false;fx.visible=progress.entered;
   return changed();
  }
  function reset(){restore(null);}

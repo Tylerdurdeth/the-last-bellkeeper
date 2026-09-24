@@ -94,6 +94,10 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     else if(kind==='stone-0')modal(t,196,.07,2.7,-.12,[1,1.48,2.12,3.4,5.1]);
     else if(kind==='stone-1'){modal(t,330,.052,1.1,.08);modal(t+.09,660,.022,.7,-.08);}
     else if(kind==='stone-2'){for(let i=0;i<3;i++)modal(t+i*.07,[392,494,587][i],.037,1.25,(i-1)*.12,[1,2,3,4,5]);}
+    // Village morning bell: a cracked, heavily damped strike that stops short of its overtones.
+    else if(kind==='dull-bell'){modal(t,147,.1,.75,-.1,[1,2.03,2.44,3.9]);hiss(t,.14,.09,420,-.1,'lowpass');modal(t+.05,294,.018,.22,-.1,[1,1.5]);}
+    // Mara's bypass: lever clunk, then air rushing into the copper channel.
+    else if(kind==='bypass'){modal(t,96,.06,.3,-.3,[1,2.7,4.1]);hiss(t+.18,1.6,.07,950,-.2,'bandpass',.7);hiss(t+.5,1.4,.05,2100,.3,'bandpass',.5);}
     else if(kind==='bird')bird(t);
     else if(kind==='hazard')hiss(t,.5,.13,600,-.1,'bandpass',.09);
   }

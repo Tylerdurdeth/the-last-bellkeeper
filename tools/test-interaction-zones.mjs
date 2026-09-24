@@ -17,9 +17,10 @@ const camp=(keys,origin=null)=>({version:1,chargeOrigin:origin,progress:Object.f
 const wood={awakened:false,restored:false,porchRead:true};
 // [name, save state, campaign, label substring, [[standX,standZ,startX,startZ],...]]
 const targets=[
- ['woodland note',{...wood,porchRead:false},{},'Read the keeper',[[-8.1,11.75,-8.1,14.2],[-8.4,11.8,-10.4,13.6],[-6.5,11.45,-6.5,14],[-6.1,11.1,-3.8,11.1],[-7.8,11.8,-5.6,13.8]]],
-  ['garden gust ribbon',{...wood,awakened:true},{},'Catch the current',[[-11.48,-17.5,-9.6,-17.5],[-13.2,-15.78,-13.2,-13.9],[-14.92,-17.5,-15.7,-17.5],[-11.98,-18.72,-10.9,-19.8],[-11.98,-16.28,-10.6,-14.9]]], // outer edge of the painted 1.5 m ring
- ['woodland wheel',{...wood,awakened:true,charged:true},{},'Give the wind',[[6.9,2.5,9.2,2.5],[6,3.4,6,5.6],[5.1,2.5,2.8,2.5],[6.7,3.2,8.3,4.8],[4.4,1.9,2.2,1.9]]],
+ ['porch staff',{...wood,porchRead:false},{},'Take the bell staff',[[-8.1,11.75,-8.1,14.2],[-8.4,11.8,-10.4,13.6],[-6.5,11.45,-6.5,14],[-6.1,11.1,-3.8,11.1],[-7.8,11.8,-5.6,13.8]]],
+ ['morning bell rope',{...wood,porchRead:false,awakened:false},{},'Pull the morning bell rope',[[0.11,15.91,1.46,17.64],[-1.34,14.05,-2.69,12.32],[-1.54,15.99,-3.06,17.58],[0.59,14.33,2.5,13.24],[-0.72,16.3,-0.94,18.49]]],
+ ['bypass gust ring',{...wood,awakened:true},{},'Catch the gust',[[5.72,6.5,7.82,6.5],[4.0,8.22,4.0,10.32],[2.28,6.5,0.18,6.5],[4.0,4.78,4.0,2.68],[2.78,7.72,1.3,9.2]]], // outer edge of the painted 1.5 m ring under Mara's outlet
+ ['woodland wheel',{...wood,awakened:true,charged:true},{},'Give the gust',[[6.9,2.5,9.2,2.5],[6,3.4,6,5.6],[5.1,2.5,2.8,2.5],[6.7,3.2,8.3,4.8],[4.4,1.9,2.2,1.9]]],
  ['far bell',{...wood,restored:true},{},'Listen beyond',[[9.5,-11.3,11.6,-11.3],[8,-10.4,8,-8.2],[6.5,-11.3,5.3,-11.3],[9.3,-10.5,10.9,-8.9]]],
  ['rootway gust source',{},camp(['entered']),'Catch the rootway current',[[5.8,-21.8,8.2,-21.8],[4.6,-20.2,6.6,-19.6],[4.8,-22.9,4.8,-25.4],[3.8,-21.9,3.8,-24.2]]],
  ['bridge wheel',{charged:true},camp(['entered'],'source'),'Give wind to the service bridge',[[4.2,-28.2,4.2,-25.6],[5.3,-28.3,7.6,-26.6],[5.35,-28.45,8.2,-28.3],[3.75,-28.25,3.75,-25.6]]],

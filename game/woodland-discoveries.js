@@ -1,16 +1,18 @@
 import * as T from 'three';
 import {ASSET} from './assetlib.js';
 import {height,POINTS} from './world-layout.js';
-import {GARDEN_CATCH} from './garden.js';
+import {GUST_CATCH} from './garden.js';
 
 // Story prompts answer wherever the hero touches what is drawn, from any side:
 // [x,z,r] horizontal circles = visible footprint + hero radius + a small margin.
-// Porch covers the door AND the pinned note left of Mara; wheel covers its long
-// rotor; garden matches the painted catch ring; far bell covers the whole bell.
-const STORY_ZONES={porch:[[...POINTS.porch,1.55],[-8,11.9,1.2]],chime:[[...POINTS.chime,2.1]],garden:[[...POINTS.garden,GARDEN_CATCH]],wheel:[[...POINTS.wheel,2.3],[4.9,2.15,1.3],[6.95,3.15,1.3]],finish:[[...POINTS.overlook,2.1]]};
+// Porch covers the door AND the staff peg/note left of Mara; the morning bell covers its
+// frame and rope; wheel covers its long rotor; bypass matches the painted catch ring under
+// Mara's outlet; far bell covers the whole bell.
+const STORY_ZONES={bell:[[...POINTS.morningBell,1.65]],porch:[[...POINTS.porch,1.55],[-8,11.9,1.2]],chime:[[...POINTS.chime,2.1]],bypass:[[...POINTS.outlet,GUST_CATCH]],wheel:[[...POINTS.wheel,2.3],[4.9,2.15,1.3],[6.95,3.15,1.3]],finish:[[...POINTS.overlook,2.1]]};
 export function storyZone(id,p){return STORY_ZONES[id].some(([x,z,r])=>Math.hypot(p.x-x,p.z-z)<r&&Math.abs(p.y-height(x,z))<2);}
 
-// Optional woodland play. Every solid shape is a clone of a reviewed recipe
+// Optional woodland play: the listening garden (root chime, gong, seed bells, harp) is signposted
+// but never required; solving it wakes the garden bed for good and reveals one of Mara's keepsakes. Every solid shape is a clone of a reviewed recipe
 // asset; the only new geometry is a small non-colliding pollen particle field.
 // Time is accumulated from dt so pausing and reset cannot leave queued effects.
 export async function createWoodlandDiscoveries(scene,art,{caption=()=>{},sound}={}){
@@ -73,7 +75,7 @@ export async function createWoodlandDiscoveries(scene,art,{caption=()=>{},sound}
   }else if(id.startsWith('stone-')){
    const i=Number(id.slice(6));stoneFlash=elapsed;
    if(stoneSolved){emit('chime');return true;}
-   if(i===stoneStep){stoneStep++;emit('stone-'+i);if(stoneStep===3){stoneSolved=true;emit('restore');caption(state.awakened?'Gong, seed bells, harp. Their rising song frees the current in the garden.':'The instruments remember the song. Wake the root chime to release its wind.',4);}else caption(stoneStep===1?'The low gong holds its note. The seed bells answer next.':'The seed bells join it. Let the high harp finish the song.',3);}
+   if(i===stoneStep){stoneStep++;emit('stone-'+i);if(stoneStep===3){stoneSolved=true;emit('restore');caption('Gong, seed bells, harp. The listening garden wakes, and something of Mara’s glints among its flowers.',5);}else caption(stoneStep===1?'The low gong holds its note. The seed bells answer next.':'The seed bells join it. Let the high harp finish the song.',3);}
    else {wrongFlash=elapsed;stoneStep=0;emit('hazard');caption('The melody breaks. Begin with the low bronze gong.',3);}
   }else return false;
   return true;
@@ -111,7 +113,7 @@ export async function createWoodlandDiscoveries(scene,art,{caption=()=>{},sound}
   if(near&&!birdNear&&birdMode==='rest'){birdTime=elapsed;birdMode='startled';birdStartles++;emit('bird');}
   birdNear=near;
   if(birdMode!=='rest'&&elapsed-birdTime>(birdMode==='called'?7:5))birdMode='rest';
-  if(!stoneClue&&nearPoint(player,-8,height(-8,-11.7),-11.7,3.1)){stoneClue=true;caption('A gong, seed bells and a harp. Follow the one, two, three flower marks to free their rising song.',5);}
+  if(!stoneClue&&!stoneSolved&&nearPoint(player,-8,height(-8,-11.7),-11.7,3.1)){stoneClue=true;caption('The listening garden: a gong, seed bells and a harp. Follow the one, two, three flower marks.',5);}
   applyVisuals(state.gentle);
  }
  function reset(){
