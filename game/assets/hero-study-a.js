@@ -57,7 +57,7 @@ export default function(THREE) {
  const hairShadow=mat(0x241a24),hairMid=mat(0x352733),hairSun=mat(0x4b3747);
  const scalp=new THREE.SphereGeometry(1,48,28,0,Math.PI*2,0,Math.PI*.70),sp=scalp.attributes.position;
  // Coverage by direction: low at the nape, above the ears at the sides, a clean hairline over the brow at the front.
- for(let j=0;j<=28;j++)for(let i=0;i<=48;i++){const a=i/48*Math.PI*2,f=Math.max(0,Math.sin(a)),b=Math.max(0,-Math.sin(a)),cover=Math.PI*(.40*f+.64*b+.50*(1-f-b)),t=j/28*cover,sn=Math.sin(t);sp.setXYZ(j*49+i,-Math.cos(a)*sn*.124,.185+Math.cos(t)*.160*(1+.10*Math.max(0,Math.cos(t))*(1-f)),Math.sin(a)*sn*.119-.022);}
+ for(let j=0;j<=28;j++)for(let i=0;i<=48;i++){const a=i/48*Math.PI*2,f=Math.max(0,Math.sin(a)),b=Math.max(0,-Math.sin(a)),cover=Math.PI*(.40*f+.56*b+.50*(1-f-b)),t=j/28*cover,sn=Math.sin(t);sp.setXYZ(j*49+i,-Math.cos(a)*sn*.124,.185+Math.cos(t)*.160*(1+.10*Math.max(0,Math.cos(t))*(1-f)),Math.sin(a)*sn*.119-.022);}
  scalp.computeVertexNormals();mesh(head,scalp,hairMid).receiveShadow=false;
  // One clump: a rounded-base, pointed, flattened lathe laid along base→tip, flat face turned away from the skull, tip curling back toward it.
  function clump(base,tip,width,thick,curl,material){
@@ -78,6 +78,11 @@ export default function(THREE) {
  // Short sides hugging the head above the ears, and a neat nape.
  for(const side of [-1,1]){clump([side*.098,.270,.020],[side*.118,.210,-.020],.028,.010,.006,side<0?hairMid:hairShadow);clump([side*.085,.230,-.070],[side*.095,.150,-.100],.028,.010,.006,hairShadow);}
  clump([.000,.210,-.110],[.000,.105,-.118],.050,.016,.010,hairShadow);
+ // Back of the head, the view the game camera sees most: layered locks falling from the crown to the nape so it reads as hair, not a cap.
+ for(let i=0;i<5;i++){const u=(i-2)/2,x=u*.085;clump([x*.5,.312,-.100],[x*1.10,.150+Math.abs(u)*.024,-.170+Math.abs(u)*.022],.054,.020,.020,i===2?hairMid:i%2?hairShadow:hairMid);}
+ for(let i=0;i<4;i++){const u=(i-1.5)/1.5,x=u*.075;clump([x*.6,.250,-.132],[x*1.15,.108,-.160],.044,.016,.014,hairShadow);}
+ // Tufts that break the cap's rim: sideburns in front of the ears and short flicks behind them.
+ for(const side of [-1,1]){clump([side*.108,.215,.030],[side*.118,.168,.042],.020,.009,.004,hairMid);clump([side*.110,.225,-.040],[side*.126,.170,-.062],.024,.010,.006,hairShadow);clump([side*.096,.205,-.090],[side*.108,.150,-.112],.024,.010,.006,hairShadow);}
  root.userData.faceStudy=true;
 
 
