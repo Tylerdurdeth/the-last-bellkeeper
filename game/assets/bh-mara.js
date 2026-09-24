@@ -55,7 +55,7 @@ export default function (THREE, opts = {}) {
     for (let k = 0; k < 4; k++) tube(base, [[s * .1 - .035, .12 + k * .038, .066], [s * .1, .128 + k * .038, .074], [s * .1 + .035, .12 + k * .038, .066]], .005, .005, C(0xE8D6B0));   // laces
   }
   // Skirt: soft bell with a hem fold, mid-calf.
-  lathe(base, [[.2, .83], [.245, .74], [.29, .52], [.315, .34], [.33, .27], [.325, .25], [.305, .245]], (v, o) => o.copy(SKIRT).lerp(SKIRT_SH, v.y < .3 ? .5 : Math.max(0, Math.sin(Math.atan2(v.x, v.z) * 9) * .35)), 0, 0, 0, .86, 36);
+  lathe(base, [[.2, .83], [.245, .74], [.285, .52], [.3, .38], [.305, .325], [.292, .305], [.275, .3]], (v, o) => o.copy(SKIRT).lerp(SKIRT_SH, v.y < .3 ? .5 : Math.max(0, Math.sin(Math.atan2(v.x, v.z) * 9) * .35)), 0, 0, 0, .86, 36);
   // Apron: curved cloth panel with rounded lower corners, darker hem, two patch pockets with stitching and tools.
   {
     const g = new T.PlaneGeometry(1, 1, 18, 14), p = g.attributes.position;
@@ -86,7 +86,7 @@ export default function (THREE, opts = {}) {
   const hips = group('hips', 0, .84, 0);
   const chest = group('chest', 0, 0, 0, hips);
   // Stout torso with sloped shoulders; blouse volume, soft bust.
-  lathe(chest, [[.25, -.02], [.265, .06], [.275, .17], [.265, .27], [.24, .35], [.2, .41], [.14, .455], [.075, .49]], (v, o) => o.copy(BLOUSE).lerp(BLOUSE_SH, v.y < .03 ? .4 : Math.max(0, Math.sin(v.x * 30 + v.y * 12) * .18)), 0, 0, 0, .78, 28);
+  lathe(chest, [[.25, -.02], [.265, .06], [.275, .17], [.265, .27], [.238, .33], [.195, .385], [.135, .43], [.075, .465]], (v, o) => o.copy(BLOUSE).lerp(BLOUSE_SH, v.y < .03 ? .4 : Math.max(0, Math.sin(v.x * 30 + v.y * 12) * .18)), 0, 0, 0, .78, 28);
   ell(chest, BLOUSE, 0, .21, .11, .2, .1, .1);                                                                            // bust volume
   // Apron bib with pocket, and straps over the shoulders crossing on the back.
   {
@@ -99,8 +99,8 @@ export default function (THREE, opts = {}) {
     for (const s of [-1, 1]) tube(chest, [[s * .09, .32, .19], [s * .13, .42, .08], [s * .12, .44, -.06], [s * .02, .3, -.2], [-s * .1, .08, -.2]], .014, .014, APRON_SH, cloth, 6, 16);
   }
   // Neck and coral neckerchief: collar roll, a knot and two folded tails.
-  const neck = group('neck', 0, .47, .01, chest);
-  lathe(neck, [[.058, -.02], [.055, .05], [.052, .085]], SKIN, 0, 0, 0, 1, 14);
+  const neck = group('neck', 0, .445, .012, chest);
+  lathe(neck, [[.06, -.02], [.057, .03], [.054, .06]], SKIN, 0, 0, 0, 1, 14);
   tube(chest, [[-.09, .45, -.02], [-.07, .47, .07], [0, .455, .1], [.07, .47, .07], [.09, .45, -.02], [0, .47, -.08], [-.09, .45, -.02]], .026, .026, (v, o) => o.copy(CORAL).lerp(CORAL_SH, Math.max(0, Math.sin(v.x * 50) * .4)), paint, 8, 24);
   ell(chest, (v, o) => o.copy(CORAL).lerp(CORAL_SH, v.y < .42 ? .4 : 0), 0, .43, .115, .038, .032, .03);
   for (const s of [-1, 1]) {
@@ -110,7 +110,7 @@ export default function (THREE, opts = {}) {
   }
 
   // ================= head =================
-  const head = group('head', 0, .085, 0, neck);
+  const head = group('head', 0, .035, 0, neck);
   {
     // Continuous head surface: sculpted in metres from a dense sphere; features only on the front.
     const g = new T.SphereGeometry(1, 56, 44), p = g.attributes.position, cols = new Float32Array(p.count * 3), c = new T.Color();
@@ -121,7 +121,7 @@ export default function (THREE, opts = {}) {
       let x = ux * .088, y = uy * .112, z = uz * .096;
       const front = smooth(.05, .5, uz), ax = Math.abs(x);
       x *= 1 + .1 * G(0, y + .055, 1, .035) * smooth(-.1, .3, -uz * 0 + 1);                 // full cheeks / jowls
-      z += front * (.03 * G(x, y + .004, .014, .03) + .016 * G(x, y + .027, .017, .013)      // nose bridge + bulb
+      z += front * (.03 * G(x, y + .004, .014, .03) + .021 * G(x, y + .027, .019, .014)      // nose bridge + bulb
         + .008 * G(0, y - .042, 1, .012) * smooth(.075, .04, ax)                              // brow ridge
         - .012 * G(ax - .034, y - .016, .017, .011)                                           // eye sockets
         + .013 * G(ax - .045, y + .02, .024, .02)                                             // cheeks (smiling, lifted)
@@ -132,10 +132,10 @@ export default function (THREE, opts = {}) {
       // Paint: base skin, warm blush, lips on a smiling curve, nasolabial and crow's-feet lines, brow furrows.
       c.copy(SKIN);
       c.lerp(SKIN_SH, smooth(.1, -.6, uz) * .35 + smooth(-.06, -.11, y) * .25);
-      c.lerp(BLUSH, front * .55 * G(ax - .048, y + .018, .022, .016));
+      c.lerp(BLUSH, front * .75 * G(ax - .048, y + .018, .024, .017));
       const smileY = -.052 + 7 * x * x;
       if (front > .5 && ax < .034) c.lerp(LIP, smooth(.0065, .002, Math.abs(y - smileY)) * .9);
-      if (front > .5 && ax < .037) c.lerp(INK, smooth(.0018, .0006, Math.abs(y - smileY)) * .5 * smooth(.037, .02, ax));
+      if (front > .5 && ax < .037) c.lerp(INK, smooth(.0024, .0008, Math.abs(y - smileY)) * .75 * smooth(.04, .022, ax));
       if (front > .4) c.lerp(LINE, smooth(.0032, .001, nasolabial(x, y)) * .55);
       for (const k of [-1, 0, 1]) if (front > .3) { const cx = .063, cy = .016 + k * .006, d = Math.abs((ax - cx) * Math.sin(-k * .45) + (y - cy) * Math.cos(-k * .45)); if (Math.abs(ax - cx - .006) < .008) c.lerp(LINE, smooth(.0022, .0008, d) * .5); }
       for (const ly of [.058, .07]) if (front > .5 && ax < .045) c.lerp(LINE, smooth(.0022, .0008, Math.abs(y - ly - .004 * Math.cos(x * 40))) * .3);
@@ -150,25 +150,25 @@ export default function (THREE, opts = {}) {
   // Eyes (own pivot for blinks): sclera, iris, pupil, catchlight; smiling upper lids; brows.
   const eyes = group('eyes', 0, HY + .016, 0, head);
   for (const s of [-1, 1]) {
-    const ex = s * .034, ez = .083;
-    ell(eyes, WHITE, ex, 0, ez, .014, .0085, .006, paint, 14, 10);
-    ell(eyes, (v, o) => o.copy(IRIS).lerp(IRIS_L, smooth(.003, .006, Math.hypot(v.x, v.y))), ex + s * .001, -.0005, ez + .0045, .0068, .0068, .003, paint, 12, 8);
+    const ex = s * .035, ez = .083; const eyeS = 1.18;
+    ell(eyes, WHITE, ex, 0, ez, .014 * eyeS, .0085 * eyeS, .006, paint, 14, 10);
+    ell(eyes, (v, o) => o.copy(IRIS).lerp(IRIS_L, smooth(.003, .006, Math.hypot(v.x, v.y))), ex + s * .001, -.0005, ez + .0045, .0068 * eyeS, .0068 * eyeS, .003, paint, 12, 8);
     ell(eyes, INK, ex + s * .001, -.0005, ez + .0068, .003, .003, .0012, paint, 8, 6);
     ell(eyes, WHITE, ex + s * .001 - .0022, .0022, ez + .0078, .0016, .0016, .0008, paint, 6, 4);
     // Smiling upper lid: a skin shell dropping over the top of the eye, a crease above it.
     const lid = ell(eyes, (v, o) => o.copy(SKIN).lerp(SKIN_SH, .25), ex, .0045, ez + .001, .0165, .0075, .0078, paint, 14, 8); lid.rotation.z = -s * .12;
     tube(eyes, [[ex - s * .016, .004, ez + .002], [ex, .0105, ez + .006], [ex + s * .017, .002, ez + .001]], .0014, .001, INK);
     tube(eyes, [[ex - s * .013, -.0065, ez + .003], [ex, -.009, ez + .004], [ex + s * .014, -.006, ez + .002]], .0009, .0007, LINE);
-    tube(head, [[s * .016, HY + .042, .092], [s * .034, HY + .049, .092], [s * .054, HY + .043, .086]], .0042, .0026, HAIR_SH);   // brows
+    tube(head, [[s * .015, HY + .043, .093], [s * .034, HY + .051, .093], [s * .055, HY + .044, .087]], .0052, .003, C(0x8A8F8C));   // brows
   }
   // Hair: silver cap swept back from the brow in waves, side waves over the ears, a bun with a copper pin.
   {
-    const g = new T.SphereGeometry(1, 36, 22, 0, Math.PI * 2, 0, Math.PI * .62), p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), front = Math.max(0, z); p.setXYZ(i, x * .096, y * .12 - front * .018 + .004, z * .104 - .006); }
+    const g = new T.SphereGeometry(1, 36, 22, 0, Math.PI * 2, 0, Math.PI * .56), p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), front = Math.max(0, z) ** 1.5; p.setXYZ(i, x * .096, y * .122 + .006 + front * .045 * (1 - y), z * .103 - .004); }
     g.computeVertexNormals(); mesh(colorize(g, (v, o) => o.copy(HAIR).lerp(HAIR_SH, Math.max(0, Math.sin(Math.atan2(v.x, v.z) * 14 + v.y * 60) * .45))), head, 0, HY + .012, 0);
     for (let i = 0; i < 9; i++) { const a = -1 + i * .25, x = Math.sin(a) * .09, z = Math.cos(a) * .09;
-      tube(head, [[x * .9, HY + .06, z * .95], [x * 1.05, HY + .1, z * .6], [x * .7, HY + .125, z * .1 - .02], [0, HY + .12, -.05]], .011, .006, i % 2 ? HAIR : HAIR_SH, paint, 6, 10); }
-    for (const s of [-1, 1]) tube(head, [[s * .08, HY + .06, .045], [s * .093, HY + .03, .01], [s * .088, HY + .045, -.04], [s * .06, HY + .09, -.07]], .014, .01, HAIR, paint, 6, 10);
+      tube(head, [[x * .88, HY + .072, z * .9], [x * 1.04, HY + .105, z * .58], [x * .7, HY + .126, z * .1 - .02], [0, HY + .12, -.05]], .01, .005, i % 2 ? HAIR : HAIR_SH, paint, 6, 10); }
+    for (const s of [-1, 1]) tube(head, [[s * .075, HY + .065, .05], [s * .092, HY + .045, .012], [s * .09, HY + .055, -.035], [s * .06, HY + .095, -.07]], .012, .008, HAIR, paint, 6, 10);
     lathe(head, [[.001, -.02], [.042, -.012], [.052, .012], [.04, .036], [.001, .045]], (v, o) => o.copy(HAIR).lerp(HAIR_SH, Math.max(0, Math.sin(Math.atan2(v.x, v.z) * 5 + v.y * 80) * .5)), 0, HY + .122, -.05, 1, 18);
     mesh(solid(new T.TorusGeometry(.042, .01, 8, 20), HAIR_SH), head, 0, HY + .122, -.05, Math.PI / 2 - .3);
     tube(head, [[-.075, HY + .16, -.03], [0, HY + .158, -.05], [.07, HY + .15, -.07]], .0035, .0035, COPPER, metal);
@@ -179,8 +179,8 @@ export default function (THREE, opts = {}) {
   // ================= arms: rolled sleeves, real hands =================
   for (const s of [-1, 1]) {
     const side = s < 0 ? 'left' : 'right';
-    const arm = group(side + 'Arm', s * .215, .4, -.01, chest);
-    ell(arm, BLOUSE, 0, -.01, 0, .075, .07, .075);                                               // shoulder cap (sloped)
+    const arm = group(side + 'Arm', s * .205, .365, -.01, chest);
+    ell(arm, BLOUSE, 0, -.005, 0, .07, .062, .072);                                               // shoulder cap (sloped)
     tube(arm, [[0, -.01, 0], [s * .015, -.12, .005], [s * .012, -.22, .01]], .072, .064, (v, o) => o.copy(BLOUSE).lerp(BLOUSE_SH, Math.max(0, Math.sin(v.y * 90) * .35)), paint, 10, 8);
     ell(arm, BLOUSE_SH, s * .06, -.12, -.01, .012, .03, .03);                                   // sleeve patch
     const fore = group(side + 'Forearm', s * .012, -.23, .01, arm);
