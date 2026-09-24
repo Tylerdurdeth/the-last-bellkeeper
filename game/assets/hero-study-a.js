@@ -10,6 +10,21 @@ export default function(THREE) {
  const profile=(p,m,points,x,y,z,depth=.04)=>{const s=new THREE.Shape();points.forEach(([a,b],i)=>i?s.lineTo(a,b):s.moveTo(a,b));s.closePath();return mesh(p,new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:.008,bevelThickness:.007}),m,x,y,z-depth/2);};
  const stroke=(p,m,points,r=.006)=>mesh(p,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),10,r,5,false),m);
  const lathe=(p,m,points,x,y,z,sx=1,sz=1)=>mesh(p,new THREE.LatheGeometry(points.map(v=>new THREE.Vector2(...v)),12),m,x,y,z,sx,1,sz);
+ // Outfit details (R-hero pass): many small parts baked into ONE vertex-coloured mesh per pivot, so trims,
+ // buttons, tails, patches and wraps cost one draw each pivot. put(geo,hex,x,y,z,rx,ry,rz,sx,sy,sz); rope(points,r0,hex,r1).
+ const detailMat=Object.assign(new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.82,side:THREE.DoubleSide}),{name:'fabric'});
+ function details(parent,build){
+  const parts=[],E=new THREE.Euler(),Q=new THREE.Quaternion();
+  const put=(geo,hex,x=0,y=0,z=0,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1)=>parts.push([geo,hex,new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),Q.clone().setFromEuler(E.set(rx,ry,rz)),new THREE.Vector3(sx,sy,sz))]);
+  const rope=(pts,r0,hex,r1=r0,radial=5)=>{const c=new THREE.CatmullRomCurve3(pts.map(v=>new THREE.Vector3(...v))),n=Math.max(4,pts.length*2),g=new THREE.TubeGeometry(c,n,1,radial,false),a=g.attributes.position,v=new THREE.Vector3(),q=new THREE.Vector3();
+   for(let i=0;i<=n;i++){c.getPointAt(i/n,q);const r=r0+(r1-r0)*i/n;for(let j=0;j<=radial;j++){const k=i*(radial+1)+j;v.fromBufferAttribute(a,k).sub(q).normalize().multiplyScalar(r).add(q);a.setXYZ(k,v.x,v.y,v.z);}}g.computeVertexNormals();put(g,hex);};
+  build(put,rope);
+  const pos=[],nor=[],col=[],c=new THREE.Color();
+  for(const [geo,hex,m] of parts){const g=geo.index?geo.toNonIndexed():geo.clone();g.applyMatrix4(m);if(!g.attributes.normal)g.computeVertexNormals();pos.push(...g.attributes.position.array);nor.push(...g.attributes.normal.array);c.set(hex);for(let i=0;i<g.attributes.position.count;i++)col.push(c.r,c.g,c.b);g.dispose();}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  return mesh(parent,g,detailMat);
+ }
+ const TRIM=0x2f6f6a,BRASS=0xd9a441,CORALC=0xc95845,CREAMC=0xebe0c5,LEATHER_L=0x8f6d4f,LEATHER_D=0x4f3d34,PATCH=0x1d4244,STITCH=0x86a79c;
 
  // Curved cloth sections retain a soft silhouette and a few broad folds under cel light.
  function garment(parent,material,sections,fold=.003,open=false){const g=new THREE.CylinderGeometry(1,1,1,20,sections.length>3?9:4,open),p=g.attributes.position,low=sections[0][0],high=sections.at(-1)[0];for(let i=0;i<p.count;i++){const t=p.getY(i)+.5,y=low+(high-low)*t,x=p.getX(i),z=p.getZ(i),a=Math.atan2(z,x),r=Math.hypot(x,z);let rx=sections[0][1],rz=sections[0][2];for(let j=1;j<sections.length;j++)if(y>=sections[j-1][0]&&y<=sections[j][0]){const A=sections[j-1],B=sections[j],u=(y-A[0])/(B[0]-A[0]);rx=THREE.MathUtils.lerp(A[1],B[1],u);rz=THREE.MathUtils.lerp(A[2],B[2],u);}const f=fold*.35*Math.sin(t*Math.PI)*Math.sin(a*6+.3);p.setXYZ(i,Math.cos(a)*(rx+f)*r,y,Math.sin(a)*(rz+f)*r);}g.computeVertexNormals();const result=mesh(parent,g,material);result.receiveShadow=false;return result;}
@@ -90,6 +105,13 @@ export default function(THREE) {
   const pre=side<0?'left':'right';const leg=pivot(pre+'UpperLeg',hips,side*.075,-.025,0);
   garment(leg,teal,[[-.33,.054,.049],[-.27,.062,.052],[-.15,.077,.061],[-.04,.078,.061],[.005,.070,.058]],.0025);
   const knee=pivot(pre+'LowerLeg',leg,0,-.335,0);ell(knee,teal,0,0,.007,.055,.052,.05);
+  details(knee,(put,rope)=>{
+   put(new THREE.SphereGeometry(1,10,6),PATCH,side*.004,-.02,.052,0,0,side*.15,.03,.036,.009);                      // knee patch
+   const st=[];for(let i=0;i<=10;i++){const a=i/10*Math.PI*2;st.push([side*.004+Math.cos(a)*.029,-.02+Math.sin(a)*.034,.059]);}rope(st,.0014,STITCH);
+   put(new THREE.LatheGeometry([[.05,-.258],[.056,-.215],[.059,-.17],[.058,-.13],[.061,-.115]].map(v=>new THREE.Vector2(...v)),14),LEATHER_L,0,0,.002,0,0,0,1,1,.86);   // boot shaft
+   put(new THREE.TorusGeometry(.06,.008,6,16),LEATHER_D,0,-.117,.002,Math.PI/2,0,0,1,.86,1);                                // folded boot top
+   for(let k=0;k<4;k++){const pts=[];for(let i=0;i<=8;i++){const a=i/8*Math.PI*2+k*.9,y=-.245+k*.032+i/8*.028;pts.push([Math.sin(a)*.061,y,Math.cos(a)*.061*.86+.002]);}rope(pts,.0045,LEATHER_D);}   // leather bindings
+  });
   garment(knee,teal,[[-.215,.033,.031],[-.19,.043,.038],[-.12,.057,.047],[-.035,.056,.050],[.015,.053,.048]],.003);
   // Inner boot tongue bridges ankle flexion without exposing a gap under the trousers.
   taper(knee,leather,0,-.240,0,.029,.027,.14,.9,12);
@@ -116,12 +138,16 @@ export default function(THREE) {
   hand.add(handShape);
   ell(handShape,skin,0,.004,0,.021,.024,.018).receiveShadow=false;
   // Human relaxed hands: continuous palm, four graduated fingers and an opposed thumb.
-  const palmGeo=new THREE.SphereGeometry(1,20,14),palmPos=palmGeo.attributes.position;
+  const palmGeo=new THREE.SphereGeometry(1,14,10),palmPos=palmGeo.attributes.position;
   for(let i=0;i<palmPos.count;i++){const x=palmPos.getX(i),y=palmPos.getY(i),z=palmPos.getZ(i),width=.029*(.88+.12*(1-y));palmPos.setXYZ(i,x*width,-.026+y*.031,z*.015);}
   palmGeo.computeVertexNormals();mesh(handShape,palmGeo,skin).receiveShadow=false;
-  ell(handShape,leather,0,-.022,-.012,.028,.028,.005).receiveShadow=false;
-  function digit(points,radius){const curve=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),g=new THREE.TubeGeometry(curve,12,1,8,false),p=g.attributes.position;
-   for(let row=0;row<=12;row++){const t=row/12,c=curve.getPoint(t),r=radius*(1-.30*t);for(let col=0;col<=8;col++){const i=row*9+col;p.setXYZ(i,c.x+(p.getX(i)-c.x)*r,c.y+(p.getY(i)-c.y)*r,c.z+(p.getZ(i)-c.z)*r);}}
+  details(handShape,(put,rope)=>{ // fingerless glove: back plate, knuckle band, wrist cuff
+   put(new THREE.SphereGeometry(1,12,8),LEATHER_D,0,-.02,-.011,0,0,0,.03,.03,.008);
+   rope([[-.03,-.043,-.006],[0,-.047,-.012],[.03,-.043,-.006]],.0055,LEATHER_D);
+   put(new THREE.TorusGeometry(.025,.0065,6,14),LEATHER_L,0,.004,0,Math.PI/2,0,0,1,.8,1);
+  }).receiveShadow=false;
+  function digit(points,radius){const curve=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),g=new THREE.TubeGeometry(curve,8,1,6,false),p=g.attributes.position;
+   for(let row=0;row<=8;row++){const t=row/8,c=curve.getPoint(t),r=radius*(1-.30*t);for(let col=0;col<=6;col++){const i=row*7+col;p.setXYZ(i,c.x+(p.getX(i)-c.x)*r,c.y+(p.getY(i)-c.y)*r,c.z+(p.getZ(i)-c.z)*r);}}
    g.computeVertexNormals();mesh(handShape,g,skin).receiveShadow=false;const tip=points.at(-1);ell(handShape,skin,...tip,radius*.70,radius*.70,radius*.70).receiveShadow=false;
   }
   const lengths=[.042,.048,.045,.035];
@@ -142,7 +168,7 @@ export default function(THREE) {
  const cape=pivot('cape',hips,0,.325,-.007);cape.scale.set(.89,.64,.94);
  // A closed shoulder drape: shared curved surface from neckline over both
  // shoulders to its diagonal hem; inner shell gives the cloth a real edge.
- const segments=64,rings=12,verts=[],indices=[];
+ const segments=44,rings=10,verts=[],indices=[];
  function drape(u,a,inside=false){
   const sn=Math.sin(a),cs=Math.cos(a),ease=Math.sin(u*Math.PI/2);
   const rx=.069+.155*ease+.025*ease**4,rz=.061+.076*ease;
@@ -157,7 +183,7 @@ export default function(THREE) {
  for(let shell=0;shell<2;shell++)for(let j=0;j<rings;j++)for(let i=0;i<segments;i++){const a=shell*layer+j*(segments+1)+i,b=a+1,c=a+segments+1,d=c+1;if(!shell)indices.push(a,c,b,b,c,d);else indices.push(a,b,c,b,d,c);}
  for(const row of [0,rings])for(let i=0;i<segments;i++){const a=row*(segments+1)+i,b=a+1;indices.push(a,b,a+layer,b,b+layer,a+layer);}
  const clothGeo=new THREE.BufferGeometry();clothGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));clothGeo.setIndex(indices);clothGeo.computeVertexNormals();mesh(cape,clothGeo,cream);
- const hem=[];for(let i=0;i<=64;i++)hem.push(drape(1,i/64*Math.PI*2));mesh(cape,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hem.map(v=>new THREE.Vector3(...v))),64,.0038,5,false),cream);
+ const hem=[];for(let i=0;i<=44;i++)hem.push(drape(1,i/44*Math.PI*2));mesh(cape,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hem.map(v=>new THREE.Vector3(...v))),44,.0038,4,false),cream);
  // Raised fold ridges converge at the copper fastening, not arbitrary plates.
  stroke(cape,cream,[[-.185,-.066,.070],[-.121,-.021,.117],[-.045,.006,.125],[.067,.010,.104]],.0045);
  stroke(cape,cream,[[-.165,-.094,.083],[-.108,-.061,.131],[-.026,-.037,.143],[.077,-.011,.112]],.0038);
@@ -169,6 +195,27 @@ export default function(THREE) {
  for(let i=0;i<3;i++)ell(hips,copper,.052,.102+i*.059,.106,.009,.009,.005);
 
  lathe(hips,copper,[[.019,0],[.017,.007],[.011,.027],[0,.034]],.028,.185,.132);stroke(hips,leather,[[.028,.225,.131],[.028,.245,.126]],.0025);
+ // ---- R-hero outfit details ----
+ details(hips,(put,rope)=>{ // upper coat: standing collar with teal edge, cream undershirt, placket trim, brass buttons
+  put(new THREE.TorusGeometry(.066,.017,8,24),CORALC,0,.338,-.004,Math.PI/2-.12,0,0,1,.86,1);
+  put(new THREE.TorusGeometry(.068,.006,6,24),TRIM,0,.353,-.002,Math.PI/2-.12,0,0,1,.86,1);
+  put(new THREE.SphereGeometry(1,12,8),CREAMC,0,.318,.068,.3,0,0,.03,.03,.01);
+  rope([[.026,.33,.074],[.042,.27,.093],[.049,.18,.097],[.05,.085,.092]],.0058,TRIM);
+  for(let i=0;i<4;i++)put(new THREE.SphereGeometry(1,10,8),BRASS,.07,.1+i*.058,.101,0,0,0,.011,.011,.0065);
+ }).userData.chestPiece=true;
+ details(hips,(put,rope)=>{ // lower coat: long split tails at the back, teal-trimmed hems, a small tool on the belt
+  for(const s of [-1,1]){
+   const cols=12,rows=9,v=[],idx=[],edge=[],inner=[];
+   for(let j=0;j<=rows;j++)for(let i=0;i<=cols;i++){const u=i/cols,t=j/rows,a=Math.PI+s*(.11+u*1.13),r=.146+.05*t+.006*Math.sin(u*9)*t,y=.052-.37*t+.03*t*Math.sin(u*Math.PI);v.push(Math.sin(a)*r,y,Math.cos(a)*r*.74-.004);}
+   for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){const a=j*(cols+1)+i,b=a+1,c=a+cols+1,d=c+1;idx.push(a,c,b,b,c,d);}
+   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setIndex(idx);g.computeVertexNormals();put(g,CORALC);
+   const at=(u,t)=>{const a=Math.PI+s*(.11+u*1.13),r=.146+.05*t+.006*Math.sin(u*9)*t,y=.052-.37*t+.03*t*Math.sin(u*Math.PI);return [Math.sin(a)*r,y,Math.cos(a)*r*.74-.004];};
+   for(let i=0;i<=12;i++)edge.push(at(i/12,1));for(let j=0;j<=9;j++)inner.push(at(0,j/9));
+   rope(edge,.0055,TRIM);rope(inner,.0055,TRIM);
+  }
+  const hem=[];for(let i=0;i<=14;i++){const a=-1.15+i/14*2.3;hem.push([Math.sin(a)*.114,.024,Math.cos(a)*.075]);}rope(hem,.0055,TRIM);
+  rope([[-.075,.025,.086],[-.08,-.03,.088]],.0045,0xb88754);put(new THREE.TorusGeometry(.011,.0038,6,12,Math.PI*1.5),0xb88754,-.08,-.04,.089,0,0,Math.PI*.75);   // wrench on the belt
+ });
  // Separate chest articulation gives purposeful upper-body effort without tilting planted legs.
  const upperChildren=hips.children.filter(o=>['head','cape','leftUpperArm','rightUpperArm'].includes(o.name)||(o.isMesh&&(o.position.y>=.075||o.userData.chestPiece)));
  const chest=pivot('chest',hips,0,.065,0);

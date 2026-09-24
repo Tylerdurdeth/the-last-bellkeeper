@@ -16,6 +16,11 @@ export default function (T) {
   mesh(g,new T.LatheGeometry(pts,16),bellmat,0,0,.025);
   ring(g,copperDark,0,.84,.025,.097,.009,'y');ell(g,copperDark,0,.841,.025,.018,.025,.018);
   ell(g,copper,0,1.02,.025,.028,.020,.028);
+  // R-hero staff: twisted grain, a leather grip wrap, and small chimes hanging by the bell.
+  const helix=(ph,m,r0)=>{const pts=[];for(let i=0;i<=40;i++){const t=i/40,y=.44+t*.66,a=ph+t*Math.PI*7;pts.push(new T.Vector3(Math.cos(a)*.019,y,Math.sin(a)*.019));}mesh(g,new T.TubeGeometry(new T.CatmullRomCurve3(pts),36,r0,4,false),m);};
+  helix(0,bark,.0065);helix(Math.PI,bark,.005);
+  const wrap=mat(0x6E5140,'fabric');for(let i=0;i<6;i++)ring(g,wrap,0,.3+i*.022,0,.023,.006,'y');
+  for(const [x,z,l] of [[.06,.02,.07],[-.055,.03,.055],[.01,-.05,.062]]){cyl(g,copper,x,1.075-l/2-.02,z,.005,.005,l,8);beam(g,copperDark,[x,1.075,z],[x*.4,1.12,z*.4],.0015);}
   g.userData.gripY=.39;
 
   g.updateMatrixWorld(true);const box=new T.Box3(),v=new T.Vector3();g.traverse(n=>{if(n.isMesh){const a=n.geometry.attributes.position;for(let i=0;i<a.count;i++)box.expandByPoint(v.fromBufferAttribute(a,i).applyMatrix4(n.matrixWorld));}});const c=box.getCenter(new T.Vector3());for(const n of g.children){n.position.x-=c.x;n.position.y-=box.min.y;n.position.z-=c.z;}return g;
