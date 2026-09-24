@@ -12,6 +12,7 @@ import {createWind} from './bellhollow/wind.js';
 import {createQuest} from './bellhollow/quest.js';
 import {MODULES} from './bellhollow/manifest.js';
 import {createMap} from './bellhollow/map.js';
+import {trunkSolid} from './bellhollow/kit/trunk.js';
 import {adaptWorld} from './bellhollow/adapt-world.js';
 import buildMara from './assets/bh-mara.js';
 import buildPairedBells from './assets/bh-paired-bells.js';
@@ -30,7 +31,7 @@ const DEFAULT_YAW=Math.atan2(.615,.788);let cameraYaw=DEFAULT_YAW,cameraDrag=nul
 let hero,movement,animator,world,wind,quest,look=null,staff,staffHand,mara,captionEnd=0,context=null,travel=0,fps=60,start3=[0,0,0];
 let saveTimer=0,introTime=0,introActive=false,lastShot=-1,queued=null,uiTimer=0,endingAt=0,liftLead=0;
 // Game feel: hit-stop (sim frozen, render continues), camera kick, finale arrival blend; Mara acting.
-let villagers=null,map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
+let beat=null,villagers=null,map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
 // Camera spring arm, subject framing and chart tucking state (see frame()).
 let armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
@@ -77,7 +78,9 @@ function action(){if(!state.started||state.paused||state.action||introActive||qu
 function questEvent(_progress,e={}){
  if(e.knock){movement.knockback(e.knock);sound('knock');if(!state.gentle){hitStop=.11;kick=1;kickDir.set(Math.random()-.5,.6,Math.random()-.5).normalize();}}
  if(e.bells==='out')bellOutT=state.t;if(e.bells==='return'){bellRetT=state.t;bellOutT??=state.t-1.7;}
- if(e.mara==='lever')maraAct.leverT=0;if(e.mara==='gesture')maraAct.gesture=1.6;if(e.mara==='wave')maraAct.waveUntil=state.t+(state.complete||e.complete?9:5);
+ if(e.mara==='lever')maraAct.leverT=0;if(e.mara==='gesture'){maraAct.gesture=1.6;handover();}
+ if(['sails','pipes','ladders'].includes(e.restored)){const h=world.points[e.restored]?.mill;if(h){const port=camera.aspect<.85;startBeat(new T.Vector3(h.x,h.y,h.z),{dist:port?22:17,up:3,dur:2.6,kind:'mill'});}}
+ if(e.vista==='mills'){const m=millHubs().filter((v,i)=>i<2);/* the western Sails and Pipes mills are the ones seen from the loft */if(m.length){const c=m.reduce((a,v)=>a.add(v),new T.Vector3()).multiplyScalar(1/m.length),p=movement.position;const from=new T.Vector3(p.x-c.x,0,p.z-c.z).normalize().multiplyScalar(6).add(p).setY(p.y+6);startBeat(c,{from,dur:3.4,kind:'vista'});}}if(e.mara==='wave')maraAct.waveUntil=state.t+(state.complete||e.complete?9:5);
  if(e.teleport){movement.reset(e.teleport);animator?.reset();snapCamera();if(world.points.terraceView)arrival=2.6;const ms=world.points.terraceView?.maraStand;if(ms&&mara){mara.position.set(ms.x,ms.y,ms.z);}}
  if(e.complete){state.complete=true;endingAt=state.t+7;later(1.6,'',0,()=>sound('chime'));}
  if(e.restored)sound('restore');
@@ -114,6 +117,10 @@ function poseStaff(){
  const grip=new T.Vector3(0,.39,-.012).multiply(staff.scale).applyQuaternion(staff.quaternion);
  staff.position.set(0,-.054,.026).sub(grip);
 }
+// Staff handover: step the hero onto a mark facing Mara, then a brief closer shot of her face.
+function handover(){if(!mara)return;const f=new T.Vector3(Math.sin(mara.rotation.y),0,Math.cos(mara.rotation.y)),mark=mara.position.clone().addScaledVector(f,1.15);
+ if(movement.isSafe(mark.toArray())){movement.reset(mark.toArray());movement.yaw=Math.atan2(mara.position.x-mark.x,mara.position.z-mark.z);}
+ const head=mara.position.clone().setY(mara.position.y+1.35),side=new T.Vector3(f.z,0,-f.x);startBeat(head,{from:mara.position.clone().addScaledVector(f,2.6).addScaledVector(side,1.4).setY(mara.position.y+1.8),dur:2.2,kind:'handover'});}
 // Mara acts through bh-mara.js hooks: throws the bypass lever, keeps a hand on it, looks at the
 // apprentice when near, opens her hands as she gives the staff, waves at the finale and ending.
 function actMara(dt,p){const set=mara.userData.setPose,to=mara.userData.headToward;if(!set)return;
@@ -122,6 +129,14 @@ function actMara(dt,p){const set=mara.userData.setPose,to=mara.userData.headTowa
  let yaw=0,pitch=0;const d=Math.hypot(p.x-mara.position.x,p.z-mara.position.z);if(d<4.5&&to){const l=mara.worldToLocal(tmpA.set(p.x,p.y+1.5,p.z));const h=to(l);yaw=h.yaw;pitch=h.pitch;}
  maraAct.yaw=T.MathUtils.damp(maraAct.yaw||0,yaw,4,dt);maraAct.pitch=T.MathUtils.damp(maraAct.pitch||0,pitch,4,dt);
  set({yaw:maraAct.yaw,pitch:maraAct.pitch,lever:maraAct.wave>.1?0:maraAct.lever,wave:maraAct.wave,gesture:Math.min(1,maraAct.gesture),lean:.04*Math.sin(state.t*.9),t:state.t});}
+// People and benches are solid: Mara, the villagers (moving a little) and their benches (boxes, cached).
+let benchBoxes=null;
+function npcBlocked(x,z,r,y){
+ if(mara&&Math.abs(y-mara.position.y)<1.2&&Math.hypot(x-mara.position.x,z-mara.position.z)<r+.32)return true;
+ if(villagers){for(const v of villagers.list)if(Math.abs(y-v.y)<1.2&&Math.hypot(x-v.x,z-v.z)<r+.28)return true;
+  benchBoxes??=villagers.root.children.filter(o=>o.isMesh&&!villagers.list.some(v=>v.v===o)).map(o=>new T.Box3().setFromObject(o));
+  for(const b of benchBoxes)if(y<b.max.y&&y+1.6>b.min.y&&x>b.min.x-r&&x<b.max.x+r&&z>b.min.z-r&&z<b.max.z+r)return true;}
+ return false;}
 function findContext(){const p=movement.position;context=state.action||quest.finaleActive?context:quest.context(p,movement.yaw);
  $('#action').disabled=!context||!!state.action;$('#action').innerHTML=(context?.label||'Look around')+' <span>SPACE</span>';$('#action').dataset.kind=context?.kind||'';}
 // Camera-aligned Bellhollow chart: anchors, mills, the Hollow gate and the current objective.
@@ -148,16 +163,24 @@ function viewGround(x,z){const g=world?.cameraGround?world.cameraGround(x,z):wor
 function floorUnder(x,z,y){const g=world?.ground(x,z,y);return typeof g==='number'&&Number.isFinite(g)?g:-Infinity;}
 // Layered worlds (world.layers): a sample is blocked when it sits just above a surface or up to a
 // metre below one (inside its slab). Otherwise the single top-most height is used.
-function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch),layered=!!world?.layers;for(let i=1;i<=20;i++){const d=length*i/20;if(d<=2)continue;const x=o.x+sx*c*d,z=o.z+sz*c*d,h=o.y+s*d,pad=.35+.03*i;
+// The great trunk (bark shell, Hollow walls and ceiling) is solid for the lens too: world kit's trunkSolid, padded.
+const inTrunk=(x,z,h)=>!world?.stub&&[[0,0],[.35,0],[-.35,0],[0,.35],[0,-.35]].some(([a,b])=>trunkSolid(x+a,z+b,h));
+function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch),layered=!!world?.layers;for(let i=1;i<=20;i++){const d=length*i/20;if(d<=1.2)continue;const x=o.x+sx*c*d,z=o.z+sz*c*d,h=o.y+s*d,pad=.35+.03*i;
+ if(inTrunk(x,z,h))return d;if(d<=2)continue;
  if(layered){for(const L of world.layers(x,z))if(L.h>h-pad&&L.h<h+1.1)return d;}else if(h<viewGround(x,z)+pad)return d;}return 0;}
 function placeCamera(dt,sx,sz,pitch,length){// Test the arm from a point kept above the floor: framing may pan the look target below a descending deck.
  armOrigin.copy(cameraTarget);armOrigin.y=Math.max(armOrigin.y,floorUnder(armOrigin.x,armOrigin.z,armOrigin.y)+.9);let p=pitch,l=length;
  // Raise first (the usual fix); under an overhang, also try lowering the arm beneath it.
- if(armHit(armOrigin,sx,sz,p,l)){let found=false;for(let k=1;k<=18&&!found;k++){for(const q of [pitch+k*.05,pitch-k*.05]){if(q>1.05||q<.1)continue;if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;break;}}}
-  if(!found){p=Math.min(1.05,pitch+.3);const hit=armHit(armOrigin,sx,sz,p,l);if(hit)l=Math.max(3.2,hit-.8);}}
+ // Blocked: raise the arm a little first, then pull it in (never through walls), then try lower pitches.
+ if(armHit(armOrigin,sx,sz,p,l)){let found=false;
+  for(let k=1;k<=6&&!found;k++){const q=pitch+k*.05;if(q<=1.05&&!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;}}
+  if(!found){const hit=armHit(armOrigin,sx,sz,pitch,l);if(hit&&hit-.7>=3.2&&!armHit(armOrigin,sx,sz,pitch,hit-.7)){l=hit-.7;found=true;}}
+  for(let k=1;k<=18&&!found;k++){for(const q of [pitch+(k+6)*.05,pitch-k*.05]){if(q>1.05||q<.1)continue;if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;break;}}}
+  if(!found){p=Math.min(1.05,pitch+.3);const hit=armHit(armOrigin,sx,sz,p,l);if(hit)l=Math.max(2.2,hit-.8);}}
  armPitch??=p;armLength??=l;armPitch=T.MathUtils.damp(armPitch,p,p>armPitch?12:2.4,dt);armLength=T.MathUtils.damp(armLength,l,l<armLength?12:2,dt);
  const c=Math.cos(armPitch)*armLength;camera.position.set(cameraTarget.x+sx*c,cameraTarget.y+Math.sin(armPitch)*armLength,cameraTarget.z+sz*c);
- let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));camera.position.y=Math.max(camera.position.y,floor+1.1);}
+ let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));camera.position.y=Math.max(camera.position.y,floor+1.1);
+ for(let i=0;i<12&&inTrunk(camera.position.x,camera.position.z,camera.position.y);i++)camera.position.lerp(cameraTarget,.18);}
 function screenBox(box){let l=1e9,t=1e9,r=-1e9,b=-1e9;for(let i=0;i<8;i++){ndc.set(i&1?box.max.x:box.min.x,i&2?box.max.y:box.min.y,i&4?box.max.z:box.min.z).project(camera);if(ndc.z>1)return null;const x=(ndc.x+1)/2*innerWidth,y=(1-ndc.y)/2*innerHeight;l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}return {l,t,r,b};}
 // Play area left by the HUD: below the objective panel, above caption/buttons, left of an open chart.
 function hudSafe(){const s={l:12,t:12,r:innerWidth-12,b:innerHeight-12},top=$('#hud>div')?.getBoundingClientRect();if(top?.height)s.t=Math.max(s.t,top.bottom+10);
@@ -183,6 +206,17 @@ const SHOTS=[{at:0,focus:'start',yaw:.55,pitch:.62,len:22,up:2},{at:5,focus:'mor
 const introEngineTime=()=>introActive&&introTime>=CARDS?introTime-CARDS:null;
 function introShot(){const e=introEngineTime();if(e===null)return null;let i=0;while(i<SHOTS.length-1&&e>=SHOTS[i+1].at)i++;return {shot:SHOTS[i],index:i,e};}
 function updateIntro(dt){introTime+=dt;opening.update(Math.min(27,introTime*9/CARD));const s=introShot();if(s&&s.index!==lastShot){lastShot=s.index;if(s.shot.cue)sound(s.shot.cue);caption(s.shot.text||'',s.shot.text?4.5:0);}if(introTime>=CARDS+ENGINE)endIntro();}
+// The mills' hubs (sail centres) from the world's branch anchors.
+function millHubs(){const P=world.points;return ['sails','pipes','ladders'].map(k=>P[k]?.mill).filter(Boolean).map(v=>new T.Vector3(v.x,v.y,v.z));}
+// Push a scripted lens out of the trunk and above the ground (never inside/under geometry).
+function guardLens(v){for(let i=0;i<24&&(inTrunk(v.x,v.z,v.y)||v.y<viewGround(v.x,v.z)+1.4);i++){v.y+=.8;}return v;}
+// Start a camera beat framing `look` from `dist` away on the hero's side (or from `from`), `dur` seconds.
+function startBeat(look,{dur=2.6,dist=16,up=5,from=null,kind=''}={}){if(!look||introActive)return;const p=movement.position;
+ const pos=from?from.clone():new T.Vector3(p.x-look.x,0,p.z-look.z).normalize().multiplyScalar(dist).add(look).setY(look.y+up);
+ guardLens(pos);beat={t:0,dur:state.gentle?dur+.6:dur,pos,look:look.clone(),kind};}
+function skipBeat(){if(beat&&beat.t<beat.dur-.6)beat.t=beat.dur-.6;}
+addEventListener('keydown',e=>{if(beat&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyA'].includes(e.code))skipBeat();},{capture:true});
+$('#stick').addEventListener('pointerdown',()=>skipBeat(),{capture:true});
 function introCamera(sh){const tv=world.points.terraceView,P=world.points;if(!tv||!sh||sh.index>=4)return null;const e=sh.e-sh.shot.at,flat=(a,b)=>tmpB.set(b.x-a.x,0,b.z-a.z).normalize();
  if(sh.index===0)return {pos:new T.Vector3().lerpVectors(tv.pos,tv.target,.02*e),look:new T.Vector3(tv.target.x,tv.target.y+e*.1,tv.target.z)};
  if(sh.index===1){const b=P.morningBell,d=flat(tv.target,tv.pos).clone();return {pos:new T.Vector3(b.x+d.x*6.5-d.z*1.5,b.y+3.2,b.z+d.z*6.5+d.x*1.5),look:new T.Vector3(b.x,b.y+2.2,b.z)};}
@@ -227,30 +261,36 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  if(shot&&!state.gentle){const s=shot.shot,q=s.focus==='hero'?pos:world.points[s.focus]||pos;focus=tmpA.set(q.x,q.y+s.up,q.z);sx=Math.sin(cameraYaw+s.yaw+shot.e*.012);sz=Math.cos(cameraYaw+s.yaw+shot.e*.012);pitch=s.pitch;length=s.len;follow=1.6;}
  else if(introActive){focus=tmpA.set(pos.x,pos.y+1,pos.z);}
  const rise=world.points.finaleRise,ft=quest.finaleTime??-1,ease=v=>{v=Math.max(0,Math.min(1,v));return v*v*(3-2*v);};
+ if(quest.finaleActive&&rise&&ft<4.5){const f=ease(Math.max(0,ft-.5)/4);focus=tmpA.set(pos.x,pos.y+1.4+f*2.5,pos.z);pitch=.42+f*.18;length=(portrait?11:9)+f*4;follow=2.2;}
  if(quest.finaleActive&&!rise){const f=quest.finaleShot,g=world.points.finale||world.points.guardian,e=f*f*(3-2*f);focus=tmpA.set(g.x,g.y+e*14,g.z);pitch=.3+e*.25;length=12+e*16;follow=1.4;}
  cameraTarget.lerp(focus,1-Math.exp(-dt*follow));placeCamera(dt,sx,sz,pitch,length);
- if(quest.finaleActive&&rise&&ft>=1.6){
-  // Finale crane: out of the Hollow and up over the waking village, then turn to the far bell.
-  // Keys from world anchors: out through the Hollow's open (camera) side, up over the terrace, turn to the far bell.
-  if(!crane){const P=world.points,tv=P.terraceView,c=P.arena||{x:0,y:0,z:0},far=P.farBell||rise.lookAt,o=new T.Vector3(Math.sin(DEFAULT_YAW),0,Math.cos(DEFAULT_YAW));// the Hollow opens toward the default camera
-   const at=(r,y)=>new T.Vector3(c.x+o.x*r,y,c.z+o.z*r),top=P.hollowGate?.y??4;
-   const over=tv?new T.Vector3().copy(tv.pos).addScaledVector(new T.Vector3().subVectors(tv.pos,tv.target).setY(0).normalize(),5).setY(tv.pos.y+12):at(36,top+22);
-   crane={pos:new T.CatmullRomCurve3([camera.position.clone(),at(3,pos.y+4),at(9,top+2),at(22,top+5),at(34,top+20),over]),
-    looks:[pos.clone().setY(pos.y+1.5),new T.Vector3(c.x,top+2,c.z),tv?new T.Vector3().copy(tv.target):at(0,top),new T.Vector3().copy(far)]};scriptCam.copy(camera.position);}
-  const e=ease((ft-1.6)/7.2);crane.pos.getPoint(e,finaleCam);
-  const L=crane.looks;if(ft<4.5)tmpB.lerpVectors(L[0],L[1],ease((ft-1.6)/2.9));else if(ft<9)tmpB.lerpVectors(L[1],L[2],ease((ft-4.5)/3.5));else tmpB.lerpVectors(L[2],L[3],ease((ft-9)/2.4));
-  const k=1-Math.exp(-dt*(ft<2.2?2:4));scriptCam.lerp(finaleCam,k);camera.position.copy(scriptCam);finaleLook.lerp(tmpB,k);camera.lookAt(finaleLook);
+ if(quest.finaleActive&&rise&&ft>=4.5){
+  // Finale, shot B/C (after a cut): outside the trunk on the Hollow's open side, rising over the waking village
+  // toward the mills, then turning to the far bell. Every frame is guarded against the trunk and the ground.
+  // Swing round the south (terrace) side so no look ever crosses the trunk: Ladders mill + village, then the
+  // western mills over the terrace, then the far bell from the south-west (its sight line clears the trunk).
+  if(!crane){const P=world.points,far=P.farBell||rise.lookAt,top=P.hollowGate?.y??4,az=(a,r,y)=>new T.Vector3(Math.sin(a*Math.PI/180)*r,y,Math.cos(a*Math.PI/180)*r);
+   const hub=k=>P[k]?.mill?new T.Vector3(P[k].mill.x,P[k].mill.y,P[k].mill.z):null,west=[hub('sails'),hub('pipes')].filter(Boolean);
+   crane={pos:new T.CatmullRomCurve3([az(40,32,top+12),az(0,38,top+16),az(-60,50,top+30),az(-135,50,top+26)]),
+    looks:[hub('ladders')||az(28,20,top+10),west.length?west.reduce((a,v)=>a.add(v),new T.Vector3()).multiplyScalar(1/west.length):az(-100,38,top+8),new T.Vector3().copy(far)]};
+   scriptCam.copy(crane.pos.getPoint(0));finaleLook.copy(crane.looks[0]);}
+  const e=ease((ft-4.5)/7.5);crane.pos.getPoint(e,finaleCam);guardLens(finaleCam);
+  const L=crane.looks;if(ft<7)tmpB.copy(L[0]);else if(ft<9.5)tmpB.lerpVectors(L[0],L[1],ease((ft-7)/2));else tmpB.lerpVectors(L[1],L[2],ease((ft-9.5)/2));
+  const k=1-Math.exp(-dt*3);scriptCam.lerp(finaleCam,k);camera.position.copy(scriptCam);finaleLook.lerp(tmpB,k);camera.lookAt(finaleLook);
  }else{crane=null;finaleLook.copy(camera.position).lerp(cameraTarget,1);
   const tv=world.points.terraceView;
   if(arrival>0&&tv){// Back on the terrace: ease from the painted terrace view into the normal follow arm.
    arrival=Math.max(0,arrival-dt);const k=ease(1-arrival/2.6);camera.position.lerpVectors(tv.pos,tmpB.copy(camera.position),k);camera.lookAt(tmpA.lerpVectors(tv.target,cameraTarget,k));
   }else camera.lookAt(cameraTarget);}
+ // Short camera beats (mill payoffs, loft vista, Mara's handover): ease out of the arm, hold, ease back. Any input skips.
+ if(beat&&!introActive&&!quest.finaleActive){beat.t+=dt;const inT=state.gentle?.9:.6,e=ease(Math.min(beat.t/inT,(beat.dur-beat.t)/inT,1));
+  if(beat.t>=beat.dur)beat=null;else{tmpB.copy(camera.position);camera.position.lerpVectors(tmpB,beat.pos,e);camera.lookAt(tmpA.lerpVectors(cameraTarget,beat.look,e));}}
  // World-anchored intro shots (real world): cut between painted views rather than panning the arm.
  const ic=introActive&&!state.gentle?introCamera(shot):null;
  if(ic){if(introCut!==shot.index){introCut=shot.index;scriptCam.copy(ic.pos);finaleLook.copy(ic.look);}const k=1-Math.exp(-dt*1.2);scriptCam.lerp(ic.pos,k);camera.position.copy(scriptCam);finaleLook.lerp(ic.look,k);camera.lookAt(finaleLook);}
  if(kick>.002){kick*=Math.exp(-dt*9);camera.position.addScaledVector(kickDir,kick*.32*Math.sin(performance.now()/1000*48));}
  sun.position.set(cameraTarget.x-9,cameraTarget.y+20,cameraTarget.z+8);sun.target.position.copy(cameraTarget);camera.updateMatrixWorld(true);
- if(state.started&&(hudTimer-=dt)<=0){hudTimer=.15;safe=hudSafe();updateChart(pos);}
+ if(state.started&&(hudTimer-=dt)<=0){hudTimer=.15;safe=hudSafe();updateChart(pos);const hy=tmpA.set(pos.x,pos.y+1.2,pos.z).project(camera).y;document.body.classList.toggle('caption-high',hy<-.3);}
  wind.flush();
  const area=quest.area(pos);
  if(look){try{look.setFocus?.({hero:hero.position,heroObject:hero,extra:mara?[mara.position]:[]});look.update(dt,{area:LOOK_AREAS[area]||'terrace-dawn',restored:quest.restoration.village||0,t:state.t,gentle:state.gentle});look.render();}catch(e){console.warn('look failed; plain renderer from now on',e);look=null;renderer.render(scene,camera);}}else renderer.render(scene,camera);
@@ -273,7 +313,7 @@ try{
  if(P.bellOut&&P.arena&&!world.stub){// Paired bells on the high ring behind the ringing stand, facing the well.
   pairedBells=buildPairedBells(T);const s=P.bellOut,dx=s.x-P.arena.x,dz=s.z-P.arena.z,L=Math.hypot(dx,dz)||1,x=s.x+dx/L*1.3,z=s.z+dz/L*1.3,g=world.ground(x,z,s.y+.5);pairedBells.position.set(x,g??s.y,z);pairedBells.rotation.y=Math.atan2(-dx,-dz);pairedBells.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=true;});scene.add(pairedBells);}
  mara.name='mara';mara.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=true;});mara.position.set(P.mara.x,P.mara.y,P.mara.z);mara.rotation.y=Math.atan2(P.start.x-P.mara.x,P.start.z-P.mara.z);scene.add(mara);
- movement=createMovement(T,{start:start3,sampleGround:(x,z,y)=>world.ground(x,z,y),blocked:(x,z,r,y)=>world.blocked(x,z,r,y),stickElement:$('#stick'),jumpButton:$('#jump'),runButton:$('#run'),walkSpeed:1.65,runSpeed:5.8,acceleration:12,deceleration:16,turnResponse:12,cameraYaw:()=>cameraYaw,maxDrop:14});
+ movement=createMovement(T,{start:start3,sampleGround:(x,z,y)=>world.ground(x,z,y),blocked:(x,z,r,y)=>world.blocked(x,z,r,y)||npcBlocked(x,z,r,y),stickElement:$('#stick'),jumpButton:$('#jump'),runButton:$('#run'),walkSpeed:1.65,runSpeed:5.8,acceleration:12,deceleration:16,turnResponse:12,cameraYaw:()=>cameraYaw,maxDrop:14});
  animator=createAdventureMotion(character,movement);hero.position.copy(movement.position);
  wind=createWind({THREE:T,scene,movement,sound,fx:()=>look?.fx?.wind});
  look=loaded[5];
@@ -288,7 +328,7 @@ try{
  window.__CAMERA_PROBE__=()=>{const p=movement.position,ray=new T.Raycaster(),blockers=[],vis=o=>{for(let n=o;n;n=n.parent){if(!n.visible||n===hero)return false;}return true;};let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));
   for(const h of [1.55,1.0]){const target=new T.Vector3(p.x,p.y+h,p.z),dir=target.clone().sub(camera.position),dist=dir.length();ray.set(camera.position,dir.normalize());ray.far=dist-.3;for(const hit of ray.intersectObject(scene,true)){const o=hit.object,m=Array.isArray(o.material)?o.material[0]:o.material;if(!o.isMesh||!vis(o)||m?.transparent&&m.opacity<.5||m?.isMeshBasicMaterial&&!m.depthWrite||m?.isShaderMaterial)continue;blockers.push({name:o.name||o.parent?.name||'mesh',h,at:+hit.distance.toFixed(2),of:+dist.toFixed(2)});}}
   const head=new T.Vector3(p.x,p.y+1.55,p.z).project(camera);heroBox.min.set(p.x-.35,p.y,p.z-.35);heroBox.max.set(p.x+.35,p.y+1.75,p.z+.35);const g=quest.subject();
-  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe};};
+  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe,insideTrunk:inTrunk(camera.position.x,camera.position.z,camera.position.y)};};
  // Lazy-load the prologue illustrations once the game is ready (not counted against start-up).
  (window.requestIdleCallback||setTimeout)(()=>{for(const n of [1,2,3]){const i=new Image();i.src=new URL(`./textures/v2/card${n}.webp`,import.meta.url).href;}});
  // After ready (never blocking it): villagers, then the chart bake from the live scene.

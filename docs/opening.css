@@ -55,3 +55,12 @@ body.gentle-opening #titleArt{animation:none;transform:none}
  body.at-title #title{top:auto;bottom:max(78px,calc(env(safe-area-inset-bottom) + 70px));transform:none;max-height:44dvh;overflow:auto;padding:0}
  body.at-title #title h1{font-size:40px;margin-bottom:8px}body.at-title #title .title-rule{margin:8px 0}body.at-title #title .title-tagline{margin:6px 0 10px}
 }
+/* Phone prologue: the card illustration fills the top, the story sits below on a solid band (no gradient over the art);
+   the stick stays touchable for move-to-skip but is invisible during the cards. */
+@media(max-width:700px) and (orientation:portrait){
+ #titleArt[data-chapter]{background-size:auto 56%;background-color:#0b2023;background-position-y:7vh}
+ #titleArt[data-chapter] .title-vignette{background:linear-gradient(180deg,transparent 0%,transparent 44%,#0b2023e6 53%,#0b2023 57%)}
+ #prologue{background:none;align-items:flex-end}
+ #prologue .story-copy{padding-bottom:max(96px,calc(env(safe-area-inset-bottom) + 90px))}
+}
+body.in-prologue #stick{opacity:0}

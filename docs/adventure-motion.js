@@ -6,6 +6,9 @@ export function createAdventureMotion(character,movement){
  const joints=character.root.children[0].userData.joints,model=character.root.children[0];
  // Acting state: blink timer, damped head offsets, squash spring (value/velocity around 1).
  let nextBlink=1.5+Math.random()*2,blinkT=-1,headYaw=0,headPitch=0,sq=0,sqV=0,wasLifting=false,peakY=null,dip=0;
+ // Air pose: the jump/fall clips hold the arms out (T-pose). In the air, blend the arms toward the hero's own
+ // idle arm pose (captured on the ground), lifted slightly forward with bent elbows and a little follow-through.
+ const ARMS=['leftUpperArm','rightUpperArm','leftLowerArm','rightLowerArm'].filter(n=>joints[n]),rest={},tmpQ=character.root.quaternion.clone();let airW=0;
  const eyes=()=>character.root.userData.eyeGroups||model.userData.eyeGroups||[];
  function kick(amount){sqV+=amount;}
  function update(dt,{action=null,actionProgress=0,lookAt=null,gentle=false}={}){
@@ -20,6 +23,13 @@ export function createAdventureMotion(character,movement){
   const phase=character.motionState.phase;
   if(movement.grounded&&speed>.2&&gait===next&&previous===next&&Math.floor(lastPhase*2)!==Math.floor(phase*2))footfalls.push('step');
   lastPhase=phase;grounded=movement.grounded;
+  if(movement.grounded&&speed<.15&&!action)for(const n of ARMS)(rest[n]??=joints[n].quaternion.clone()).slerp(joints[n].quaternion,Math.min(1,dt*4));
+  airW+=((!movement.grounded&&ARMS.every(n=>rest[n])?1:0)-airW)*(1-Math.exp(-dt*(movement.grounded?10:7)));
+  if(airW>.01){const up=movement.verticalVelocity,lift=movement.lifting?1:0;
+   for(const n of ARMS){tmpQ.copy(joints[n].quaternion);joints[n].quaternion.copy(tmpQ.slerp(rest[n],.88*airW));}
+   // Rising: arms swing a little forward/up; falling: they trail back; lifting in a column: a steady open glide.
+   const swing=Math.max(-.35,Math.min(.45,up*.06))+lift*.25;
+   for(const side of ['left','right']){const U=joints[side+'UpperArm'],L=joints[side+'LowerArm'];if(U)U.rotation.x-=swing*airW;if(L)L.rotation.x-=(.45+.15*lift)*airW;}}
   if(action){const reach=Math.sin(Math.PI*Math.min(1,actionProgress));joints.rightUpperArm.rotation.x-=reach*.75;joints.rightLowerArm.rotation.x-=reach*.40;joints.chest.rotation.x+=reach*.07;}
   // Anticipation: a quick dip (knees give) in the first third of an action, then a small lift.
   const want=action?(actionProgress<.3?Math.sin(Math.PI*actionProgress/.3)*.07:-Math.sin(Math.PI*Math.min(1,(actionProgress-.3)/.5))*.025):0;

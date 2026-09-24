@@ -72,7 +72,7 @@ export function buildTrunk(T, B, seed = 11) {
       const c0 = rin(y0 + .01), c1 = rin(y1 - .01);
       const s = Math.sin(a * DEG), c = Math.cos(a * DEG), ro0 = trunkR(y0) + ridge(a * DEG, y0), ro1 = trunkR(y1) + ridge(a * DEG, y1);
       const A = [s * c0, y0, c * c0], Bq = [s * ro0, y0, c * ro0], C = [s * ro1, y1, c * ro1], D = [s * c1, y1, c * c1];
-      if (flip) quad(bark, barkUV, A, D, C, Bq, 0, y0 / 3, 3, y1 / 3); else quad(bark, barkUV, A, Bq, C, D, 0, y0 / 3, 3, y1 / 3);
+      quad(bark, barkUV, A, D, C, Bq, 0, y0 / 3, 3, y1 / 3); quad(bark, barkUV, A, Bq, C, D, 0, y0 / 3, 3, y1 / 3);  // both sides: seen from the wedge and from inside
     }
   };
   edgeFace(HOLLOW.open0, false); edgeFace(HOLLOW.open1, true);

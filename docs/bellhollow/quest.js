@@ -314,7 +314,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
       if (!v.ledge || reached[v.id] || v.id.startsWith('ring')) continue;
       if (d2(p, v.ledge) < 3.6 && Math.abs(p.y - v.ledge.y) < .45) {
         reached[v.id] = true;
-        if (v.id === 'loft') { progress.loft = true; say('The loft. The whole tree opens up: three still windmills on the branches, and the Hollow gate below.', 7); }
+        if (v.id === 'loft') { progress.loft = true; say('The loft. The whole tree opens up: three still windmills on the branches, and the Hollow gate below.', 7); emit({ vista: 'mills' }); }
         else if (v.id === 'ladders3') say('The top ledge. The Mill of Ladders waits, still.', 4);
         emit({ checkpoint: arr(v.ledge) });
       }

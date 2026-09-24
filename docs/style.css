@@ -85,3 +85,15 @@ body:has(#ending.completion:not([hidden])) #controls>button,body:has(#ending.com
 body.wind-held #charge{border-color:#8fd3e0;box-shadow:0 0 0 2px #8fd3e055,0 6px 20px #142b3426}
 body.wind-held #chargeIcon{color:#8fd3e0;text-shadow:0 0 10px #8fd3e0}
 #action[data-kind=catch],#action[data-kind=give],#action[data-kind=vent],#action[data-kind=push]{background:linear-gradient(135deg,#e6f6f8,#a9dde6);border-color:#8fd3e0}
+
+/* Audit fixes: captions never cover the hero; a lighter desktop bottom HUD. */
+body.caption-high #caption{bottom:auto;top:max(130px,17vh)}
+@media(pointer:coarse),(max-width:700px){body.caption-high #caption{top:max(150px,19vh);bottom:auto}}
+@media(pointer:fine) and (min-width:701px){
+ #jump,#run{display:none}            /* keys cover them: A and Shift are in the hint line */
+ #action{min-height:52px;width:170px;padding:8px 12px;bottom:26px;font-size:13px}
+ #action span{margin-top:3px}
+ #charge{bottom:26px;padding:7px 12px}
+ #hint{bottom:6px;padding:4px 10px;font-size:10px}
+ #caption{bottom:92px}
+}

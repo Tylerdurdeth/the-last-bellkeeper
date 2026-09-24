@@ -55,7 +55,7 @@ void main() {
       if ( i >= bkFocusCount ) break;
       vec4 A = bkFocusA[ i ], B = bkFocusB[ i ];
       vec2 d = ( gl_FragCoord.xy - A.xy ) / vec2( A.w * B.y, A.w );
-      float f = ( 1.0 - smoothstep( 0.35, 0.8, length( d ) ) ) * smoothstep( 1.0, 1.6, A.z - vDepth ) * max( 1.0 - flatS, smoothstep( B.x + 1.0, B.x + 1.3, vWorld.y ) ) * B.z;
+      float f = ( 1.0 - smoothstep( 0.8, 1.05, length( d ) ) ) * smoothstep( 1.0, 1.6, A.z - vDepth ) * max( 1.0 - flatS, smoothstep( B.x + 1.0, B.x + 1.3, vWorld.y ) ) * B.z;
       if ( f > 0.02 ) discard;   // a fading object loses its ink shell entirely (no dark dots through the dither holes)
     }
   }

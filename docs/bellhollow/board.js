@@ -27,6 +27,7 @@ const BOARD = {
   street: [P.start, {}, {}, 'terrace-dawn'],
   maraWorkshop: [P.maraLever, {}, {}, 'terrace-dawn'],
   maraOutlet: [P.maraOutlet, {}, {}, 'terrace-dawn'],
+  morningBell: [P.morningBell, {}, {}, 'terrace-dawn'],
   seedWheelGate: [P.seedWheel, {terraceGate: 1}, {terrace: 1}, 'terrace-dawn'],
   loftVent: [P.loftVent, OPEN, {terrace: 1}, 'terrace-dawn'],
   loft: [P.loftLedge, OPEN, {terrace: 1}, 'terrace-dawn'],
