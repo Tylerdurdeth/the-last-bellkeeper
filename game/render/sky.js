@@ -14,7 +14,7 @@ export function createSky(THREE) {
     uSunDir: { value: new THREE.Vector3(0, .3, 1).normalize() },
     uCloud: { value: new THREE.Color('#FFF1DC') },
     uCloudShade: { value: new THREE.Color('#C9B9B0') },
-    uCloudAmt: { value: .8 },
+    uCloudAmt: { value: .8 }, uSunGlow: { value: 1 },
     // Painted sky strip
     uMap: { value: null }, uMapMix: { value: 0 }, uMapRange: { value: new THREE.Vector2(-.06, .62) }, uMapTint: { value: new THREE.Color(1, 1, 1) },
     uMapAz: { value: 0 },          // azimuth of the image centre (radians); follows the sun unless pinned
@@ -34,7 +34,7 @@ void main() {
 }`,
     fragmentShader: `#include <common>
 uniform vec3 uTop, uHorizon, uBelow, uSunColor, uSunDir, uCloud, uCloudShade, uMapTint, uHaze, uBackTint;
-uniform float uCloudAmt, uMapMix, uMapAz, uBackMix, uBackAz, uBackArc, uHazeAmt;
+uniform float uCloudAmt, uSunGlow, uMapMix, uMapAz, uBackMix, uBackAz, uBackArc, uHazeAmt;
 uniform vec2 uMapRange, uBackRange, uBackSkyFade;
 uniform sampler2D uMap, uBack;
 varying vec3 vDir;
@@ -70,6 +70,7 @@ void main() {
     col = mix( col, m * uMapTint, uMapMix * inside );
   }
   col += uSunColor * pow( s, 400.0 ) * 1.2 * ( 1.0 - uMapMix * 0.7 );
+  col += uSunColor * ( pow( s, 3.0 ) * 0.10 + pow( s, 14.0 ) * 0.22 ) * uSunGlow;   // bloom-free glow around the sun
   if ( uBackMix > 0.0 ) {
     float da = wrapPi( az - uBackAz );
     float u = 0.5 + da / uBackArc;

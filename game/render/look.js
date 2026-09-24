@@ -22,6 +22,7 @@ import { createWindMaterial } from './wind-material.js';
 import { createWindFx, DISTORT_LAYER } from './fx/wind-fx.js';
 import { createFireFx } from './fx/fire.js';
 import { createWaterFx } from './fx/water.js';
+import { createShafts } from './fx/shafts.js';
 export { createWindMaterial };
 import { setPaintedCel } from '../art-direction.js';
 
@@ -44,7 +45,8 @@ function baseRigs(THREE) {
     lift: new THREE.Vector3(.004, .018, .022), gain: new THREE.Vector3(1.03, 1.0, .96), sat: .98, contrast: 1.08,
     vignette: .20, ink: c('#2A1E1C'),
     skyMapMix: 1, mapTint: c('#FFFFFF'), backMix: 1, backTint: c('#FFFFFF'), hazeAmt: .22,
-    restoreExposure: 1.24, restoreWarm: 1, shadowIntensity: 1, postGain: 1,   // how hard restoration brightens / warms this area
+    restoreExposure: 1.24, restoreWarm: 1, shadowIntensity: 1, postGain: 1,
+    aerial: new THREE.Vector3(18, 75, .22), aerialColor: c('#BCCDD6'), sunGlow: 1, shafts: .08,   // how hard restoration brightens / warms this area
     ...o,
   });
   return {
@@ -59,7 +61,7 @@ function baseRigs(THREE) {
       cloud: c('#FFFFFF'), cloudShade: c('#BFD2DA'),
       bands: new THREE.Vector4(.10, .42, .03, .50), shadowTint: c('#AEB9CC'), shadeAmt: .06,   // cool blue, not teal: warm timber must not go olive
       lift: new THREE.Vector3(.0, .012, .02), gain: new THREE.Vector3(1.02, 1.01, .99), sat: 1.06, contrast: 1.10,
-      vignette: .14, mapTint: c('#F4F8FF'), hazeAmt: .12,
+      vignette: .14, mapTint: c('#F4F8FF'), hazeAmt: .12, aerial: new THREE.Vector3(22, 90, .2), shafts: .05,
       restoreExposure: 1.2, restoreWarm: .45,   // already bright: warmth and fill, not exposure (no clipping)
     }),
     // Warm shaft from above, cool darker lower well.
@@ -71,7 +73,7 @@ function baseRigs(THREE) {
       bands: new THREE.Vector4(.12, .50, .05, .50), shadowTint: c('#9FB6C8'), shade: c('#2C4A45'), shadeAmt: .22,
       height: new THREE.Vector4(-15, 1, .45, .45), lowTint: c('#9FC0C2'),
       rim: c('#FFB060'), rimIntensity: 1.1, exposure: 1.0,
-      restoreExposure: 1.1, restoreWarm: .55,   // restored Hollow: brighter and warmer, not yellow
+      restoreExposure: 1.1, restoreWarm: .55, aerial: new THREE.Vector3(12, 40, .12), aerialColor: c('#6F8C92'), sunGlow: .4, shafts: .2,   // restored Hollow: brighter and warmer, not yellow
       shadowIntensity: .72,   // inside the trunk: occluded key survives at half strength as warm bounce (interiors keep form)
       lift: new THREE.Vector3(.0, .015, .04), gain: new THREE.Vector3(1.03, 1.0, .96), sat: 1.04, contrast: 1.22,
       vignette: .2, skyMapMix: .85, mapTint: c('#9FA7A0'), backMix: .35, backTint: c('#8E9A92'), hazeAmt: .45,
@@ -109,7 +111,9 @@ function lerpRig(out, a, b, t) {
 
 const TEX = n => new URL(`../textures/v2/${n}.webp`, import.meta.url).href;
 
-export function createLook({ THREE, renderer, scene, camera, tier: forcedTier, pixelWidth = 1.5, sky: skyOpts = true, autoTiles = true } = {}) {
+export function createLook({ THREE, renderer, scene, camera, tier: forcedTier, pixelWidth = 1.5, sky: skyOpts = true, autoTiles = true, hierarchy: hierarchyOpt = true, beauty = true } = {}) {
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('beauty') === '0') beauty = false;   // dev comparison override
+  const hierarchy = hierarchyOpt && beauty;   // beauty:false = pass-3 look (no hierarchy/weathering/AO/aerial/shafts/sun glow), for comparisons
   setPaintedCel(false);   // the old art-direction cel ramp would stack on top of the toon bands
   const toon = createToon(THREE), sky = createSky(THREE);
   const ink = createOutlines(THREE, { bkFocusA: toon.uniforms.bkFocusA, bkFocusB: toon.uniforms.bkFocusB, bkFocusCount: toon.uniforms.bkFocusCount });
@@ -131,7 +135,8 @@ export function createLook({ THREE, renderer, scene, camera, tier: forcedTier, p
   scene.add(sky.mesh);
   // Natural elements (not toon): wind streams/particles/updrafts, lantern flames, water. See game/render/fx/*.
   const fxWind = createWindFx({ THREE, scene });
-  const fx = { wind: fxWind, fire: createFireFx({ THREE, scene }), water: createWaterFx({ THREE, wind: fxWind }) };
+  const shafts = createShafts({ THREE, scene });
+  const fx = { wind: fxWind, fire: createFireFx({ THREE, scene }), water: createWaterFx({ THREE, wind: fxWind }), shafts };
   // Atlas painted sky + distant valley (≈125 KB, async, never blocks the first frame). Pass sky:false to skip.
   const ready = skyOpts ? Promise.all([
     sky.setTexture(skyOpts.sky ?? TEX('sky-dawn'), skyOpts.skyOptions),
@@ -182,11 +187,11 @@ void main() {
     uniforms: {
       tColor: { value: null }, tDepth: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uNear: { value: .1 }, uFar: { value: 100 },
       uPx: { value: 1 }, uInk: { value: new THREE.Color('#2A1E1C') }, uInkAmt: { value: .92 }, uFade: { value: new THREE.Vector2(18, 55) },
-      uLift: { value: new THREE.Vector3() }, uPostGain: { value: 1 }, tDistort: { value: null }, uDistort: { value: .006 }, uGain: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 }, uContrast: { value: 1 }, uVignette: { value: 0 },
+      uLift: { value: new THREE.Vector3() }, uPostGain: { value: 1 }, tDistort: { value: null }, uDistort: { value: .006 }, uAoR: { value: 6 }, uAo: { value: .38 }, uGain: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 }, uContrast: { value: 1 }, uVignette: { value: 0 },
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4( position.xy, 0.0, 1.0 ); }',
     fragmentShader: `#include <common>
-uniform sampler2D tColor, tDepth, tDistort; uniform float uDistort; uniform vec2 uRes, uFade; uniform float uNear, uFar, uPx, uInkAmt, uSat, uContrast, uVignette;
+uniform sampler2D tColor, tDepth, tDistort; uniform float uDistort, uAoR, uAo; uniform vec2 uRes, uFade; uniform float uNear, uFar, uPx, uInkAmt, uSat, uContrast, uVignette;
 uniform vec3 uInk, uLift, uGain; uniform float uPostGain; varying vec2 vUv;
 float linZ( vec2 uv ) { float d = texture2D( tDepth, uv ).x; return uNear * uFar / ( uFar - d * ( uFar - uNear ) ); }
 vec3 toSRGB( vec3 c ) { return mix( c * 12.92, 1.055 * pow( c, vec3( 1.0 / 2.4 ) ) - 0.055, step( 0.0031308, c ) ); }
@@ -210,6 +215,20 @@ void main() {
     float lap = ( abs( zl + zr - 2.0 * z0 ) + abs( zd + zu - 2.0 * z0 ) ) / z0;
     float crease = smoothstep( 0.012, 0.03, lap ) * 0.8 * smoothstep( 0.6, 0.9, src.a );   // terrain (a=.5): silhouettes only
     e = max( sil, crease ) * ( 1.0 - smoothstep( uFade.x, uFade.y, z0 ) );
+    // Soft AO where things meet + light edge wear on convex edges: depth second derivative over opposing tap pairs
+    // (planes cancel), windowed so object/background gaps do not halo. Fades with distance; skipped on sky.
+    {
+      vec2 r = uAoR / uRes; float occ = 0.0, wear = 0.0;
+      vec2 D[ 4 ]; D[ 0 ] = vec2( 1.0, 0.0 ); D[ 1 ] = vec2( 0.0, 1.0 ); D[ 2 ] = vec2( 0.707, 0.707 ); D[ 3 ] = vec2( 0.707, -0.707 );
+      for ( int i = 0; i < BK_AO_PAIRS; i ++ ) {
+        float d = ( z0 - 0.5 * ( linZ( vUv + D[ i ] * r ) + linZ( vUv - D[ i ] * r ) ) ) / z0;
+        occ += smoothstep( 0.002, 0.02, d ) * ( 1.0 - smoothstep( 0.06, 0.15, d ) );
+        wear += smoothstep( 0.002, 0.012, - d ) * ( 1.0 - smoothstep( 0.03, 0.06, - d ) );
+      }
+      float k = ( 1.0 - smoothstep( 25.0, 60.0, z0 ) ) * step( z0, uFar * 0.8 ) / float( BK_AO_PAIRS );
+      col *= 1.0 - uAo * occ * k;
+      col *= 1.0 + uAo * 0.5 * wear * k;
+    }
     e *= step( z0, uFar * 0.85 );
     e *= smoothstep( 0.3, 0.4, src.a );   // no ink on fading occluders (alpha .25 marker)
   #endif
@@ -237,7 +256,12 @@ void main() {
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), post); quad.frustumCulled = false;
   const postScene = new THREE.Scene(); postScene.add(quad);
   const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  function setEdges(on) { const had = !!post.defines.BK_EDGES; if (on) post.defines.BK_EDGES = ''; else delete post.defines.BK_EDGES; if (had !== on) post.needsUpdate = true; }
+  function setEdges(on, pairs = 4) {
+    const had = post.defines.BK_EDGES !== undefined, hadPairs = post.defines.BK_AO_PAIRS;
+    if (on) post.defines.BK_EDGES = ''; else delete post.defines.BK_EDGES;
+    post.defines.BK_AO_PAIRS = pairs;
+    if (had !== on || hadPairs !== pairs) post.needsUpdate = true;
+  }
 
   // Registration: every lit material in the scene is patched (scanned periodically, cheap).
   let scanTimer = 0;
@@ -247,7 +271,27 @@ void main() {
   // The world's mist sea (flat, far below) is painted as a distant forest canopy in drifting mist.
   const AUTO_ROLES = { paving: 'terrain', mist: 'mist' };
   const lanternGlass = o => o.isInstancedMesh && /^bh-lanterns-/.test(o.name);
-  const tiled = new WeakSet();
+  const characterMaterial = (o, m) => toon.roleOf(m) === 'character' || [...characters].some(c => { for (let q = o; q; q = q.parent) if (q === c) return true; return false; });
+  const tiled = new WeakSet(), surfaced = new WeakSet(), hsl = {};
+  // Rule 1 (value/saturation hierarchy): large surfaces calm and weathered, saturation kept for accents.
+  const HONEY_GREY = new THREE.Color('#A58B6B');
+  function classifySurface(m) {
+    const role = toon.roleOf(m);
+    const glowing = m.emissive && (m.emissive.r + m.emissive.g + m.emissive.b) * (m.emissiveIntensity ?? 1) > .15;
+    if (!m.color || ['character', 'glow', 'mist'].includes(role) || glowing || m.userData.accent) return null;
+    const key = m.userData.bhKey || '', name = m.name || '';
+    m.color.getHSL(hsl);
+    const teal = hsl.h > .38 && hsl.h < .56, warm = hsl.h < .12 || hsl.h > .95, coral = warm && hsl.s > .45 && hsl.l > .45;
+    if (/^(deck|timber|timberDark)$/.test(key) || name === 'timber') return { sat: .6, tint: HONEY_GREY, tintAmt: .2, moss: key === 'deck' ? .2 : .35, grime: .6 };
+    if (/^(stone|stoneShade|paving|plaster)$/.test(key) || name === 'stone' || name === 'plaster') return { sat: .7, moss: .7, grime: .7 };
+    if (/^bark/.test(key) || name === 'bark') return { sat: .72, moss: .6, grime: .4 };
+    if (name === 'tile' || /^tile/.test(key)) return { sat: coral ? .7 : .6, moss: .45, grime: .5 };   // roofs are large: calm
+    if (name === 'metal') return teal ? { sat: .45, grime: .5 } : { sat: .82, grime: .2 };   // verdigris pipes calm; polished copper stays warm
+    if (name === 'fabric' || /^cloth/.test(key)) return coral ? null : { sat: .8, grime: .3 };   // coral cloth is the accent
+    if (name === 'foliage' || /^leaf/.test(key) || key === 'far' || key === 'farLight') return { sat: hsl.l > .5 ? .7 : .84 };   // lime tips calmer
+    if (role === 'terrain' || name === 'ground') return { sat: .78, moss: .3, grime: .2 };
+    return hsl.s > .5 ? { sat: .78, grime: .4 } : { sat: .92, grime: .3 };
+  }
   const scan = () => {
     toon.patchObject(scene);
     scene.traverse(o => {
@@ -256,6 +300,7 @@ void main() {
         if (m && AUTO_ROLES[m.userData?.bhKey]) toon.patch(m, AUTO_ROLES[m.userData.bhKey]);
         if (m && lanternGlass(o) && toon.roleOf(m) !== 'glow') toon.patch(m, 'glow');
         if (o.name === 'bellhollow-wind' && !fx.wind.attached.has(o)) fx.wind.attach(o);   // zero-wiring fallback for wind.js
+        if (m && hierarchy && !surfaced.has(m) && toon.isPatched(m) && !characterMaterial(o, m)) { surfaced.add(m); const c = classifySurface(m); if (c) toon.setSurface(m, c); }
         const role = m && AUTO_TILES[m.userData?.bhKey];
         if (role && !tiled.has(m)) { tiled.add(m); toon.setTile(m, tile(role)); }
       }
@@ -350,6 +395,8 @@ void main() {
     U.bkAmbSteps.value = r.ambSteps; U.bkHeight.value.copy(r.height); U.bkLowTint.value.copy(r.lowTint);
     U.bkRimColor.value.copy(r.rim).multiplyScalar(r.rimIntensity);
     U.bkMist.value.copy(r.fogColor).lerp(WHITE, .35);
+    U.bkAerial.value.copy(r.aerial); U.bkAerialColor.value.copy(r.aerialColor); sky.uniforms.uSunGlow.value = r.sunGlow; shafts.amount = r.shafts;
+    if (!beauty) { U.bkAerial.value.z = 0; sky.uniforms.uSunGlow.value = 0; shafts.amount = 0; post.uniforms.uAo.value = 0; } shafts.dir.copy(r.keyDir); shafts.color.copy(r.keyColor);
     U.bkSunDir.value.copy(r.keyDir);
     const S = sky.uniforms;
     S.uTop.value.copy(r.skyTop); S.uHorizon.value.copy(r.skyHorizon); S.uBelow.value.copy(r.skyBelow); S.uSunColor.value.copy(r.sunColor);
@@ -444,7 +491,9 @@ void main() {
   }
 
   function render() {
+    toon.uniforms.bkDetail.value = beauty && (tier === 'high' || tier === 'low') ? 1 : 0;
     updateFocus();
+    shafts.update(windClock, focus?.hero ?? sun.target.position);
     // Key direction is owned by the rig; the host keeps choosing the shadow focus via sun.target.
     sun.position.copy(sun.target.position).addScaledVector(cur.keyDir, 30);
     sun.target.updateMatrixWorld();
@@ -479,10 +528,10 @@ void main() {
     post.uniforms.tDistort.value = distort ? distRT.texture : null;
     renderer.setRenderTarget(null);
     info.autoReset = false;
-    setEdges(tier === 'high' || tier === 'low');
+    setEdges(tier === 'high' || tier === 'low', tier === 'high' ? 4 : 2);   // phones: 2 AO pairs
     const P = post.uniforms;
     P.tColor.value = rtT.texture; P.tDepth.value = rtT.depthTexture; P.uRes.value.copy(size);
-    P.uNear.value = camera.near; P.uFar.value = camera.far; P.uPx.value = Math.max(.75, size.y / 1080) * 1.0;
+    P.uNear.value = camera.near; P.uFar.value = camera.far; P.uAoR.value = 6 * Math.max(.75, size.y / 1080); P.uPx.value = Math.max(.75, size.y / 1080) * 1.0;
     renderer.render(postScene, postCam);
     info.autoReset = auto;
   }

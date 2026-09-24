@@ -29,7 +29,8 @@ export function createToon(THREE) {
     bkFocusB: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) },
     bkFocusCount: { value: 0 },
     bkMist: { value: new THREE.Color('#E6ECE4') },       // mist colour for the painted under-canopy
-    bkTime: { value: 0 }, bkFlicker: { value: 1 },       // seconds; lantern-glass breathing (fx/fire.js)
+    bkTime: { value: 0 }, bkFlicker: { value: 1 }, bkDetail: { value: 1 },   // bkDetail 0 on fallback tiers: no weathering noise
+    bkAerial: { value: new THREE.Vector3(18, 75, .22) }, bkAerialColor: { value: new THREE.Color('#B9CCD6') },   // mid-distance cool layer       // seconds; lantern-glass breathing (fx/fire.js)
   };
   const LUM = 'vec3(0.2126, 0.7152, 0.0722)';
   const patched = new WeakMap();
@@ -51,7 +52,7 @@ export function createToon(THREE) {
 uniform vec3 bkKeyColor; uniform vec4 bkBands; uniform vec3 bkShadowTint; uniform vec3 bkShade; uniform float bkShadeAmt;
 uniform vec4 bkHeight; uniform vec3 bkLowTint; uniform float bkAmbSteps; uniform vec3 bkRimColor; uniform vec3 bkSunDir;
 uniform vec3 bkFogSun; uniform vec3 bkFogHeight; uniform float bkGlow; uniform vec2 bkFogShape;
-uniform vec4 bkFocusA[ 4 ]; uniform vec4 bkFocusB[ 4 ]; uniform int bkFocusCount; uniform vec3 bkMist; uniform float bkTime, bkFlicker;
+uniform vec4 bkFocusA[ 4 ]; uniform vec4 bkFocusB[ 4 ]; uniform int bkFocusCount; uniform vec3 bkMist; uniform float bkTime, bkFlicker, bkDetail; uniform vec3 bkAerial, bkAerialColor;
 varying vec3 vBkWorldPos;`;
   const HEMI = `
 vec3 bkHemi( const in HemisphereLight h, const in vec3 n ) {
@@ -96,7 +97,8 @@ vec3 bkHemi( const in HemisphereLight h, const in vec3 n ) {
       bkSide = saturate( dot( normal, directionalLights[ 0 ].direction ) * 1.2 + 0.25 );
     #endif
     // Warm rim tinted by the surface's own paint (hair stays brown, coat goes light coral), never a white halo.
-    totalEmissiveRadiance += bkRimColor * bkRim * bkSide * ( 0.08 + bkAlbedo * 1.4 );
+    totalEmissiveRadiance += bkRimColor * bkRim * bkSide * ( 0.08 + bkAlbedo * 1.7 );
+    reflectedLight.indirectDiffuse *= 1.12;   // characters sit a touch above the calmed world in value
   }
   #endif
   #if BK_ROLE == 3
@@ -135,7 +137,7 @@ float bkFadeAmt = 0.0;
     vec3 canopy = mix( vec3( 0.105, 0.20, 0.155 ), vec3( 0.23, 0.36, 0.17 ), smoothstep( 0.3, 0.7, groves ) );
     canopy = mix( canopy * 0.72, canopy * 1.25 + vec3( 0.05, 0.06, 0.0 ), smoothstep( 0.42, 0.72, crowns ) );   // crown tops catch light
     float r = length( p );
-    float mist = smoothstep( 0.42, 0.72, drift ) * 0.85 + ( 1.0 - smoothstep( 25.0, 60.0, r ) ) * 0.6;           // mist pools under the tree
+    float mist = smoothstep( 0.45, 0.75, drift ) * 0.75 + ( 1.0 - smoothstep( 20.0, 50.0, r ) ) * 0.35;           // mist pools under the tree
     diffuseColor.rgb = mix( canopy, bkMist, clamp( mist, 0.0, 0.92 ) );
   } else if ( abs( bkFlat.y ) < 0.2 ) {
     // Vertical mist sheets are the backdrop waterfalls: bright streaks racing down, foam haze near the mist sea.
@@ -144,6 +146,29 @@ float bkFadeAmt = 0.0;
     diffuseColor.rgb = mix( diffuseColor.rgb, bkMist, 1.0 - smoothstep( -30.0, -18.0, vBkWorldPos.y ) );
   } else {
     diffuseColor.rgb = bkMist * 0.92;   // cloud banks: the area's mist colour, so they melt into the haze
+  }
+}
+#endif`;
+  // Weathering on world materials (rule 5) + value/saturation hierarchy (rule 1). Per-material uniforms:
+  // bkSurf = (saturation kept, tint amount, moss, grime); bkSurfTint = chroma the albedo is nudged toward.
+  const SURFACE = `
+#ifdef BK_SURFACE
+{
+  vec3 bkW = vBkWorldPos;
+  vec3 bkFn = normalize( cross( dFdx( bkW ), dFdy( bkW ) ) );
+  float bkL = dot( diffuseColor.rgb, ${LUM} );
+  // calm large surfaces: desaturate, nudge hue (timber toward honey/grey-brown) at constant value
+  diffuseColor.rgb = mix( vec3( bkL ), diffuseColor.rgb, bkSurf.x );
+  diffuseColor.rgb = mix( diffuseColor.rgb, bkSurfTint * bkL, bkSurf.y );
+  // broad pigment mottling (±7%), rain grime streaks on walls, grime under overhangs, moss on upward faces
+  if ( bkDetail > 0.5 ) {
+  float bkM = bkNoise( bkW.xz * 0.35 + bkW.y * 0.2 ) * 0.7 + bkNoise( bkW.xz * 1.1 - bkW.y * 0.4 ) * 0.3;
+  diffuseColor.rgb *= 0.93 + 0.14 * bkM;
+  float bkWall = 1.0 - abs( bkFn.y );
+  float bkStreak = smoothstep( 0.55, 0.85, bkNoise( vec2( ( bkW.x + bkW.z ) * 2.3, bkW.y * 0.35 ) ) );
+  diffuseColor.rgb *= 1.0 - bkSurf.w * ( 0.12 * bkStreak * bkWall + 0.28 * smoothstep( -0.2, -0.7, bkFn.y ) );
+  float bkMoss = smoothstep( 0.55, 0.9, bkFn.y ) * smoothstep( 0.55, 0.75, bkNoise( bkW.xz * 1.3 + 9.0 ) * 0.65 + bkM * 0.35 ) * bkSurf.z;
+  diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.16, 0.25, 0.12 ) * ( 0.8 + 0.4 * bkM ), bkMoss * 0.55 );
   }
 }
 #endif`;
@@ -161,6 +186,8 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
   #else
     float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
   #endif
+  // Rule 7: the mid distance goes cooler and lighter before the far haze takes over.
+  gl_FragColor.rgb = mix( gl_FragColor.rgb, bkAerialColor, smoothstep( bkAerial.x, bkAerial.y, vFogDepth ) * bkAerial.z );
   vec3 bkView = normalize( vBkWorldPos - cameraPosition );
   float bkSunF = pow( saturate( dot( bkView, bkSunDir ) ), 5.0 );
   float bkLowF = 1.0 - smoothstep( bkFogHeight.x, bkFogHeight.y, vBkWorldPos.y );
@@ -195,6 +222,13 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
     f = f.replace('#include <fog_fragment>', FOG);
     f = f.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + FADE);
     if (info.role === 'mist') { f = f.replace('#include <common>', '#include <common>' + NOISE); f = f.replace('#include <color_fragment>', '#include <color_fragment>' + MIST); }
+    if (info.surface) {
+      shader.uniforms.bkSurf = { value: info.surface.v }; shader.uniforms.bkSurfTint = { value: info.surface.tint };
+      f = '#define BK_SURFACE\n' + f;
+      if (info.role !== 'mist') f = f.replace('#include <common>', '#include <common>' + NOISE);
+      f = f.replace('#include <common>', '#include <common>\nuniform vec4 bkSurf; uniform vec3 bkSurfTint;');
+      f = f.replace('#include <color_fragment>', '#include <color_fragment>' + SURFACE);
+    }
     // Ink mask for the post pass: terrain writes alpha .5 (opaque, so blending is off) → no crease ink on ground folds.
     if (info.role === 'terrain' && !m.transparent) f = f.replace('#include <dithering_fragment>', '#include <dithering_fragment>\n  gl_FragColor.a = 0.5;');
     // Fading occluders mark alpha .25 so the post pass does not ink every dither hole (no dotted screen-door outlines).
@@ -241,7 +275,7 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
     const base = ownKey ? String(prior) : null;
     m.onBeforeCompile = function (shader, renderer) { prior?.call(this, shader, renderer); inject(shader, info, this); };
     m.customProgramCacheKey = function () {
-      return (ownKey ? base : priorKey.call(this)) + `|bk-look-3:${info.role}:${info.soft ? 1 : 0}:${info.tile ? 't' : ''}:${info.noFade ? 'n' : ''}:${this.isMeshStandardMaterial && this.metalness > .2 ? 1 : 0}`;
+      return (ownKey ? base : priorKey.call(this)) + `|bk-look-3:${info.role}:${info.soft ? 1 : 0}:${info.tile ? 't' : ''}:${info.noFade ? 'n' : ''}:${info.surface ? 's' : ''}:${this.isMeshStandardMaterial && this.metalness > .2 ? 1 : 0}`;
     };
     m.needsUpdate = true;
     return true;
@@ -251,6 +285,15 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
     if (!patch(m)) return false;
     const info = patched.get(m);
     if (info.noFade !== on) { info.noFade = on; m.needsUpdate = true; }
+    return true;
+  }
+  /** World surface treatment: {sat, tint:Color, tintAmt, moss, grime} (values live per material, one program per role). */
+  function setSurface(m, o) {
+    if (!patch(m)) return false;
+    const info = patched.get(m), had = !!info.surface;
+    info.surface ??= { v: new THREE.Vector4(), tint: new THREE.Color(1, 1, 1) };
+    info.surface.v.set(o.sat ?? 1, o.tintAmt ?? 0, o.moss ?? 0, o.grime ?? 0); if (o.tint) info.surface.tint.copy(o.tint);
+    if (!had) m.needsUpdate = true;
     return true;
   }
   /** Attach a painted tile (shared uniforms object {bkTile, bkTileMean, bkTileScale, bkTileAmt}) to a material. */
@@ -268,5 +311,5 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
     });
     return n;
   }
-  return { uniforms: U, patch, patchObject, setTile, setNoFade, isPatched: m => patched.has(m), roleOf: m => patched.get(m)?.role };
+  return { uniforms: U, patch, patchObject, setTile, setNoFade, setSurface, isPatched: m => patched.has(m), roleOf: m => patched.get(m)?.role };
 }

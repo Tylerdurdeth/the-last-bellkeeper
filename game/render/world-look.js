@@ -54,7 +54,7 @@ guardian.position.set(well.x ?? 0, (W.low.safe.y ?? -14) + 1, well.z ?? 0); scen
 
 let look = null;
 if (useLook) {
-  look = createLook({ THREE, renderer, scene, camera, tier: q.get('tier') || undefined });
+  look = createLook({ THREE, renderer, scene, camera, tier: q.get('tier') || undefined, beauty: q.get('beauty') !== '0' });
   look.applyTo(hero, 'character'); look.applyTo(guardian, 'outline', { dynamic: true, occluder: false });
   await look.ready;
 }

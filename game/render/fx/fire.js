@@ -21,19 +21,20 @@ export function createFireFx({ THREE, scene }) {
   const time = { value: 0 };
   const material = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 } }]),
-    vertexShader: `attribute vec3 iPos; attribute vec3 iData; uniform float uTime; varying vec2 vUv; varying vec3 vData;
+    vertexShader: `attribute vec3 iPos; attribute vec3 iData; uniform float uTime; varying vec2 vUv; varying vec3 vData; varying float vNear;
 #include <fog_pars_vertex>
 void main() {
   vUv = uv; vData = iData;
   float s = iData.x * 1.6;                        // quad covers flame + glow halo
   vec4 mvPosition = modelViewMatrix * vec4( iPos, 1.0 );
+  vNear = smoothstep( 1.5, 5.0, - mvPosition.z );   // no screen-filling glare from a lantern beside the camera
   mvPosition.xyz += normalize( - mvPosition.xyz ) * ( 0.1 + 0.55 * iData.x );   // in front of its glass (radius ~.16 m × scale)
   mvPosition.xy += position.xy * s;
   mvPosition.y += 0.18 * s;                        // flame rises from the wick
   gl_Position = projectionMatrix * mvPosition;
 #include <fog_vertex>
 }`,
-    fragmentShader: `uniform float uTime; varying vec2 vUv; varying vec3 vData;
+    fragmentShader: `uniform float uTime; varying vec2 vUv; varying vec3 vData; varying float vNear;
 #include <common>
 #include <fog_pars_fragment>
 ${NOISE_GLSL}
@@ -55,7 +56,7 @@ void main() {
   // Warm glow halo (bloom-free): exponential falloff around the flame, breathing with the flicker.
   float r = length( ( vUv - vec2( 0.5, 0.40 ) ) * vec2( 1.0, 0.85 ) );
   float glow = exp( - r * r * 12.0 ) * 0.75 * flick * ( 1.0 - smoothstep( 0.32, 0.5, max( abs( vUv.x - 0.5 ), abs( vUv.y - 0.5 ) ) ) );
-  vec3 col = flame * body * 2.4 + vec3( 1.0, 0.55, 0.18 ) * glow;
+  vec3 col = flame * body * 2.4 + vec3( 1.0, 0.55, 0.18 ) * glow * vNear;
   col *= k;
   if ( max( col.r, max( col.g, col.b ) ) < 0.004 ) discard;
   gl_FragColor = vec4( col, 1.0 );
