@@ -18,7 +18,7 @@ export default function (THREE, opts = {}) {
   const V = { // candidate proportions (a: slender reference, b: chunkier readable, c: wide skirt heavy hood)
     a: { skirtLen: 1.45, skirtWid: .72, hoodLen: .86, hoodWid: .5, armR: .05, finger: .26, waist: .22, shoulder: .40 },
     b: { skirtLen: 1.5, skirtWid: .84, hoodLen: .98, hoodWid: .6, armR: .062, finger: .31, waist: .26, shoulder: .46 },
-    d: { skirtLen: 1.55, skirtWid: 1.12, hoodLen: 1.08, hoodWid: .78, armR: .075, finger: .34, waist: .31, shoulder: .54 },
+    d: { skirtLen: 1.55, skirtWid: 1.12, hoodLen: 1.12, hoodWid: .84, armR: .09, finger: .46, waist: .31, shoulder: .74 },
     c: { skirtLen: 1.62, skirtWid: .95, hoodLen: 1.08, hoodWid: .68, armR: .066, finger: .34, waist: .28, shoulder: .5 },
   }[variant] || {};
   const root = new T.Group(); root.name = 'bh-guardian';
@@ -73,76 +73,58 @@ export default function (THREE, opts = {}) {
   }
   const ball = (r, hex, sx = 1, sy = 1, sz = 1, ws = 12, hs = 8) => { const g = new T.SphereGeometry(r, ws, hs); g.scale(sx, sy, sz); return solid(g, hex); };
 
-  // ---------------- trail (wispy lower tail) ----------------
-  const hem = 1.05, waistY = hem + V.skirtLen * .86;
-  const trail = group('trail', 0, hem + .1, 0);
-  for (let k = 0; k < 3; k++) {
-    const pts = [];
-    for (let i = 0; i <= 8; i++) { const f = i / 8, a = k * 2.1 + f * 3.6, r = .12 + f * (.34 - k * .06); pts.push([Math.cos(a) * r, -f * (1.05 - k * .08), Math.sin(a) * r * .9]); }
-    mesh(taper(pts, .2 - k * .03, .018, 7, 18, (v, i, c) => c.copy(WISP).lerp(IVORY, Math.min(1, Math.max(0, (v.y + 1) / 1.1)))), paint, trail);
-  }
-  { // swirl flourish at the tip
-    const pts = []; for (let i = 0; i <= 14; i++) { const f = i / 14, a = f * 5.2 + 1, r = .42 * (1 - f * .8); pts.push([Math.cos(a) * r, -1.02 + f * .12, Math.sin(a) * r]); }
-    mesh(taper(pts, .06, .012, 6, 26, WISP), paint, trail);
-  }
-
-  // ---------------- body (waist pivot) ----------------
+  // ---------------- body: an ancient hovering BELL (R-guardian spec: bell body, rotor heart, petal hood) ----------------
+  const waistY = 2.05, shY = .8, chestY = .38;
   const body = group('body', 0, waistY, 0);
-  const skirt = group('skirt', 0, 0, 0, body);
-  // Honey-timber core (visible between the front petals), pointed like a seed.
-  mesh(lathe([[0, -V.skirtLen * .92], [.12, -V.skirtLen * .8], [.3, -V.skirtLen * .45], [V.waist + .06, -.1], [V.waist, .02]], 18,
-    (v, i, c) => c.copy(TIMBER).lerp(TIMBER_SH, .5 + .5 * Math.sin(Math.atan2(v.x, v.z) * 7 + v.y * 5) > .82 ? .6 : 0)), paint, skirt);
-  mesh(solid(new T.TorusGeometry(V.waist + .06, .065, 8, 28), COPPER), metal, skirt, 0, .04, 0, Math.PI / 2, 0, 0); // copper waist band
-  // Coral cloth tongue at the waist front (R-guardian).
-  { const g = petal({ len: .62, wid: .34, thick: .03, cup: .15, bend: .06, outer: CORAL, inner: CORAL, seg: [10, 8], shape: .9 });
-    const o = mesh(g, paint, skirt, 0, .02, V.waist + .03, Math.PI - .12, 0, 0); o.scale.set(1, 1, 1); }
-  const SK = 7;
-  for (let i = 0; i < SK; i++) {
-    // Front gap: petals avoid the +Z front sector so the timber core and coral read, as in the reference.
-    const a = (i - (SK - 1) / 2) * (2 * Math.PI - .9) / SK + Math.PI;
-    const pv = new T.Group(); pv.position.set(Math.sin(a) * (V.waist - .02), .06, Math.cos(a) * (V.waist - .02)); pv.rotation.y = a; skirt.add(pv);
-    const g = petal({ len: V.skirtLen, wid: V.skirtWid * (i === 0 || i === SK - 1 ? .9 : 1), thick: .12, cup: .3, bend: -.2, outer: IVORY, inner: IVORY_SH, base: TIMBER_SH, seg: [14, 12], shape: .62, rim: COPPER });
-    mesh(g, paint, pv, 0, 0, 0, Math.PI - .34, 0, (i % 2 ? .04 : -.04));
+  const skirt = group('skirt', 0, 0, 0, body);   // the bell itself (swells/squashes with the breath)
+  const bellProf = [[.14, .96], [.46, .88], [.62, .72], [.67, .42], [.69, .1], [.76, -.4], [.95, -.95], [1.18, -1.36], [1.3, -1.5], [1.33, -1.58], [1.2, -1.6], [1.02, -1.4], [.72, -.8], [.5, -.2], [.001, .1]];
+  const bellR = y => { for (let i = 1; i < 10; i++) if (y >= bellProf[i][1]) { const a = bellProf[i - 1], b = bellProf[i], t = (y - b[1]) / (a[1] - b[1]); return b[0] + (a[0] - b[0]) * t; } return 1.3; };
+  mesh(lathe(bellProf.slice().reverse(), 40, (v, i, c) => {   // lathe profiles run bottom->top for outward faces
+    const inside = v.y < -1.35 && Math.hypot(v.x, v.z) < bellR(v.y) - .03 || v.y < -1.3 && i % 2 === 0 && false;
+    const a = Math.atan2(v.x, v.z), petalMotif = Math.max(0, Math.cos(a * 8)) * Math.max(0, Math.min(1, (v.y + 1.2) / .6)) * Math.max(0, Math.min(1, (-.1 - v.y) / .4));
+    c.copy(IVORY).lerp(IVORY_SH, .15 + .5 * petalMotif * (Math.cos(a * 8) > .93 ? 1 : .35));   // carved petal relief round the flare
+    if (v.y < -1.44) c.copy(VERD).lerp(VERD_SH, .3);                                                // verdigris lip
+    return c;
+  }), paint, skirt);
+  for (const [y, r, t, col] of [[.62, .64, .05, COPPER], [.02, .7, .06, COPPER], [-.62, .83, .045, VERD], [-1.28, 1.13, .07, COPPER]]) mesh(solid(new T.TorusGeometry(r, t, 8, 40), col), metal, skirt, 0, y, 0, Math.PI / 2, 0, 0);   // bands
+  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; mesh(ball(.045, COPPER), metal, skirt, Math.sin(a) * 1.2, -1.3, Math.cos(a) * 1.2); }   // rim rivets
+  // Dark hollow mouth with the breath glowing inside (a clapper-like core).
+  mesh(lathe([[.001, -.45], [.7, -.7], [1.0, -1.3], [1.16, -1.56]], 28, (v, i, c) => c.copy(DEEP)), paint, skirt);
+  mesh(new T.SphereGeometry(.26, 14, 10), glow, skirt, 0, -1.25, 0);
+  // Crown loop on top of the bell, like a bell's canon, under the hood.
+  mesh(solid(new T.TorusGeometry(.2, .07, 8, 18), COPPER), metal, skirt, 0, .98, 0, 0, 0, 0);
+
+  // ---------------- trail: a flat breath swirl under the rim (no leg-like tubes) ----------------
+  const trail = group('trail', 0, waistY - 1.62, 0);
+  for (let k = 0; k < 4; k++) {
+    const pts = []; for (let i = 0; i <= 14; i++) { const f = i / 14, a = k * Math.PI / 2 + f * 3.4, r = .35 + f * .75; pts.push([Math.cos(a) * r, -f * .28, Math.sin(a) * r]); }
+    const o = mesh(taper(pts, .09, .015, 6, 22, (v, i, c) => c.copy(WISP)), paint, trail); o.scale.y = .45;
   }
 
-  // ---------------- torso ----------------
+  // ---------------- torso: rotor heart mounted in the bell's breast, pipes behind ----------------
   const torso = group('torso', 0, 0, 0, body);
-  const chestY = .52, shY = .8;
-  mesh(lathe([[V.waist, -.02], [V.waist + .02, .14], [V.waist + .1, chestY - .05], [V.shoulder - .08, chestY + .14], [V.shoulder - .12, shY], [.12, shY + .1], [.1, shY + .12]], 20,
-    (v, i, c) => { const a = Math.atan2(v.x, v.z), grain = Math.sin(a * 5 + v.y * 9 + Math.sin(a * 3) * 1.5); return c.copy(TIMBER).lerp(TIMBER_SH, grain > .8 ? .55 : grain < -.9 ? .25 : 0); }), paint, torso);
-  // Rotor housing: ivory plate + copper ring set into the chest.
-  mesh(ball(.32, IVORY, 1, 1.1, .45, 16, 10), paint, torso, 0, chestY, V.waist + .07);
-  mesh(solid(new T.TorusGeometry(.27, .06, 8, 28), COPPER), metal, torso, 0, chestY, V.waist + .15);
-  mesh(solid(new T.TorusGeometry(.19, .025, 6, 24), VERD), metal, torso, 0, chestY, V.waist + .17);
-  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; mesh(ball(.03, COPPER), metal, torso, Math.cos(a) * .27, chestY + Math.sin(a) * .27, V.waist + .21); }
-  // High timber collar (two flared leaves) and coral scarf.
-  for (const s of [-1, 1]) {
-    const g = petal({ len: .42, wid: .34, thick: .04, cup: .3, bend: -.12, outer: TIMBER, inner: TIMBER_SH, seg: [10, 8] });
-    const pv = new T.Group(); pv.position.set(s * .08, shY - .02, .02); pv.rotation.y = Math.PI + s * .9; torso.add(pv); mesh(g, paint, pv, 0, 0, 0, -.35, 0, 0);
-  }
-  mesh(solid(new T.TorusGeometry(.17, .055, 8, 20), CORAL), paint, torso, 0, shY + .02, .02, Math.PI / 2 + .15, 0, 0);
-  mesh(solid(new T.CylinderGeometry(.075, .095, .3, 10), VERD), metal, torso, 0, shY + .15, 0);
-  // Petal capelet on the shoulders (pivot so it can lift on the inhale).
-  const capelet = group('capelet', 0, shY - .06, 0, body);
-  for (let i = 0; i < 6; i++) {
-    const a = (i - 2.5) * .52 + (i < 3 ? -.25 : .25);
-    for (const back of [0, 1]) {
-      const aa = back ? a + Math.PI : a;
-      const pv = new T.Group(); pv.position.set(Math.sin(aa) * .2, 0, Math.cos(aa) * .16); pv.rotation.y = aa; capelet.add(pv);
-      mesh(petal({ len: .5, wid: .42, thick: .045, cup: .3, bend: -.1, outer: IVORY, inner: IVORY_SH, seg: [10, 8] }), paint, pv, 0, 0, 0, Math.PI - 1.05, 0, 0);
-    }
-  }
-  // Back: timber spine ridge + copper breath pipes so the rear view is modelled.
-  mesh(taper([[0, .02, -V.waist + .02], [0, .4, -V.waist - .06], [0, .78, -.2]], .07, .05, 8, 10, TIMBER_SH), paint, torso);
-  for (const s of [-1, 1]) mesh(taper([[s * .12, .05, -V.waist], [s * .2, .45, -V.waist - .08], [s * .14, .82, -.16]], .035, .03, 6, 10, COPPER), metal, torso);
+  const hz = bellR(chestY);
+  mesh(ball(.46, IVORY, 1, 1, .32, 20, 12), paint, torso, 0, chestY, hz - .02);
+  mesh(solid(new T.TorusGeometry(.42, .075, 10, 36), COPPER), metal, torso, 0, chestY, hz + .08);
+  mesh(solid(new T.TorusGeometry(.3, .035, 8, 30), VERD), metal, torso, 0, chestY, hz + .11);
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; mesh(ball(.04, COPPER), metal, torso, Math.cos(a) * .42, chestY + Math.sin(a) * .42, hz + .15); }
+  mesh(solid(new T.CylinderGeometry(.11, .14, .34, 12), VERD), metal, torso, 0, shY + .15, 0);   // neck into the hood
+  mesh(solid(new T.TorusGeometry(.2, .06, 8, 20), CORAL), paint, torso, 0, shY + .06, .02, Math.PI / 2 + .1, 0, 0);
+  // Back of the bell: copper breath pipes and a timber spine, so the rear view is modelled.
+  for (const s of [-1, 0, 1]) mesh(taper([[s * .28, -.9, -bellR(-.9) + .02], [s * .22, -.2, -bellR(-.2) - .04], [s * .16, .55, -bellR(.55) - .06], [s * .1, .9, -.3]], .06, .045, 8, 12, s ? COPPER : TIMBER_SH), s ? metal : paint, torso);
+  // Petal collar where the hood meets the bell (pivot so it lifts on the inhale).
+  const capelet = group('capelet', 0, shY - .02, 0, body);
+  for (let i = 0; i < 10; i++) { const aa = i / 10 * Math.PI * 2 + .3;
+    const pv = new T.Group(); pv.position.set(Math.sin(aa) * .4, 0, Math.cos(aa) * .36); pv.rotation.y = aa; capelet.add(pv);
+    mesh(petal({ len: .5, wid: .44, thick: .05, cup: .3, bend: -.1, outer: IVORY, inner: IVORY_SH, seg: [10, 8], rim: COPPER }), paint, pv, 0, 0, 0, Math.PI - 1.2, 0, 0); }
 
   // ---------------- rotor heart ----------------
-  const rotor = group('rotor', 0, chestY, V.waist + .19, body);
-  mesh(new T.SphereGeometry(.1, 12, 8), glow, rotor);
-  for (let i = 0; i < 4; i++) { // curved pinwheel blades
-    const b = new T.SphereGeometry(1, 10, 6); b.scale(.15, .045, .022); b.translate(.13, .025, 0);
-    const p = b.attributes.position; for (let k = 0; k < p.count; k++) { const x = p.getX(k); p.setY(k, p.getY(k) + x * x * 2.2); }
-    b.computeVertexNormals(); const o = mesh(b, glow, rotor); o.rotation.z = i * Math.PI / 2;
+  const rotor = group('rotor', 0, chestY, hz + .14, body);
+  mesh(new T.SphereGeometry(.14, 14, 10), glow, rotor);
+  for (let i = 0; i < 5; i++) { // curved pinwheel blades, big enough to read from the camera
+    const b = new T.SphereGeometry(1, 10, 6); b.scale(.2, .06, .03); b.translate(.18, .03, 0);
+    const p = b.attributes.position; for (let k = 0; k < p.count; k++) { const x = p.getX(k); p.setY(k, p.getY(k) + x * x * 1.6); }
+    b.computeVertexNormals(); const o = mesh(b, glow, rotor); o.rotation.z = i * Math.PI * 2 / 5;
   }
 
   // ---------------- hood (tulip bud that blooms) ----------------
@@ -180,8 +162,8 @@ export default function (THREE, opts = {}) {
   // ---------------- arms: shoulder -> forearm -> fan hand ----------------
   for (const s of [-1, 1]) {
     const side = s < 0 ? 'left' : 'right';
-    const arm = group(side + 'Arm', s * V.shoulder, shY - .1, -.02, body);
-    mesh(ball(.1, COPPER, 1, 1, 1), metal, arm);
+    const arm = group(side + 'Arm', s * V.shoulder, shY - .18, -.02, body);
+    mesh(ball(.15, COPPER, 1, 1, 1), metal, arm); mesh(ball(.2, IVORY, 1.1, .6, 1, 12, 8), paint, arm, s * .02, .08, 0);   // shoulder boss + ivory pauldron
     mesh(taper([[0, 0, 0], [s * .02, -.34, .01], [0, -.64, 0]], V.armR * 1.15, V.armR * .85, 8, 8, VERD), metal, arm);
     mesh(solid(new T.TorusGeometry(V.armR * 1.25, .018, 6, 14), COPPER), metal, arm, 0, -.3, 0, Math.PI / 2, 0, 0);
     const fore = group(side + 'Forearm', 0, -.66, 0, arm);
@@ -190,12 +172,12 @@ export default function (THREE, opts = {}) {
     mesh(solid(new T.CylinderGeometry(V.armR * 1.35, V.armR * 1.3, .1, 10), COPPER), metal, fore, 0, -.48, 0);
     const hand = group(side + 'Hand', 0, -.62, 0, fore);
     mesh(ball(.055, COPPER), metal, hand);
-    mesh(ball(.1, VERD, 1, .55, 1.1, 12, 8), metal, hand, 0, -.1, .01, 0, 0, 0);
+    mesh(ball(.14, VERD, 1.2, .55, 1.1, 12, 8), metal, hand, 0, -.1, .01, 0, 0, 0);   // broad fan palm
     for (let f = 0; f < 5; f++) { // fan of long jointed fingers, splayed like the reference's open hand
-      const a = (f - 2) * .3 + (f === 0 ? -.25 : 0) * s, L = V.finger * (f === 0 ? .72 : f === 2 ? 1.05 : .95);
+      const a = (f - 2) * .38 + (f === 0 ? -.25 : 0) * s, L = V.finger * (f === 0 ? .72 : f === 2 ? 1.05 : .95);
       const x0 = Math.sin(a) * .07, y0 = -.12 - Math.cos(a) * .04;
       const x1 = x0 + Math.sin(a) * L * .55, y1 = y0 - Math.cos(a) * L * .55, x2 = x0 + Math.sin(a * 1.15) * L, y2 = y0 - Math.cos(a * 1.15) * L;
-      mesh(taper([[x0, y0, .02], [x1, y1, .05], [x2, y2, .09]], .026, .014, 6, 6, (v, i, c) => c.copy(v.y < y1 ? VERD_SH : VERD)), metal, hand);
+      mesh(taper([[x0, y0, .02], [x1, y1, .05], [x2, y2, .09]], .036, .02, 6, 6, (v, i, c) => c.copy(v.y < y1 ? VERD_SH : VERD)), metal, hand);
       mesh(ball(.024, COPPER), metal, hand, x1, y1, .05);
     }
   }
@@ -234,11 +216,12 @@ export default function (THREE, opts = {}) {
   const glowCalm = C(0xE9B949), glowWind = C(0x8FD3E0), glowTmp = new T.Color();
   function setPose(q = {}) {
     const crouch = q.crouch || 0, bloom = q.bloom || 0, spread = q.spread || 0, thrust = q.thrust || 0, slump = q.slump || 0, lean = q.lean || 0,
-      swell = q.swell || 0, fold = q.fold || 0, look = q.look || { x: 0, y: 0 }, rg = q.rotorGlow ?? 0;
+      swell = q.swell || 0, fold = q.fold || 0, look = q.look || { x: 0, y: 0 }, rg = q.rotorGlow ?? 0, rage = q.rage || 0;
     const J = joints, R = rest;
     J.body.position.copy(R.body.p); J.body.position.y -= .42 * crouch + .18 * slump - .12 * thrust;
     J.body.position.z = R.body.p.z + .25 * thrust - .08 * crouch;
-    J.body.rotation.set(R.body.r.x + .3 * lean - .16 * crouch + .3 * thrust + .22 * slump, 0, 0);
+    J.body.rotation.set(R.body.r.x + .3 * lean - .16 * crouch + .3 * thrust + .22 * slump - .38 * rage, 0, 0);   // rage: rears up and back
+    J.body.position.y += .35 * rage;
     J.skirt.scale.set(1 + .22 * swell + .1 * crouch - .06 * slump, 1 - .16 * crouch + .06 * thrust, 1 + .22 * swell + .1 * crouch - .06 * slump);
     J.trail.rotation.set(-.35 * thrust + .15 * crouch + (q.trailPitch || 0), 0, q.trail || 0);
     J.trail.scale.set(1 + .2 * swell, 1 - .25 * crouch + .35 * thrust, 1 + .2 * swell);
@@ -248,25 +231,26 @@ export default function (THREE, opts = {}) {
     for (const p of J.petals) {
       // closed bud tilt +0.3 (tips meet); bloom 1 = petals thrown out past horizontal like R-guardian-inhale.
       const closed = p.userData.front ? .05 : p.userData.inner ? .36 : .27, open = p.userData.inner ? -1.05 : -1.5;
-      p.rotation.x = closed + (open - closed) * Math.max(0, bloom) + Math.min(0, bloom) * -.5 + .1 * slump;
+      p.rotation.x = closed + (open - closed) * Math.min(1, Math.max(0, bloom) + .25 * rage) - .35 * rage + Math.min(0, bloom) * -.5 + .1 * slump;
     }
     J.face.scale.setScalar(1.2 + .1 * Math.max(0, bloom));
-    J.eyes.scale.set(1 + .15 * rg, Math.max(.08, q.eyes ?? 1) * (1 + .35 * rg), 1);
+    J.eyes.scale.set(1 + .15 * rg + .3 * rage, Math.max(.08, q.eyes ?? 1) * (1 + .35 * rg + .5 * rage), 1);
     for (const s of ['left', 'right']) {
       const k = s === 'left' ? -1 : 1, A = J[s + 'Arm'], F = J[s + 'Forearm'], H = J[s + 'Hand'];
       // Rest: hanging slightly out and forward; spread: flung wide and up; thrust: pushed forward.
-      A.rotation.set(-.22 - 1.25 * thrust - .2 * spread + .15 * slump - .95 * fold, 0, k * (.28 + 1.25 * spread - .1 * slump - .15 * thrust - .1 * fold));
+      A.rotation.set(-.22 - 1.25 * thrust - .2 * spread + .15 * slump - .95 * fold - .6 * rage, 0, k * (.28 + 1.25 * spread - .1 * slump - .15 * thrust - .1 * fold + 1.2 * rage));   // rage: arms raised high
       F.rotation.set(-.45 - .1 * spread + .35 * thrust - .15 * slump - 1.25 * fold, 0, k * (.15 * spread - .45 * fold));
       H.rotation.set(-.15 - .35 * spread + .25 * thrust, k * .3 * spread, k * (.25 * spread - .1 * slump));
       H.scale.set(1 + .45 * spread + .25 * thrust, 1 + .15 * spread, 1);
     }
     if (q.rotor !== undefined) J.rotor.rotation.z = q.rotor;
-    glowTmp.copy(glowCalm).lerp(glowWind, Math.min(1, rg)); glow.emissive.copy(glowTmp); glow.emissiveIntensity = .5 + 2.1 * rg; glow.color.copy(glowTmp).lerp(C(0xffffff), .35);
+    glowTmp.copy(glowCalm).lerp(glowWind, Math.min(1, rg)).lerp(C(0xFF6A2A), Math.min(1, rage)); glow.emissive.copy(glowTmp); glow.emissiveIntensity = .5 + 2.1 * rg + 1.5 * rage;   // rage: red-gold heart and eyes glow.color.copy(glowTmp).lerp(C(0xffffff), .35);
     root.updateMatrixWorld(true);
   }
   const POSES = {
     calm: {}, inhale: { crouch: .9, bloom: 1, spread: 1, lean: -.12, swell: .8, rotorGlow: 1, look: { x: -.4, y: 0 } },
     exhale: { thrust: 1, bloom: .35, lean: .5, rotorGlow: .8, look: { x: -.35, y: 0 } }, slump: { slump: 1, bloom: -.2, rotorGlow: .05 },
+    rage: { rage: 1, bloom: 1, spread: .6, swell: .6, rotorGlow: .6, look: { x: .5, y: 0 } },
     tend: { fold: 1, crouch: .3, lean: .35, look: { x: -.35, y: 0 }, bloom: .5, rotorGlow: .15, eyes: .12 },
   };
   root.userData.setPose = setPose; root.userData.poses = POSES; root.userData.glowMaterial = glow;

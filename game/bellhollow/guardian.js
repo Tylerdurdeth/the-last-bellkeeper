@@ -75,7 +75,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   const LV = W.top ? [...W.rings, W.top] : W.rings;                 // levels: low, mid, high (+ top perch)
   const beatsOf = ph => ph === 2 && W.top ? BEATS_TOP : BEATS[ph];
   const cycleLength = ph => beatsOf(ph).reduce((s, b) => s + b.d, 0);
-  const actor = buildGuardian(T, { height: 5.0 }); actor.name = 'bh-guardian-actor';
+  const actor = buildGuardian(T, { height: 5.4 }); actor.name = 'bh-guardian-actor';
   const J = actor.userData.joints, setPose = actor.userData.setPose;
   scene.add(actor); look?.applyTo?.(actor, 'character');
   const bands = createBands(T, scene);
@@ -93,7 +93,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   // ---------------- state ----------------
   let phase = 0, clock = 0, cycle = -1, active = false, warned = false, doneT = -1, time = 0, gentle = false;
   let lanes = {}, hitThis = new Set(), loiterFrom = null, loiter = false, breath = null, stats = { hits: 0, cycles: 0, exhales: 0, pulses: 0, catches: 0 };
-  const pose = { crouch: 0, bloom: 0, spread: 0, thrust: 0, slump: 0, lean: 0, swell: 0, fold: 0, rotorGlow: 0, eyes: 1, lx: 0, ly: 0 };
+  const pose = { crouch: 0, bloom: 0, spread: 0, thrust: 0, slump: 0, lean: 0, swell: 0, fold: 0, rotorGlow: 0, eyes: 1, rage: 0, lx: 0, ly: 0 };
   let yaw = 0, rotorAngle = 0, hover = W.rings[0].y + HOVER, lastStage = '', stageStart = 0, beatInfo = null;
   const heroV = new T.Vector3(), mouth = new T.Vector3(), tmp = new T.Vector3(), tmp2 = new T.Vector3();
   actor.position.set(C.x, hover, C.z);
@@ -208,16 +208,18 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     hover += (R.y + HOVER + (rage.t < w ? 1.6 * ease(rage.t / w) : 1.6 * (1 - ease((rage.t - w) / .25))) - hover) * (1 - Math.exp(-dt * 6));
     if (rage.t < w) { // rise and flare; the whole ring floor is painted and fills as the timer
       const f = rage.t / w, e = ease(f);
-      applyActor(dt, t, { crouch: 0, bloom: 1, spread: e, thrust: 0, slump: 0, lean: -.35 * e, swell: e, fold: 0, rotorGlow: f }, 10, face, { x: .5 * e, y: 0 });
+      applyActor(dt, t, { crouch: 0, bloom: 1, spread: .6 * e, thrust: 0, slump: 0, lean: 0, swell: .7 * e, fold: 0, rotorGlow: .6 * f, rage: e }, 10, face, { x: .45 * e, y: 0 });   // rears up: petals flared, arms raised, heart red-gold
       bands.sector({ cx: C.x, cz: C.z, y: R.y, a0: 0, a1: TAU, lo: rage.lo, hi: rage.hi, fill: f, firing: false, alpha: .7, t, ground: gr });
       drawInhale(f, t);
       if (!rage.slammed && f > .98) { rage.slammed = true; }
     } else if (rage.t < w + travel) {
       if (!rage.boom) { rage.boom = true; sound('guardian-slam'); wind?.burst?.({ x: C.x, y: R.y, z: C.z }, { radius: 3.5, duration: .7, rays: 14 }); }
       const fr = rageFront();
-      applyActor(dt, t, { crouch: 1, bloom: .3, spread: .2, thrust: .6, slump: 0, lean: .5, swell: .4, fold: 0, rotorGlow: 1 }, 30, face, { x: -.5, y: 0 });
+      applyActor(dt, t, { crouch: 1, bloom: .6, spread: .5, thrust: .6, slump: 0, lean: .5, swell: .4, fold: 0, rotorGlow: .8, rage: .7 }, 30, face, { x: -.5, y: 0 });
       bands.sector({ cx: C.x, cz: C.z, y: R.y, a0: 0, a1: TAU, lo: Math.max(rage.lo, fr - .45), hi: Math.min(rage.hi, fr + .45), fill: 1, firing: true, alpha: 1, t, ground: gr });
-      if (wind) { wind.ring(C.x, R.y + .3, C.z, fr, { width: .7, alpha: 1, taper: false, n: 64 }); wind.ring(C.x, R.y + .75, C.z, fr - .15, { width: .3, alpha: .8, taper: false, n: 64 }); }
+      if (wind) { // a standing wall of wind rolling outward (not just a floor band)
+        wind.ring(C.x, R.y + .3, C.z, fr, { width: .7, alpha: 1, taper: false, n: 64 }); wind.ring(C.x, R.y + .95, C.z, fr - .12, { width: .35, alpha: .9, taper: false, n: 64 }); wind.ring(C.x, R.y + 1.5, C.z, fr - .3, { width: .18, alpha: .6, taper: false, n: 64 });
+        for (let i = 0; i < 28; i++) { const a = i / 28 * TAU + t * .7, h = 1.1 + .45 * Math.sin(i * 2.3 + t * 9); wind.strip(5, (g, o) => o.set(C.x + Math.cos(a) * (fr - g * .3), R.y + .1 + g * h, C.z + Math.sin(a) * (fr - g * .3)), { width: .2, alpha: .8 }); } }
       if (hero && !rage.hit && !movement?.knocked && Math.abs(hero.y - R.y) < 1.1 && Math.abs(rad(hero) - fr) < .45) {
         const why = safeReason(hero); if (why) spared = { reason: why + ' (shockwave)', at: +time.toFixed(2) }; else { rage.hit = true; beatInfo = { i: -1 }; knock(hero, ang(hero)); }
       }
@@ -281,9 +283,13 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     let face = hero ? Math.atan2(hero.x - C.x, hero.z - C.z) : yaw, look = { x: -.25, y: 0 };
     let target = { crouch: 0, bloom: .05, spread: 0, thrust: 0, slump: 0, lean: 0, swell: 0, fold: 0, rotorGlow: .1 }, rate = 6;
     const laneAngle = a => Math.atan2(Math.cos(a), Math.sin(a)); // world ring angle -> actor yaw (atan2(dx,dz))
-    if (lane?.kind === 'sweep') face = laneAngle(k === 'exhale' ? lane.a0 + (lane.a1 - lane.a0) * ease((B.u - .12) / (B.b.d - .12)) : lane.a0 + (lane.a1 - lane.a0) * (k === 'inhale' ? .15 : 1));
-    else if (lane?.kind === 'pillar') face = Math.atan2(lane.x - C.x, lane.z - C.z);
-    else if (lane?.kind === 'arc') face = laneAngle(lane.a0 + (lane.a1 - lane.a0) * (k === 'exhale' ? ease(B.u / B.b.d) : .3));
+    // Face the hero between breaths (audit: >= 50% of the cycle toward the camera/hero); turn onto the lane
+    // only through the second half of the inhale and during the exhale itself.
+    let laneFace = null;
+    if (lane?.kind === 'sweep') laneFace = laneAngle(k === 'exhale' ? lane.a0 + (lane.a1 - lane.a0) * ease((B.u - .12) / (B.b.d - .12)) : lane.a0 + (lane.a1 - lane.a0) * .15);
+    else if (lane?.kind === 'pillar') laneFace = Math.atan2(lane.x - C.x, lane.z - C.z);
+    else if (lane?.kind === 'arc') laneFace = laneAngle(lane.a0 + (lane.a1 - lane.a0) * (k === 'exhale' ? ease(B.u / B.b.d) : .3));
+    if (laneFace !== null && (k === 'exhale' || k === 'inhale')) { const w = k === 'exhale' ? 1 : ease((B.f - .45) / .4); face = face + wrap(laneFace - face) * w; }
     if (k === 'inhale') {
       const f = B.f, e = ease(f);
       target = { crouch: e, bloom: ease(f * 1.5), spread: ease(f * 1.25), lean: -.12 * e, swell: e, rotorGlow: Math.pow(f, 1.2), thrust: 0, slump: 0, fold: 0 };
@@ -330,7 +336,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     applyActor(dt, t, { crouch: .3 * f, bloom: .5 * f + .06 * b * f, spread: 0, thrust: 0, slump: 0, lean: .35 * f, swell: .05 * b, fold: f * (.85 + .15 * b), rotorGlow: .15 + .05 * b, eyes: 1 - .88 * ease((doneT - 1.5) / 2) }, 2.5, face, { x: -.35 * f, y: 0 }, true);
   }
   function applyActor(dt, t, target, rate, face, look, keepXZ = false) {
-    if (target.eyes === undefined) target.eyes = 1;
+    if (target.eyes === undefined) target.eyes = 1; if (target.rage === undefined) target.rage = 0;
     const m = gentle ? .6 : 1, a = 1 - Math.exp(-rate * dt);
     for (const key of Object.keys(target)) pose[key] += (target[key] - pose[key]) * a;
     pose.lx += (look.x - pose.lx) * a; pose.ly += (look.y - pose.ly) * a;

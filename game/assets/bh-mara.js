@@ -174,17 +174,17 @@ export default function (THREE, opts = {}) {
     ell(eyes, WHITE, ex, 0, ez, .014 * eyeS, .0085 * eyeS, .006, paint, 14, 10);
     ell(eyes, (v, o) => o.copy(C(0x6B4A2A)).lerp(C(0x9C8446), smooth(.002, .0075, Math.hypot(v.x, v.y))), ex + s * .001, -.0005, ez + .0045, .0068 * eyeS, .0068 * eyeS, .003, paint, 12, 8);
     ell(eyes, INK, ex + s * .001, -.0005, ez + .0068, .0036, .0036, .0012, paint, 8, 6);
-    ell(eyes, C(0xFFFFFF), ex + s * .001 - .0028, .0028, ez + .0082, .0022, .0022, .001, paint, 6, 4); ell(eyes, C(0xFFFFFF), ex + s * .001 + .002, -.0025, ez + .008, .001, .001, .0006, paint, 6, 4);   // two catchlights
+    ell(eyes, C(0xFFFFFF), ex + s * .001 - .003, .003, ez + .0084, .003, .003, .0012, paint, 6, 4); ell(eyes, C(0xFFFFFF), ex + s * .001 + .002, -.0025, ez + .008, .001, .001, .0006, paint, 6, 4);   // two catchlights
     // Smiling upper lid: a skin shell dropping over the top of the eye, a crease above it.
-    const lid = ell(eyes, (v, o) => o.copy(SKIN).lerp(SKIN_SH, .2), ex, .0085, ez + .0005, .0205, .0072, .008, paint, 14, 8); lid.rotation.z = -s * .1;
+    const lid = ell(eyes, (v, o) => o.copy(SKIN).lerp(SKIN_SH, .2), ex, .0125, ez + .0005, .0205, .0056, .008, paint, 14, 8); lid.rotation.z = -s * .1;
     tube(eyes, [[ex - s * .019, .002, ez + .002], [ex, .0105, ez + .007], [ex + s * .021, .003, ez + .001]], .0018, .0011, INK);
     tube(eyes, [[ex - s * .013, -.0065, ez + .003], [ex, -.009, ez + .004], [ex + s * .014, -.006, ez + .002]], .0009, .0007, LINE);
-    tube(head, [[s * .014, HY + .047, .094], [s * .034, HY + .058, .094], [s * .056, HY + .052, .087]], .0055, .003, C(0x7E8582));   // brows, raised and kind
+    tube(head, [[s * .014, HY + .05, .095], [s * .034, HY + .063, .095], [s * .057, HY + .055, .088]], .0066, .0035, C(0x6E6158));   // brows, raised and kind
   }
   // Hair: silver cap swept back from the brow in waves, side waves over the ears, a bun with a copper pin.
   {
     const g = new T.SphereGeometry(1, 36, 22, 0, Math.PI * 2, 0, Math.PI * .56), p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), front = Math.max(0, z) ** 1.5, az = Math.atan2(x, z), wv = 1 + .035 * Math.sin(az * 16 + y * 4) * (1 - y * .6); p.setXYZ(i, x * .096 * wv, y * .122 + .006 + front * .045 * (1 - y), (z * .103 - .004) * wv); }
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), front = Math.max(0, z) ** 1.5, az = Math.atan2(x, z), wv = 1 + .035 * Math.sin(az * 16 + y * 4) * (1 - y * .6); p.setXYZ(i, x * .096 * wv, y * .122 + .006 + front * .062 * (1 - y), (z * .103 - .004) * wv); }
     g.computeVertexNormals(); mesh(colorize(g, (v, o) => o.copy(HAIR).lerp(HAIR_SH, .5 + .5 * Math.sin(Math.atan2(v.x, v.z) * 16 + v.y * 40)).lerp(C(0xF2F2EE), smooth(.06, .12, v.y) * .5)), head, 0, HY + .012, 0);
     for (let i = 0; i < 9; i++) { const a = -1 + i * .25, x = Math.sin(a) * .09, z = Math.cos(a) * .09;
       tube(head, [[x * .88, HY + .072, z * .9], [x * 1.04, HY + .105, z * .58], [x * .7, HY + .126, z * .1 - .02], [0, HY + .12, -.05]], .009, .005, i % 2 ? C(0xEDEDE8) : HAIR_SH, paint, 6, 10); }

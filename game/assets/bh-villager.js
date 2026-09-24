@@ -86,12 +86,13 @@ export default function (THREE, opts = {}) {
     g.setAttribute('color', new T.BufferAttribute(col, 3)); g.computeVertexNormals(); put(head, g, null);
   }
   for (const s of [-1, 1]) {
-    ell(head, 0x2A1E1C, s * hr * .36, hr * .05, hr * .93, hr * .1, hr * .13, hr * .04, 8, 6);                   // eyes
-    ell(head, 0xFFFFFF, s * hr * .36 - hr * .03, hr * .1, hr * .97, hr * .035, hr * .035, hr * .02, 5, 4);         // catchlight
-    tube(head, [[s * hr * .2, hr * .28, hr * .92], [s * hr * .38, hr * .34, hr * .9], [s * hr * .55, hr * .28, hr * .82]], hr * .035, elder ? 0xB9BDB8 : HAIR, hr * .02, 4);   // brows
+    ell(head, 0xF6EFE2, s * hr * .36, hr * .05, hr * .9, hr * .16, hr * .15, hr * .05, 10, 7);                   // eye whites
+    ell(head, 0x2A1E1C, s * hr * .36, hr * .03, hr * .95, hr * .1, hr * .12, hr * .04, 8, 6);                    // iris
+    ell(head, 0xFFFFFF, s * hr * .36 - hr * .035, hr * .09, hr * .99, hr * .04, hr * .04, hr * .02, 5, 4);         // catchlight
+    tube(head, [[s * hr * .2, hr * .28, hr * .92], [s * hr * .38, hr * .34, hr * .9], [s * hr * .55, hr * .28, hr * .82]], hr * .055, elder ? 0x9A9F9A : 0x3A2A22, hr * .03, 4);   // brows (bold, readable)
     ell(head, SKIN, s * hr * .92, 0, 0, hr * .15, hr * .25, hr * .12, 6, 5);                                   // ears
   }
-  { const pts = []; for (let i = 0; i <= 6; i++) { const x = (-1 + i / 3) * hr * .28; pts.push([x, -hr * .42 + (x / hr) ** 2 * hr * 1.4, hr * .9 - (x / hr) ** 2 * hr * .5]); } tube(head, pts, hr * .03, 0x7A3E34, hr * .03, 4); }   // smile
+  { const pts = []; for (let i = 0; i <= 6; i++) { const x = (-1 + i / 3) * hr * .28; pts.push([x, -hr * .42 + (x / hr) ** 2 * hr * 1.4, hr * .9 - (x / hr) ** 2 * hr * .5]); } tube(head, pts, hr * .045, 0x6A3028, hr * .045, 4); }   // smile
   // hair
   const cap = (thetaLen, extra = 0) => { const g = new T.SphereGeometry(1, 16, 10, 0, Math.PI * 2, 0, Math.PI * thetaLen), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const z = p.getZ(i), f = Math.max(0, z) ** 2; p.setXYZ(i, p.getX(i) * hr * 1.02, p.getY(i) * hr * 1.1 + f * hr * .35 + hr * .06, p.getZ(i) * hr * 1.04 - hr * .02 * (1 - f) - extra); } g.computeVertexNormals(); put(head, g, HAIR); };
   if (hairStyle !== 'bald') cap(hairStyle === 'long' || hairStyle === 'braid' ? .62 : .5);
@@ -118,15 +119,23 @@ export default function (THREE, opts = {}) {
   const J = joints, baseHeadY = J.head.position.y;
   function setPose({ t = 0, act = 'idle', yaw = 0, pitch = 0, look = 0, gentle = false } = {}) {
     const m = gentle ? .5 : 1, br = Math.sin(t * 1.6 + (opts.seed || 0)), sway = Math.sin(t * .5 + (opts.seed || 0) * 1.7);
-    let bodyX = 0, bodyZ = .015 * sway * m, lift = 0, hx = 0, hy = 0, aL = [-.05, 0, -.12], aR = [-.05, 0, .12];
-    if (act === 'sweep') { const s = Math.sin(t * 3.2); bodyX = .18 + .04 * s; aR = [-.75 + .3 * s, .2, .25]; aL = [-.9 + .3 * s, -.3, -.1]; hx = .2; }
-    else if (act === 'chat') { const g = Math.max(0, Math.sin(t * 1.3 + (opts.seed || 0))); aR = [-.6 * g - .1, 0, .2 + .3 * g]; hx = -.05 * Math.sin(t * 2.3) * g; hy = .1 * Math.sin(t * .7); }
-    else if (act === 'worried') { hx = -.55; aL = [-1.2, -.5, -.35]; aR = [-1.2, .5, .35]; bodyX = -.05; }
-    else if (act === 'cheer') { const b = Math.abs(Math.sin(t * 7)); lift = .08 * b * m; aL = [0, 0, -2.6 - .2 * b]; aR = [0, 0, 2.6 + .2 * b]; hx = -.25; }
-    else if (act === 'wave') { aR = [0, 0, 2.5 + .35 * Math.sin(t * 9)]; hx = -.1; }
-    else if (act === 'keeper') { aR = [-.9, 0, .1]; aL = [-.5 - .3 * Math.max(0, Math.sin(t * .9)), 0, -.15]; bodyX = .05; }
-    else if (act === 'pinwheel') { aR = [-2.3 + .15 * Math.sin(t * 2), 0, .15]; hx = -.35; }
-    else if (act === 'sit') { aL = [-.5, 0, -.1]; aR = [-.5, 0, .1]; hx = .05; }
+    // Each act cycles through three sub-poses (~2.8 s each, blended), so no villager holds one frozen pose.
+    const pose = (act, v, t) => { // -> [bodyX, lift, hx, hy, aL, aR]
+      const S = Math.sin, sd = opts.seed || 0;
+      if (act === 'sweep') { const k = S(t * 3.2); return [[.18 + .04 * k, 0, .2, 0, [-.9 + .3 * k, -.3, -.1], [-.75 + .3 * k, .2, .25]], [.02, 0, -.15, .5 * S(t * .8), [-.25, 0, -.12], [-.55, 0, .15]], [.05, 0, -.3, -.3, [-.3, 0, -.1], [-.6, .1, .25]]][v]; }   // stroke / lean on the broom, look around / look up
+      if (act === 'chat') { const g = Math.max(0, S(t * 1.6 + sd)); return [[0, 0, -.05 * S(t * 2.3) * g, .1 * S(t * .7), [-.1, 0, -.12], [-.6 * g - .1, 0, .2 + .3 * g]], [0, 0, .1, 0, [-.1, 0, -.12], [-1.7, .35, .45]], [-.04, .02 * Math.abs(S(t * 6)), -.15, 0, [-.35, 0, -.25], [-.35, 0, .25]]][v]; }   // gesture / sip the cup / laugh
+      if (act === 'worried') return [[-.05, 0, -.55, 0, [-1.2, -.5, -.35], [-1.2, .5, .35]], [-.05, 0, -.5, .2, [-.1, 0, -.12], [-1.4, 0, .9]], [.05, 0, -.1, -.35 * S(t * .6), [-1.3, -.4, -.6], [-.2, 0, .12]]][v];   // clasp / point at the bell / hand to cheek
+      if (act === 'keeper') return [[.05, 0, .1, 0, [-.5 - .3 * Math.max(0, S(t * .9)), 0, -.15], [-.9, 0, .1]], [0, 0, -.1, .45 * S(t * .5), [-.2, 0, -.12], [-1.1, 0, .35]], [.12, 0, .25, 0, [-.8, -.2, -.1], [-.8, .2, .1]]][v];   // arrange / offer the basket / straighten goods
+      if (act === 'pinwheel') return [[0, 0, -.35, 0, [-.1, 0, -.15], [-2.3 + .15 * S(t * 2), 0, .15]], [0, .05 * Math.abs(S(t * 5)), -.2, .3 * S(t * 1.5), [-.3, 0, -.4], [-1.6, 0, .6 + .3 * S(t * 3)]], [0, 0, .15, 0, [-.2, 0, -.15], [-.9, 0, .2]]][v];   // hold up / run it round / look at it
+      if (act === 'sit') return [[0, 0, .05, 0, [-.5, 0, -.1], [-.5, 0, .1]], [-.08, 0, -.1, .4 * S(t * .5), [-.5, 0, -.1], [-.5, 0, .1]], [-.12, 0, -.3, 0, [-2.4, 0, -.3], [-2.4, 0, .3]]][v];   // hands on knees / look round / stretch
+      if (act === 'cheer') { const b = Math.abs(S(t * 7)); return [0, .08 * b, -.25, 0, [0, 0, -2.6 - .2 * b], [0, 0, 2.6 + .2 * b]]; }
+      if (act === 'wave') return [0, 0, -.1, 0, [-.05, 0, -.12], [0, 0, 2.5 + .35 * S(t * 9)]];
+      return [[0, 0, 0, 0, [-.05, 0, -.12], [-.05, 0, .12]], [0, 0, -.05, .45 * S(t * .6), [-.05, 0, -.2], [-.05, 0, .2]], [.03, 0, .1, 0, [-.9, .6, -.6], [-.9, -.6, .6]]][v];   // stand / look round / arms crossed
+    };
+    const cyc = (t + (opts.seed || 0) * 1.37) / 2.8, vi = Math.floor(cyc) % 3, fb = Math.min(1, (cyc % 1) / .22), bl = fb * fb * (3 - 2 * fb);
+    const P1 = pose(act, vi, t), P0 = pose(act, (vi + 2) % 3, t), mix = (a, b) => Array.isArray(a) ? a.map((x, i) => mix(x, b[i])) : b + (a - b) * bl;
+    const [bx, lf, hxx, hyy, aLL, aRR] = act === 'cheer' || act === 'wave' ? P1 : mix(P1, P0);
+    let bodyX = bx, bodyZ = .015 * sway * m, lift = lf * m, hx = hxx, hy = hyy, aL = aLL, aR = aRR;
     J.body.rotation.set(bodyX * m + .01 * br, 0, bodyZ); J.body.position.y = lift;
     J.leftArm.rotation.set(aL[0] + .02 * br, aL[1], aL[2]); J.rightArm.rotation.set(aR[0] + .02 * br, aR[1], aR[2]);
     J.leftArm.position.y = J.rightArm.position.y = (top - .04) + lift; J.leftArm.position.z = J.rightArm.position.z = 0;
