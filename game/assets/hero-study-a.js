@@ -53,39 +53,31 @@ export default function(THREE) {
  const mouth=[];for(let i=0;i<=24;i++){const x=-.025+i*.05/24,y=seam(x);mouth.push([x,y,surface(x,y)+.0012]);}stroke(head,mat(0x925b49),mouth,.0008).userData.faceDetail=true;
  function lipPlane(upper){const g=new THREE.PlaneGeometry(.05,1,32,4),p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),u=p.getY(i)+.5,w=Math.pow(Math.max(0,1-(x/.025)**2),.8),height=upper?.0035:.0045,y=seam(x)+(upper?1:-1)*height*w*u;const bulge=.0015*Math.sin(u*Math.PI)*w;p.setXYZ(i,x,y,surface(x,y)+.0007+bulge);}g.computeVertexNormals();mesh(head,g,mat(upper?0xc28b70:0xdba786)).userData.faceDetail=true;}lipPlane(true);lipPlane(false);
 
- // A medium-length swept cut: broad closed locks, airy crown and a loose nape.
- const hairShadow=mat(0x503326),hairMid=mat(0x63412d),hairSun=mat(0x735039);
- const scalp=new THREE.SphereGeometry(1,40,24,0,Math.PI*2,0,Math.PI*.70),sp=scalp.attributes.position;
- for(let j=0;j<=24;j++)for(let i=0;i<=40;i++){const a=i/40*Math.PI*2,t=j/24*Math.PI*(.65-.26*Math.max(0,Math.sin(a))+.018*Math.sin(a*7)),sn=Math.sin(t);sp.setXYZ(j*41+i,-Math.cos(a)*sn*.116,.179+Math.cos(t)*.145,Math.sin(a)*sn*.109-.020);}
- scalp.computeVertexNormals();mesh(head,scalp,hairShadow).receiveShadow=false;
- function hairLock(points,width,depth,material){
-  const path=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),profile=[[-1,0],[-.60,.68],[0,1],[.60,.68],[1,0],[.55,-.30],[0,-.40],[-.55,-.30]],verts=[],indices=[];let lastAcross=null;
-  for(let row=0;row<=16;row++){const t=row/16,c=path.getPoint(t),tangent=path.getTangent(t).normalize(),out=new THREE.Vector3(c.x*.65,(c.y-.17)*.55,c.z+.015).normalize(),across=new THREE.Vector3().crossVectors(tangent,out).normalize();if(lastAcross&&across.dot(lastAcross)<0)across.negate();lastAcross=across.clone();
-   const taper=(.70+.40*Math.sin(t*Math.PI))*Math.pow(1-t,.65);
-   for(const [a,b]of profile){const p=c.clone().addScaledVector(across,a*width*taper).addScaledVector(out,b*depth*taper);verts.push(p.x,p.y,p.z);}
-  }
-  for(let row=0;row<16;row++)for(let col=0;col<8;col++){const a=row*8+col,b=row*8+(col+1)%8,c=a+8,d=b+8;indices.push(a,c,b,b,c,d);}
-  for(let i=1;i<7;i++)indices.push(0,i,i+1);
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setIndex(indices);g.computeVertexNormals();const m=material.clone();m.side=THREE.DoubleSide;mesh(head,g,m).receiveShadow=false;
- }
- // Crown follows an off-centre sweep rather than radial spaghetti strands.
- for(let i=0;i<9;i++){const a=-Math.PI*.85+i/8*Math.PI*1.7,s=Math.sin(a),c=-Math.cos(a);
-  hairLock([[-.025,.304,-.020],[s*.064-.015,.328,c*.052-.020],[s*.112,.275,c*.103-.024],[s*.134,.174+(i%3)*.008,c*.120-.028]],.039,.018,i%3===0?hairSun:hairMid);
- }
- // Longer rear layers flare softly away from the neck instead of ending in a hard rim.
- for(let i=0;i<7;i++){const a=-1.1+i/6*2.2,s=Math.sin(a),c=-Math.cos(a);
-  hairLock([[s*.082,.260,c*.084-.020],[s*.117,.211,c*.125-.022],[s*.132,.139,c*.130-.025],[s*.142,.070+(i%3)*.009,c*.143-.022]],.033,.015,i%3===1?hairSun:hairMid);
- }
- // Three broad bangs leave a clear eye line, with unequal ends and space underneath.
- hairLock([[.043,.308,.025],[.010,.325,.080],[-.040,.275,.125],[-.081,.197,.104]],.036,.017,hairMid);
- hairLock([[.004,.309,.035],[-.054,.292,.103],[-.091,.223,.106],[-.112,.139,.085]],.035,.015,hairMid);
- hairLock([[.059,.303,.022],[.079,.282,.102],[.078,.236,.126],[.046,.191,.109]],.029,.016,hairSun);
- // Cheek-framing side pieces: wider at the temple, light and tapered below the ear.
- for(const side of [-1,1]){
-  hairLock([[side*.090,.281,.015],[side*.126,.227,.049],[side*.139,.159,.038],[side*.125,.074,.046]],.031,.016,side<0?hairShadow:hairMid);
-  hairLock([[side*.091,.271,-.042],[side*.134,.222,-.041],[side*.143,.154,-.054],[side*.156,.095,-.080]],.026,.013,hairMid);
- }
- hairLock([[-.031,.309,-.020],[-.071,.337,-.010],[-.109,.322,.004],[-.126,.298,.010]],.024,.011,hairMid);
+ // Short boyish cut from R-hero: a close sculpted cap above the ears, chunky pointed clumps swept back on top, a side-swept fringe clear of the eyes.
+ const hairShadow=mat(0x241a24),hairMid=mat(0x352733),hairSun=mat(0x4b3747);
+ const scalp=new THREE.SphereGeometry(1,48,28,0,Math.PI*2,0,Math.PI*.70),sp=scalp.attributes.position;
+ // Coverage by direction: low at the nape, above the ears at the sides, a clean hairline over the brow at the front.
+ for(let j=0;j<=28;j++)for(let i=0;i<=48;i++){const a=i/48*Math.PI*2,f=Math.max(0,Math.sin(a)),b=Math.max(0,-Math.sin(a)),cover=Math.PI*(.40*f+.64*b+.50*(1-f-b)),t=j/28*cover,sn=Math.sin(t);sp.setXYZ(j*49+i,-Math.cos(a)*sn*.124,.185+Math.cos(t)*.160*(1+.10*Math.max(0,Math.cos(t))*(1-f)),Math.sin(a)*sn*.119-.022);}
+ scalp.computeVertexNormals();mesh(head,scalp,hairMid).receiveShadow=false;
+ // One clump: a rounded-base, pointed, flattened lathe laid along base→tip, flat face turned away from the skull, tip curling back toward it.
+ function clump(base,tip,width,thick,curl,material){
+  const B=new THREE.Vector3(...base),T=new THREE.Vector3(...tip),dir=T.clone().sub(B),len=dir.length();dir.normalize();
+  const g=new THREE.LatheGeometry([[0,0],[.60,.05],[.95,.18],[1,.32],[.80,.55],[.45,.78],[.15,.93],[0,1]].map(([r,y])=>new THREE.Vector2(r,y*len)),14),q=g.attributes.position;
+  for(let i=0;i<q.count;i++){const v=q.getY(i)/len;q.setXYZ(i,q.getX(i)*width,q.getY(i),q.getZ(i)*thick-curl*v*v);}
+  const out=B.clone().add(T).multiplyScalar(.5).sub(new THREE.Vector3(0,.19,-.02));out.addScaledVector(dir,-out.dot(dir)).normalize();
+  g.applyMatrix4(new THREE.Matrix4().makeBasis(new THREE.Vector3().crossVectors(dir,out).normalize(),dir,out));g.translate(B.x,B.y,B.z);g.computeVertexNormals();
+  mesh(head,g,material).receiveShadow=false;}
+ // Crown volume sweeping back low and wide, so the silhouette stays rounded rather than spiky.
+ clump([-.040,.315,.040],[-.050,.350,-.090],.060,.022,.018,hairMid);
+ clump([.030,.315,.030],[.045,.350,-.100],.058,.022,.018,hairSun);
+ clump([.000,.280,-.070],[.000,.290,-.170],.056,.020,.012,hairMid);
+ // Heavier side-swept fringe, tips resting above the brow line.
+ clump([-.070,.300,.070],[.020,.245,.125],.042,.022,.010,hairSun);
+ clump([-.020,.310,.060],[.070,.240,.118],.040,.022,.010,hairMid);
+ clump([.040,.300,.050],[.110,.235,.085],.032,.020,.010,hairMid);
+ // Short sides hugging the head above the ears, and a neat nape.
+ for(const side of [-1,1]){clump([side*.098,.270,.020],[side*.118,.210,-.020],.028,.010,.006,side<0?hairMid:hairShadow);clump([side*.085,.230,-.070],[side*.095,.150,-.100],.028,.010,.006,hairShadow);}
+ clump([.000,.210,-.110],[.000,.105,-.118],.050,.016,.010,hairShadow);
  root.userData.faceStudy=true;
 
 
