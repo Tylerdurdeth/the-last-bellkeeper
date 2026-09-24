@@ -36,6 +36,7 @@ const BEATS_TOP = [{ k: 'inhale', d: 2.2, lane: 'up' }, { k: 'exhale', d: .55 },
 const RAGE = { windup: 1.8, speed: 6.5, settle: 1.1 };
 // Breaths each vane needs (it visibly turns part-way per breath): the loop repeats with its volley, not padding.
 const BREATHS_PER_VANE = [2, 2, 1];
+const HOLD_AFTER_KNOCK = 2;
 
 export function resolveWell(world) {
   const pts = world.points || {}, derived = [];
@@ -117,8 +118,11 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     if (kind === 'sweep' || kind === 'sweep2') {
       const R = W.rings[0], v = R.vane, onFloor = hero && heroRing === 0;
       let c0 = onFloor ? ang(hero) : ang(v);
-      // Carrying the breath: centre the sweep on the path to the vane so it crosses catch -> vane.
-      if (onFloor && charged) { const mid = { x: (hero.x + v.x) / 2, z: (hero.z + v.z) / 2 }; c0 = ang(hero) + Math.max(-.6, Math.min(.6, wrap(ang(mid) - ang(hero)))); }
+      // Softened (route stall, 24 Sep): while a breath is waiting or carried, phase-1 sweeps never cover the
+      // hero's direct path to it / to the vane; they sweep the far side of the floor instead. Before the breath
+      // settles, the volley aims at the hero (standing still gets knocked).
+      const goal = charged ? v : breathSrc();
+      if (onFloor && goal) { const ga = Math.atan2(goal.z - hero.z, goal.x - hero.x), pa = ang(hero); c0 = pa + Math.PI + (wrap(ga - pa) > 0 ? -.9 : .9); }
       // The second sweep comes from the other side of the first.
       const s = kind === 'sweep2' ? -(lanes.sweep?.dir || 1) : (cycle % 2 ? 1 : -1), half = .78, e = extent(0, c0);
       return { kind: 'sweep', dir: s, ring: 0, a0: c0 - half * s, a1: c0 + half * s, lo: e.lo, hi: Math.min(e.hi, R.outer), width: 1.7, end: at(c0 + half * s * .92, Math.min(e.hi, R.outer) - 2.0, R.y) };
@@ -173,6 +177,8 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     if (!active) { clock = 0; cycle = -1; lanes = {}; actIdle(dt, t, 'idle'); bands.flush(t); return; }
     if (!warned) { warned = true; }
     if (rage) { runRage(dt, t, hero); tickVents(dt); bands.flush(t); return; }
+    // After a knock the next telegraph waits HOLD_AFTER_KNOCK s (frozen at its start) before it counts down.
+    if (hold > 0) { const Bh = beatAt(phase, clock % cycleLength(phase)); if (Bh.b.k === 'inhale' && Bh.f < .05 || Bh.b.k === 'idle') { hold -= dt; beatInfo = Bh; const kh = Bh.b.k + Bh.i; if (kh !== lastStage) { lastStage = kh; enterBeat(Bh, hero); } runBeat(Bh, dt, t, hero); tickVents(dt); bands.flush(t); return; } }
     clock += dt;
     const L = cycleLength(phase), c = Math.floor(clock / L), cc = clock - c * L;
     if (c !== cycle) { // new cycle: loiter check (standing still for one whole cycle gets targeted)
@@ -192,7 +198,8 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   }
   let current = null; // lane of the current telegraph/exhale pair
   // ---------------- rage beat (between phases) ----------------
-  let rage = null;
+  let rage = null, hold = 0;
+  const breathSrc = () => { const b = wind?.sources?.get?.('guardianBreath'); return b && b.active ? b : null; };
   const rageFront = () => rage.lo + (rage.t - RAGE.windup) * RAGE.speed;
   function runRage(dt, t, hero) {
     rage.t += dt; beatInfo = null;
@@ -421,7 +428,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   // Map lane progress (0..1 along the lane) into the ribbon parameter (the dive takes the first 30%).
   const s2g = f => .3 + .7 * f;
   function knock(hero, a) {
-    hitThis.add(beatInfo.i); stats.hits++;
+    hitThis.add(beatInfo.i); stats.hits++; hold = HOLD_AFTER_KNOCK; // the next volley waits while the hero recovers
     const k = ringOf(hero), s = LV[k].safe, to = [s.x, (ground(s.x, s.z, LV[k].y) ?? LV[k].y), s.z];
     const dx = Math.cos(a), dz = Math.sin(a);
     sound('hazard');
@@ -503,12 +510,12 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     objective() { return phase >= 3 ? null : ['Dodge the breath, catch it, turn vane 1/3', 'Ride the grille up; catch after the volley; vane 2/3', W.top ? 'Ride two updrafts to the perch; turn vane 3/3' : 'Ride the upward breath; turn vane 3/3'][phase] + (BREATHS_PER_VANE[Math.min(phase, 2)] > 1 ? ` (${vaneLeft()})` : ''); },
     target() { if (phase >= 3) return null; const v = vaneOf(phase); return new T.Vector3(v.x, v.y, v.z); },
     serialize() { return { phase }; },
-    restore(d) { rage = null; fed = 0; phase = Math.max(0, Math.min(3, d?.phase | 0)); for (let k = 1; k <= phase; k++) world.setRestored?.('vane' + k, 1); clock = 0; cycle = -1; lastStage = ''; doneT = phase >= 3 ? 10 : -1; },
-    reset() { rage = null; fed = 0; phase = 0; clock = 0; cycle = -1; warned = false; lastStage = ''; lanes = {}; current = null; doneT = -1; loiter = false; pendingBreath = null; stats = { hits: 0, cycles: 0, exhales: 0, pulses: 0, catches: 0 }; },
+    restore(d) { rage = null; hold = 0; fed = 0; phase = Math.max(0, Math.min(3, d?.phase | 0)); for (let k = 1; k <= phase; k++) world.setRestored?.('vane' + k, 1); clock = 0; cycle = -1; lastStage = ''; doneT = phase >= 3 ? 10 : -1; },
+    reset() { rage = null; hold = 0; fed = 0; phase = 0; clock = 0; cycle = -1; warned = false; lastStage = ''; lanes = {}; current = null; doneT = -1; loiter = false; pendingBreath = null; stats = { hits: 0, cycles: 0, exhales: 0, pulses: 0, catches: 0 }; },
     telemetry() {
       const B = beatInfo?.b ? beatInfo : null, L = phase < 3 ? cycleLength(phase) : 0;
       return { phase, stage: stage(), beat: B ? B.b.k + (B.b.lane ? ':' + B.b.lane : '') : null, beatLeft: B ? +(B.b.d - B.u).toFixed(2) : null, clock: +clock.toFixed(2), cycle: L ? +(clock % L).toFixed(2) : 0,
-        lane: current ? { kind: current.kind, id: current.id || current.kind, ring: current.ring, aimed: !!current.aimed } : null, loiter, fed, rage: rage ? { t: +rage.t.toFixed(2), ring: rage.ring, front: rage.t > RAGE.windup ? +rageFront().toFixed(2) : null, lo: rage.lo, hi: rage.hi } : null, climb: !!W.top, knockRules: KNOCK_RULES, spared, heroSafe: heroV ? safeReason(heroV) : null, breath: breath ? { ...breath, left: +(breath.closesAt - time).toFixed(2) } : null, ...stats, derived: W.derived };
+        lane: current ? { kind: current.kind, id: current.id || current.kind, ring: current.ring, aimed: !!current.aimed } : null, loiter, fed, need: BREATHS_PER_VANE[Math.min(phase, 2)], hold: +hold.toFixed(2), rage: rage ? { t: +rage.t.toFixed(2), ring: rage.ring, front: rage.t > RAGE.windup ? +rageFront().toFixed(2) : null, lo: rage.lo, hi: rage.hi } : null, climb: !!W.top, knockRules: KNOCK_RULES, spared, heroSafe: heroV ? safeReason(heroV) : null, breath: breath ? { ...breath, left: +(breath.closesAt - time).toFixed(2) } : null, ...stats, derived: W.derived };
     },
     dispose() { scene.remove(actor); bands.dispose(); },
   };
