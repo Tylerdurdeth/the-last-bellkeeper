@@ -15,7 +15,9 @@ export default function (THREE, opts = {}) {
   // one side and dropping into the floor (the well is fed from below). Flush-walkable (rim .12).
   const R = .8;
   add(new THREE.CylinderGeometry(R + .55, R + .62, .12, 8), shade, 0, .06, 0, Math.PI / 8);
-  add(new THREE.CylinderGeometry(R + .42, R + .5, .05, 8), ivory, 0, .145, 0, Math.PI / 8);
+  // Ivory collar is a true ring (open over the grille): a solid disc here shared the petals' top plane and z-fought.
+  const collar = new THREE.LatheGeometry([[R + .02, .12], [R + .02, .17], [R + .42, .17], [R + .5, .12]].map(([x, y]) => new THREE.Vector2(x, y)), 8);
+  add(collar, ivory, 0, 0, 0, Math.PI / 8);
   for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + Math.PI / 8; box(.05, .02, R * .7, shade, Math.sin(a) * (R + .3), .175, Math.cos(a) * (R + .3)).rotation.y = a; }
   add(new THREE.TorusGeometry(R + .06, .08, 6, 28), copper, 0, .15, 0, 0, Math.PI / 2);
   add(new THREE.CylinderGeometry(R, R, .06, 24), M(0x2C4A45, "metal", .8, .1), 0, .1, 0);
