@@ -31,12 +31,15 @@ const wstate = { skyPlanks: restored ? 3 : 1, terraceGate: 1, sailBridge: 1, pip
 world.update(10, 0, wstate); for (let i = 0; i < 20; i++) world.update(.5, i * .5, wstate);
 
 const P = world.points, W = P.guardianWell.rings;
-const SHOTS = {
-  start: P.start, morningBell: P.morningBell, mara: P.maraLever, seedWheel: P.seedWheel, loftVent: P.loftVent, loft: P.loftLedge,
-  sailsBranch: P.millSails.source, sailsMill: P.millSails.restore, pipesBranch: P.millPipes.branchStart, pipesMill: P.millPipes.restore,
-  laddersBase: P.millLadders.branchEnd, laddersMill: P.millLadders.restore, skyBridge: P.skyBridge.stages[1].mid,
-  hollowGate: P.hollowGate, gallery: P.gallery.carvings[1].stand, wellHigh: W.high.safe, wellMid: W.mid.safe, wellLow: W.low.safe,
-};
+// Anchors are read defensively: the world module is still moving; missing ones are skipped.
+const get = f => { try { return f(); } catch { return undefined; } };
+const SHOTS = Object.fromEntries(Object.entries({
+  start: () => P.start, morningBell: () => P.morningBell, mara: () => P.maraLever, seedWheel: () => P.seedWheel, loftVent: () => P.loftVent, loft: () => P.loftLedge,
+  sailsBranch: () => (P.sails ?? P.millSails).source, sailsBridge: () => (P.sails ?? P.millSails).bridgeFrom, sailsMill: () => (P.sails ?? P.millSails).restore,
+  pipesBranch: () => (P.pipes ?? P.millPipes).branchStart, pipesMill: () => (P.pipes ?? P.millPipes).restore,
+  laddersLedge1: () => (P.ladders ?? P.millLadders).ledge1, laddersMill: () => (P.ladders ?? P.millLadders).restore, skyBridge: () => (P.skyBridge?.stages ?? P.bridge?.stages)?.[1]?.mid ?? P.bridge?.start,
+  hollowGate: () => P.hollowGate, gallery: () => P.gallery.carvings[1].stand, wellHigh: () => W.high.safe, wellMid: () => W.mid.safe, wellLow: () => W.low.safe,
+}).map(([k, f]) => [k, get(f)]).filter(([, v]) => v));
 const AREA = { terrace: 'terrace-dawn', loft: 'terrace-dawn', skybridge: 'branches-day', sails: 'branches-day', pipes: 'branches-day', ladders: 'branches-day', hollow: 'hollow', well: 'hollow' };
 const shot = q.get('shot') && SHOTS[q.get('shot')] ? q.get('shot') : 'start';
 const anchor = SHOTS[shot].clone ? SHOTS[shot].clone() : new THREE.Vector3(...SHOTS[shot]);

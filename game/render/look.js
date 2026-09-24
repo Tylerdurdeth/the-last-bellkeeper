@@ -41,7 +41,7 @@ function baseRigs(THREE) {
     lift: new THREE.Vector3(.004, .018, .022), gain: new THREE.Vector3(1.03, 1.0, .96), sat: 1.04, contrast: 1.08,
     vignette: .20, ink: c('#2A1E1C'),
     skyMapMix: 1, mapTint: c('#FFFFFF'), backMix: 1, backTint: c('#FFFFFF'), hazeAmt: .22,
-    restoreExposure: 1.24, restoreWarm: 1, shadowIntensity: 1,   // how hard restoration brightens / warms this area
+    restoreExposure: 1.24, restoreWarm: 1, shadowIntensity: 1, postGain: 1,   // how hard restoration brightens / warms this area
     ...o,
   });
   return {
@@ -62,12 +62,13 @@ function baseRigs(THREE) {
     // Warm shaft from above, cool darker lower well.
     'hollow': rig({
       keyDir: v(.66, .9, .66), keyColor: c('#FFD39A'), keyIntensity: 3.4,
-      skyColor: c('#B6CCD0'), groundColor: c('#34494C'), hemiIntensity: 1.6,
+      skyColor: c('#B6CCD0'), groundColor: c('#30464A'), hemiIntensity: 1.45,
       fogColor: c('#4F6772'), fogSun: c('#D8AE74'), fogDensity: .018, fogShape: new THREE.Vector2(10, .45), fogHeight: new THREE.Vector3(-14, -2, .8),
       skyTop: c('#5E817C'), skyHorizon: c('#B89A73'), skyBelow: c('#2E4843'), sunColor: c('#FFC27A'), cloudAmt: 0,
       bands: new THREE.Vector4(.12, .50, .05, .50), shadowTint: c('#9FB6C8'), shade: c('#2C4A45'), shadeAmt: .22,
-      height: new THREE.Vector4(-16, 3, .5, .5), lowTint: c('#9FC0C2'),
+      height: new THREE.Vector4(-15, 1, .45, .45), lowTint: c('#9FC0C2'),
       rim: c('#FFB060'), rimIntensity: 1.1, exposure: 1.0,
+      restoreExposure: 1.1, restoreWarm: .55,   // restored Hollow: brighter and warmer, not yellow
       shadowIntensity: .72,   // inside the trunk: occluded key survives at half strength as warm bounce (interiors keep form)
       lift: new THREE.Vector3(.0, .015, .04), gain: new THREE.Vector3(1.03, 1.0, .96), sat: 1.04, contrast: 1.22,
       vignette: .2, skyMapMix: .85, mapTint: c('#9FA7A0'), backMix: .35, backTint: c('#8E9A92'), hazeAmt: .45,
@@ -84,8 +85,9 @@ function restoredOf(THREE, r) {
   o.fogColor.lerp(gold, .40); o.fogSun.lerp(C(THREE, '#FFD08A'), .4); o.fogDensity *= .85;
   o.skyHorizon.lerp(C(THREE, '#FFD49C'), .40); o.skyTop.lerp(C(THREE, '#A7D2DC'), .3); o.sunColor.lerp(warm, .3);
   o.shadowTint.lerp(C(THREE, '#B7B7A0'), .35); o.lowTint.lerp(C(THREE, '#E8D2A8'), .5);
-  o.height.z = Math.min(1, o.height.z + .25); o.height.w = Math.min(1, o.height.w + .25);
+  o.height.z = Math.min(1, o.height.z + .12); o.height.w = Math.min(1, o.height.w + .12);   // the well stays deeper than its rim
   o.mapTint.lerp(C(THREE, '#FFE7C4'), .45); o.backTint.lerp(C(THREE, '#FFEBCB'), .4); o.hazeAmt *= .6;
+  o.postGain = 1.07;   // display-space lift (not compressed by tone mapping): keeps the restored delta ≥12% in bright frames
   o.exposure *= r.restoreExposure; o.gain.set(o.gain.x * (1 + .04 * w), o.gain.y * (1 + .01 * w), o.gain.z * (1 - .05 * w));
   o.sat *= 1 + .03 * w; o.vignette *= .8;
   return o;
@@ -154,12 +156,12 @@ export function createLook({ THREE, renderer, scene, camera, tier: forcedTier, p
     uniforms: {
       tColor: { value: null }, tDepth: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uNear: { value: .1 }, uFar: { value: 100 },
       uPx: { value: 1 }, uInk: { value: new THREE.Color('#2A1E1C') }, uInkAmt: { value: .92 }, uFade: { value: new THREE.Vector2(18, 55) },
-      uLift: { value: new THREE.Vector3() }, uGain: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 }, uContrast: { value: 1 }, uVignette: { value: 0 },
+      uLift: { value: new THREE.Vector3() }, uPostGain: { value: 1 }, uGain: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 }, uContrast: { value: 1 }, uVignette: { value: 0 },
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4( position.xy, 0.0, 1.0 ); }',
     fragmentShader: `#include <common>
 uniform sampler2D tColor, tDepth; uniform vec2 uRes, uFade; uniform float uNear, uFar, uPx, uInkAmt, uSat, uContrast, uVignette;
-uniform vec3 uInk, uLift, uGain; varying vec2 vUv;
+uniform vec3 uInk, uLift, uGain; uniform float uPostGain; varying vec2 vUv;
 float linZ( vec2 uv ) { float d = texture2D( tDepth, uv ).x; return uNear * uFar / ( uFar - d * ( uFar - uNear ) ); }
 vec3 toSRGB( vec3 c ) { return mix( c * 12.92, 1.055 * pow( c, vec3( 1.0 / 2.4 ) ) - 0.055, step( 0.0031308, c ) ); }
 void main() {
@@ -187,7 +189,7 @@ void main() {
   vec3 s = toSRGB( saturate( col ) );
   // LUT-ish grade in display space: lift (tinted shadows), gain (warm highlights), saturation, soft contrast.
   float l = dot( s, vec3( 0.2126, 0.7152, 0.0722 ) );
-  s = s * uGain + uLift * ( 1.0 - l );
+  s = s * uGain * uPostGain + uLift * ( 1.0 - l );
   l = dot( s, vec3( 0.2126, 0.7152, 0.0722 ) );
   s = mix( vec3( l ), s, uSat );
   s = mix( s, s * s * ( 3.0 - 2.0 * s ), uContrast - 1.0 );
@@ -319,7 +321,7 @@ void main() {
     sky.followSun(r.keyDir);
     renderer.toneMappingExposure = r.exposure;
     const P = post.uniforms;
-    P.uLift.value.copy(r.lift); P.uGain.value.copy(r.gain); P.uSat.value = r.sat; P.uContrast.value = r.contrast; P.uVignette.value = r.vignette;
+    P.uLift.value.copy(r.lift); P.uPostGain.value = r.postGain; P.uGain.value.copy(r.gain); P.uSat.value = r.sat; P.uContrast.value = r.contrast; P.uVignette.value = r.vignette;
     P.uInk.value.copy(r.ink); ink.uniforms.uInk.value.copy(r.ink);
   }
 
