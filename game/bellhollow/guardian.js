@@ -16,7 +16,7 @@
 //   (arena, ring1..3, vane1..3, vents ring1/ring2) and reported in layout.derived.
 import buildGuardian from '../assets/bh-guardian.js';
 
-const TAU = Math.PI * 2;
+const TAU = Math.PI * 2, HOVER = .8; // trail tip above the floor (4.8 m actor: hem ~2 m up)
 const clamp01 = v => Math.max(0, Math.min(1, v));
 const ease = v => { v = clamp01(v); return v * v * (3 - 2 * v); };
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -55,7 +55,7 @@ export function resolveWell(world) {
 
 export function createGuardian({ THREE: T, scene, world, wind, movement = null, sound = () => {}, caption = () => {}, onEvent = () => {}, look = null } = {}) {
   const W = resolveWell(world), C = W.center;
-  const actor = buildGuardian(T); actor.name = 'bh-guardian-actor';
+  const actor = buildGuardian(T, { height: 5.0 }); actor.name = 'bh-guardian-actor';
   const J = actor.userData.joints, setPose = actor.userData.setPose;
   scene.add(actor); look?.applyTo?.(actor, 'character');
   const bands = createBands(T, scene);
@@ -73,8 +73,8 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   // ---------------- state ----------------
   let phase = 0, clock = 0, cycle = -1, active = false, warned = false, doneT = -1, time = 0, gentle = false;
   let lanes = {}, hitThis = new Set(), loiterFrom = null, loiter = false, breath = null, stats = { hits: 0, cycles: 0, exhales: 0, pulses: 0, catches: 0 };
-  const pose = { crouch: 0, bloom: 0, spread: 0, thrust: 0, slump: 0, lean: 0, swell: 0, fold: 0, rotorGlow: 0, lx: 0, ly: 0 };
-  let yaw = 0, rotorAngle = 0, hover = W.rings[0].y + .6, lastStage = '', stageStart = 0, beatInfo = null;
+  const pose = { crouch: 0, bloom: 0, spread: 0, thrust: 0, slump: 0, lean: 0, swell: 0, fold: 0, rotorGlow: 0, eyes: 1, lx: 0, ly: 0 };
+  let yaw = 0, rotorAngle = 0, hover = W.rings[0].y + HOVER, lastStage = '', stageStart = 0, beatInfo = null;
   const heroV = new T.Vector3(), mouth = new T.Vector3(), tmp = new T.Vector3(), tmp2 = new T.Vector3();
   actor.position.set(C.x, hover, C.z);
 
@@ -203,7 +203,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   // Beat behaviour: telegraph paint, acting targets, ribbons, hits.
   function runBeat(B, dt, t, hero) {
     const k = B.b.k, lane = current, R = lane && lane.ring !== undefined ? W.rings[lane.ring] : W.rings[Math.min(phase, 2)];
-    const hoverTarget = (phase === 0 ? W.rings[0].y : phase === 1 ? W.rings[1].y - .4 : W.rings[1].y + .6) + .6;
+    const hoverTarget = (phase === 0 ? W.rings[0].y : phase === 1 ? W.rings[1].y - .6 : W.rings[1].y + .4) + HOVER;
     hover += (hoverTarget - hover) * (1 - Math.exp(-dt * 1.2));
     // Facing: toward the lane (sweep follows its sweeping angle), else the hero.
     let face = hero ? Math.atan2(hero.x - C.x, hero.z - C.z) : yaw, look = { x: -.25, y: 0 };
@@ -231,7 +231,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
       if (lane && lane.kind !== 'up') paintTelegraph(lane, 1, t, true, 1 - B.f);
     } else if (k === 'slump') {
       const s = ease(B.f / .25) * (1 - ease((B.f - .75) / .25));
-      target = { crouch: .25 * s, bloom: -.2 * s, spread: 0, thrust: 0, lean: .35 * s, slump: s, swell: 0, rotorGlow: .05 + .1 * (1 - s), fold: 0 };
+      target = { crouch: .25 * s, bloom: -.2 * s, spread: 0, thrust: 0, lean: .35 * s, slump: s, swell: 0, rotorGlow: .05 + .1 * (1 - s), fold: 0, eyes: 1 - .6 * s };
       rate = 4; look = { x: -.2 * s, y: 0 };
     } else if (k === 'turn') { rate = 6; }
     else actIdleTargets(target, t);
@@ -242,20 +242,22 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   function actIdleTargets(target, t) { const b = Math.sin(t * 1.1); target.bloom = .08 + .06 * b; target.swell = .08 * b; target.rotorGlow = .12 + .05 * b; }
   function actIdle(dt, t, why) {
     const target = { crouch: 0, bloom: 0, spread: 0, thrust: 0, slump: 0, lean: 0, swell: 0, fold: 0, rotorGlow: .1 }; actIdleTargets(target, t);
-    hover += ((W.rings[0].y + .6) - hover) * (1 - Math.exp(-dt));
+    hover += ((W.rings[0].y + HOVER) - hover) * (1 - Math.exp(-dt));
     applyActor(dt, t, target, 3, yaw, { x: -.1, y: 0 });
   }
   function actTend(dt, t) {
     // Fold (3 s), turn to the roots, sink, then tend: slow breaths, hands brushing the roots.
     const R = W.roots || { x: C.x, y: C.y, z: C.z - 5 }, f = ease(doneT / 3), b = Math.sin(t * .8);
     const face = Math.atan2(R.x - C.x, R.z - C.z);
-    hover += ((W.rings[0].y + .35) - hover) * (1 - Math.exp(-dt * .6));
+    hover += ((W.rings[0].y + .45) - hover) * (1 - Math.exp(-dt * .6));
     const toward = Math.min(1, doneT / 4);
     actor.position.x += ((C.x + (R.x - C.x) * .45 * toward) - actor.position.x) * (1 - Math.exp(-dt));
     actor.position.z += ((C.z + (R.z - C.z) * .45 * toward) - actor.position.z) * (1 - Math.exp(-dt));
-    applyActor(dt, t, { crouch: .3 * f, bloom: .12 + .08 * b * f, spread: 0, thrust: 0, slump: 0, lean: .45 * f, swell: .05 * b, fold: f * (.85 + .15 * b), rotorGlow: .15 + .05 * b }, 2.5, face, { x: -.55 * f, y: 0 }, true);
+    // The hood stays half open in the ending so the calm face (eyes peacefully closed) holds the shot.
+    applyActor(dt, t, { crouch: .3 * f, bloom: .5 * f + .06 * b * f, spread: 0, thrust: 0, slump: 0, lean: .35 * f, swell: .05 * b, fold: f * (.85 + .15 * b), rotorGlow: .15 + .05 * b, eyes: 1 - .88 * ease((doneT - 1.5) / 2) }, 2.5, face, { x: -.35 * f, y: 0 }, true);
   }
   function applyActor(dt, t, target, rate, face, look, keepXZ = false) {
+    if (target.eyes === undefined) target.eyes = 1;
     const m = gentle ? .6 : 1, a = 1 - Math.exp(-rate * dt);
     for (const key of Object.keys(target)) pose[key] += (target[key] - pose[key]) * a;
     pose.lx += (look.x - pose.lx) * a; pose.ly += (look.y - pose.ly) * a;
@@ -321,11 +323,23 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     }
     // Hit test at body height: the swept wedge so far (sweep) or the ledge behind the travelling front (arc).
     if (!hero || hitThis.has(B.i) || movement?.knocked) return;
-    const hr = rad(hero), onRing = Math.abs(hero.y - R.y) < 1.1 && !movement?.lifting; // riding a column is safe
-    if (!onRing || hr < lane.lo - .3 || hr > lane.hi + .4) return;
+    const hr = rad(hero), guard = safeReason(hero);
+    if (guard) { spared = { reason: guard, at: +time.toFixed(2) }; return; }
+    if (Math.abs(hero.y - R.y) >= 1.1 || hr < lane.lo - .3 || hr > lane.hi + .4) return;
     const done = wrap(a - lane.a0), ha = wrap(ang(hero) - lane.a0), pad = .5 / Math.max(1, hr);
     const hit = (sweep ? snap >= 1 : true) && (done >= 0 ? ha >= -pad && ha <= done + pad : ha <= pad && ha >= done - pad);
     if (hit) knock(hero, sweep ? a : a + Math.PI / 2 * Math.sign(lane.a1 - lane.a0));
+  }
+  // Knock rules (M2): a knock clears the player's held input (movement.knockback), so the guardian never
+  // knocks while the hero is (a) riding an updraft column (movement.lifting), (b) airborne above a ring
+  // (jumping/falling), or (c) within 1.5 m of a grille rim (standing on it, or on the ledge approach to it).
+  const KNOCK_RULES = ['not lifting', 'grounded', 'farther than grille radius + 1.5 m from every grille'];
+  let spared = null;
+  function safeReason(hero) {
+    if (movement?.lifting) return 'lifting';
+    if (movement && !movement.grounded) return 'airborne';
+    for (const v of world.vents || []) if (Math.abs(hero.y - v.y) < 1.5 && Math.hypot(hero.x - v.x, hero.z - v.z) < (v.radius || 1) + 1.5) return 'near grille ' + v.id;
+    return null;
   }
   // Map lane progress (0..1 along the lane) into the ribbon parameter (the dive takes the first 30%).
   const s2g = f => .3 + .7 * f;
@@ -342,8 +356,13 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     const s = wind?.sources?.get?.('guardianBreath');
     if (!s || !s.active) { breath = null; return; }
     const left = breath ? clamp01((breath.closesAt - time) / breath.ttl) : 1, spin = gentle ? .4 : 1, warn = left < .25 ? .6 + .4 * Math.sin(t * 16) : 1;
-    for (let i = 0; i < 2; i++) wind.strip(30, (g, o) => { const a = i * Math.PI + t * 2.2 * spin + g * 4.2, r = .25 + g * 1.25; o.set(s.x + Math.cos(a) * r, s.y + .08 + g * .05, s.z + Math.sin(a) * r); }, { width: .3, alpha: .95, flat: true });
-    wind.ring(s.x, s.y + .07, s.z, 1.85, { width: .2, alpha: .95 * warn, taper: false }, -Math.PI / 2, -Math.PI / 2 + TAU * left);
+    // Three-arm spiral, thick outer ring, countdown ring, rising glow column and twinkling sparkles.
+    for (let i = 0; i < 3; i++) wind.strip(34, (g, o) => { const a = i * TAU / 3 + t * 2.2 * spin + g * 4.6, r = .2 + g * 1.7; o.set(s.x + Math.cos(a) * r, s.y + .08 + g * .04, s.z + Math.sin(a) * r); }, { width: .42, alpha: 1, flat: true });
+    wind.ring(s.x, s.y + .06, s.z, 2.05, { width: .34, alpha: .9, taper: false });
+    wind.ring(s.x, s.y + .09, s.z, 2.55, { width: .24, alpha: .95 * warn, taper: false }, -Math.PI / 2, -Math.PI / 2 + TAU * left);
+    for (let i = 0; i < 2; i++) wind.helix(s.x, s.y + .2, s.z, s.y + 3.2, .55 + .15 * i, 1.4, t * 3 * spin + i * Math.PI, { width: .22, alpha: .75, n: 30 });
+    for (let i = 0; i < 10; i++) { const ph = (t * (.7 + i * .07) + i * .37) % 1, a = i * 2.39 + t * .5, r = .6 + (i % 4) * .45, y = s.y + .3 + ph * 2.6, tw = Math.sin(ph * Math.PI);
+      wind.strip(4, (g, o) => o.set(s.x + Math.cos(a) * r, y + (g - .5) * .28, s.z + Math.sin(a) * r), { width: .16 * tw + .04, alpha: .95 * tw, taper: false }); }
     bands.dot({ x: s.x, z: s.z, y: s.y, r: 2.1, t });
   }
 
@@ -399,7 +418,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     telemetry() {
       const B = beatInfo, L = phase < 3 ? cycleLength(phase) : 0;
       return { phase, stage: stage(), beat: B ? B.b.k + (B.b.lane ? ':' + B.b.lane : '') : null, beatLeft: B ? +(B.b.d - B.u).toFixed(2) : null, clock: +clock.toFixed(2), cycle: L ? +(clock % L).toFixed(2) : 0,
-        lane: current ? { kind: current.kind, id: current.id || current.kind, ring: current.ring, aimed: !!current.aimed } : null, loiter, breath: breath ? { ...breath, left: +(breath.closesAt - time).toFixed(2) } : null, ...stats, derived: W.derived };
+        lane: current ? { kind: current.kind, id: current.id || current.kind, ring: current.ring, aimed: !!current.aimed } : null, loiter, knockRules: KNOCK_RULES, spared, heroSafe: heroV ? safeReason(heroV) : null, breath: breath ? { ...breath, left: +(breath.closesAt - time).toFixed(2) } : null, ...stats, derived: W.derived };
     },
     dispose() { scene.remove(actor); bands.dispose(); },
   };
@@ -431,16 +450,23 @@ function createBands(T, scene) {
           #include <colorspace_fragment>
           return; }
         float ac=vL.y, w=vS.z, e=min(min(ac,1.-ac)*w, min(vL.x, vLen-vL.x)); // metres from the nearest edge
-        float edge=1.-smoothstep(.13,.17,e), pin=smoothstep(.2,.23,e)*(1.-smoothstep(.27,.3,e));
-        float fill=step(vL.z,vL.w);
-        float flash=vL.w>.8&&vS.y<.5 ? .5+.5*sin(uTime*26.) : 0.;
-        vec3 c=mix(deep,hot,fill*.85+flash*.15);
+        float fill=smoothstep(vL.w-.015,vL.w+.015,vL.z)<.5?1.:0.;   // the fill sweeps along the lane: it IS the timer
+        float lead=(1.-smoothstep(0.,.05,abs(vL.z-vL.w)))*step(vL.w,.995)*step(.01,vL.w);
+        float flash=vL.w>.8&&vS.y<.5 ? .5+.5*sin(uTime*22.) : 0.;
+        float mid=1.-abs(ac-.5)*2.;                                   // painted gradient: deep at the rims, warm in the middle
+        vec3 painted=mix(deep,hot,.25+.55*mid*mid);
+        vec3 c=mix(mix(deep,cream,.35),painted,fill);                 // unfilled = pale coral wash
+        float a=mix(.42,.86,fill);
         float spd=vS.y>.5?9.:1.2+vL.w*3.;
         float ch=fract((vL.x+abs(ac-.5)*min(w,2.2)*.9)/1.7-uTime*spd*.8);
-        float chev=step(ch,.2)*step(.34,e)*step(abs(ac-.5)*w,.95);
-        c=mix(c,cream,chev*(.55+.4*fill));
-        c=mix(c,cream,pin*.9); c=mix(c,ink,edge);
-        gl_FragColor=vec4(c,vS.x*(edge>.5?1.:.93));
+        float chev=smoothstep(.0,.03,ch)*(1.-smoothstep(.17,.21,ch))*smoothstep(.3,.36,e)*step(abs(ac-.5)*w,.95);
+        c=mix(c,cream,chev*mix(.45,.85,fill)); a=max(a,chev*mix(.55,.9,fill));
+        c=mix(c,vec3(1.,.93,.7),lead*.9); a=max(a,lead);              // bright leading edge of the fill
+        c=mix(c,hot*1.25,flash*fill*.35);
+        float border=1.-smoothstep(.1,.15,e), soft=smoothstep(0.,.03,e); // dark ink border, soft outer edge
+        c=mix(c,uInk,border);
+        a=mix(a,.95,border)*soft;
+        gl_FragColor=vec4(c,a*vS.x);
         #include <colorspace_fragment>
       }`,
   });
