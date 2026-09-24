@@ -257,7 +257,9 @@ for (let phase = 0; phase < 3; phase++) {
   if ((await read()).knocked) { result.steps.push({ label: 'knocked back by the breath (safe, no progress lost)' }); await shot(`guardian-knock-${phase + 1}`); }
   await waitFor(() => !window.__GAME__.knocked, 'knock settled', 6000);
   for (let feed = 0; feed < 3 && (await read()).quest.guardian.phase < phase + 1; feed++) {
-    if (phase === 2 && feed === 0 && vent('ring3')) { await travel(vent('ring3'), 'perch grille', { tol: .4 }); await ride(vent('ring3'), 'ride-perch'); }
+    if (phase === 2 && vent('ring3') && (await read()).y < vent('ring3').ledge.y - .5) { // not on the perch: (re)climb, riding ring 2 first if knocked below the high ring
+      if ((await read()).y < vent('ring3').y - .5) { await travel(vent('ring2'), 'pulse grille', { tol: .4 }); await ride(vent('ring2'), 'ride-pulse-again'); }
+      await travel(vent('ring3'), 'perch grille', { tol: .4 }); await ride(vent('ring3'), 'ride-perch'); }
     for (let tries = 0; tries < 4; tries++) {
       const s = await waitSource('guardianBreath', 30000);
       try { await travel(s, 'breath', { tol: .5 }); await press('guardianBreath'); await waitFor(() => window.__GAME__.charged, 'caught breath', 2500); break; }

@@ -302,10 +302,21 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const lanternPts = [];
   for (const az of [-13.5, -22.5, -40, -58, -94]) { const [x, , z] = at(az, 22.3); const ry = faceIn(az) + Math.PI / 2, {group} = place(lanternPost, {id: 'lamp'}, x, 0, z, ry, {collide: 'circle', colliderScale: .35}); const [lx, ly, lz] = group.userData.postTop; lanternPts.push([x + lx * Math.cos(ry) + lz * Math.sin(ry), ly - .5, z - lx * Math.sin(ry) + lz * Math.cos(ry)]); }
   // Yard clutter (barrels, crates, hay) + planters around the village.
-  const barrel = (x, y, z, s = 1) => { B.add(new T.CylinderGeometry(.3 * s, .26 * s, .75 * s, 10).translate(x, y + .375 * s, z), 'timber'); for (const yy of [.15, .6]) B.add(new T.TorusGeometry(.29 * s, .03, 4, 12).rotateX(Math.PI / 2).translate(x, y + yy * s, z), 'verdigris'); gm.addCircle({id: 'barrel', x, z, r: .3 * s, y0: y, y1: y + .75 * s}); };
+  // Village barrel: bulged lathe of honey staves with painted stave lines, three iron hoops and a
+  // planked lid (the old plain cylinder with teal bands read as a black tube in shade).
+  const barrel = (x, y, z, s = 1, rot = 0) => {
+    const H = .8 * s, R0 = .27 * s, RB = .33 * s, prof = [];
+    for (let k = 0; k <= 8; k++) { const f = k / 8; prof.push(new T.Vector2(R0 + (RB - R0) * Math.sin(f * Math.PI), f * H)); }
+    B.add(new T.LatheGeometry(prof, 14).rotateY(rot).translate(x, y, z), 'timber');
+    for (let k = 0; k < 10; k++) { const a = rot + k / 10 * Math.PI * 2 + .15, pts = prof.map((v) => new T.Vector3(Math.sin(a) * (v.x + .006), v.y, Math.cos(a) * (v.x + .006))); B.add(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 6, .011 * s, 3).translate(x, y, z), 'timberDark'); }
+    for (const f of [.1, .5, .9]) { const r = R0 + (RB - R0) * Math.sin(f * Math.PI) + .012; B.add(new T.TorusGeometry(r, .022 * s, 4, 16).rotateX(Math.PI / 2).translate(x, y + f * H, z), 'metalWorn'); }
+    B.add(new T.CircleGeometry(R0 - .01, 14).rotateX(-Math.PI / 2).translate(x, y + H - .03, z), 'deck');
+    for (const o of [-.09, .09]) B.add(new T.BoxGeometry(.012, .01, 2 * Math.sqrt(Math.max(0, (R0 - .02) ** 2 - (o * s) ** 2))).rotateY(rot).translate(x + Math.cos(rot) * o * s, y + H - .025, z - Math.sin(rot) * o * s), 'timberDark');
+    gm.addCircle({id: 'barrel', x, z, r: RB, y0: y, y1: y + H});
+  };
   const crate = (x, y, z, s = .55, ry = 0) => { B.add(bevelBox(T, s, s, s, s * .08).rotateY(ry).translate(x, y + s / 2, z), 'timber'); B.add(new T.BoxGeometry(s * 1.02, .06, s * 1.02).rotateY(ry).translate(x, y + s * .5, z), 'timberDark'); gm.addCircle({id: 'crate', x, z, r: s * .6, y0: y, y1: y + s}); };
   const planter = (x, y, z, s = 1) => { B.add(bevelBox(T, .9 * s, .45, .9 * s).translate(x, y + .225, z), 'stone'); leafClump(T, B, x, y + .75, z, .5 * s, Math.round(Math.abs(x * 13 + z * 7)) + 3); if (R() < .6) B.add(new T.IcosahedronGeometry(.09, 0).translate(x + .2, y + .95, z), 'cloth'); gm.addCircle({id: 'planter', x, z, r: .5 * s, y0: y, y1: y + 1}); };
-  for (const [az, r] of [[-96.5, 14.4], [-98.5, 15.6], [-95, 15.3]]) { const [x, , z] = at(az, r); barrel(x, 0, z); }
+  for (const [az, r, sc, rot] of [[-88.7, 14.05, 1, .3], [-88.8, 14.8, .95, 1.4], [-90.6, 14.2, 1.05, 2.2]]) { const [x, , z] = at(az, r); barrel(x, 0, z, sc, rot); }
   for (const [az, r] of [[-89.5, 26], [-92.5, 26.4], [-91, 25.3]]) { const [x, , z] = at(az, r); crate(x, 0, z, .6, az); }
   { const [x, , z] = at(-97, 24.8); B.add(blob(T, 1.3, 5, 1, .55).translate(x, .4, z), 'leafLight'); B.add(blob(T, .9, 6, 1, .6).translate(x + .6, .9, z), 'leafLight'); gm.addCircle({id: 'hay', x, z, r: 1.2, y0: 0, y1: 1.2}); }
   for (const [az, r] of [[-14.5, 14.2], [-15, 25.6], [-27, 26], [-38.5, 26.4], [-50, 26.6], [-26, 15.2], [-33, 14.6]]) { const [x, , z] = at(az, r); planter(x, 0, z); }
@@ -636,7 +647,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
       const w = span / 2 - .45;
       const leaf = new T.Mesh(bevelBox(T, w, 3.4, .16).translate(w / 2 + .45, 1.7, 0), M.timberDark);
       const db = new Bins(T, 'hollow-door-' + side);
-      for (let x = .45 + .38; x < w + .4; x += .38) db.add(new T.BoxGeometry(.035, 3.3, .2).translate(x, 1.7, 0), 'barkShade');
+      for (let x = .45 + .38; x < w + .4; x += .38) db.add(new T.BoxGeometry(.035, 3.3, .2).translate(x, 1.7, 0), 'deckDark');
       for (const y of [.55, 3.0]) { db.add(new T.BoxGeometry(w - .1, .13, .22).translate(w / 2 + .45, y, 0), 'metalWorn'); for (let x = .6; x < w + .3; x += .45) db.add(new T.SphereGeometry(.035, 5, 3).translate(x, y, .12), 'metalWorn'); }
       for (const z of [-.1, .1]) {
         const cx = w + .45 - .62, cy = 1.95, pts = [];
@@ -842,9 +853,9 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   for (let i = 1; i < pipesBr.length - 2; i += 3) { const p = pipesBr[i]; B.add(rod(T, [p[0], p[1] - .4, p[2]], [p[0], p[1] - 1.6, p[2]], .02, 4), 'copper'); life.lantern('pipes', p[0], p[1] - 1.9, p[2], .9); }
   for (const [t, u] of [[-3.2, 1.6], [2.8, -2.4]]) { const p = Pl(t, u); leafClump(T, B, p[0], P1y + .7, p[2], .6, Math.round(t * 10 + 50)); B.add(bevelBox(T, .8, .5, .8).translate(p[0], P1y + .25, p[2]), 'stone'); gm.addCircle({id: 'planter', x: p[0], z: p[2], r: .45, y0: P1y, y1: P1y + 1}); }
   // stores stacked into the corner behind wheel A (no hero-sized pocket between the wheel, valve and rim)
-  { B.add(new T.CylinderGeometry(.32, .28, .8, 10).translate(-36.5, P1y + .4, -5.0), 'timber'); gm.addCircle({id: 'stores', x: -36.5, z: -5.0, r: .95, y0: P1y, y1: P1y + 1.2}); B.add(new T.TorusGeometry(.31, .03, 4, 12).rotateX(Math.PI / 2).translate(-36.5, P1y + .6, -5.0), 'verdigris');
+  { barrel(-36.5, P1y, -5.0, 1.05, .7); gm.addCircle({id: 'stores', x: -36.5, z: -5.0, r: .95, y0: P1y, y1: P1y + 1.2});
     for (const [cx, cz, sz] of [[-37.25, -4.75, .7], [-35.6, -5.45, .6], [-36.2, -4.3, .5], [-36.9, -5.6, .55]]) { B.add(bevelBox(T, sz, sz, sz, sz * .08).rotateY(.4).translate(cx, P1y + sz / 2, cz), 'timber'); B.add(bevelBox(T, sz * .8, sz * .8, sz * .8, .05).rotateY(1.1).translate(cx + .05, P1y + sz + sz * .4, cz - .05), 'timber'); gm.addCircle({id: 'stores', x: cx, z: cz, r: sz * .62, y0: P1y, y1: P1y + sz * 1.8}); } }
-  { const p = Il(3.2, -1.8); B.add(new T.CylinderGeometry(.3, .26, .75, 10).translate(p[0], P1y + .375, p[2]), 'timber'); gm.addCircle({id: 'barrel', x: p[0], z: p[2], r: .3, y0: P1y, y1: P1y + .75}); }
+  { const p = Il(3.2, -1.8); barrel(p[0], P1y, p[2], 1, 1.9); }
   B.block('ladders');
   for (const [L, a, rr] of [[L0, -12.5, L0.r0 + .7], [L1, 6.1, L1.r1 - .8], [L2, 17, L2.r0 + .7]]) { const p = at(a, rr, L.y); leafClump(T, B, p[0], L.y + .7, p[2], .55, Math.round(a * 3 + 99)); B.add(bevelBox(T, .7, .5, .7).translate(p[0], L.y + .25, p[2]), 'stone'); gm.addCircle({id: 'planter', x: p[0], z: p[2], r: .42, y0: L.y, y1: L.y + 1}); }
   // birds on rail posts, roofs and mill galleries (static; they scatter in a later pass)

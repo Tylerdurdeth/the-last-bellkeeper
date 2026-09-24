@@ -5,7 +5,7 @@ import {mkdir, writeFile} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 const args = process.argv.slice(2), out = args.find((a) => !a.startsWith('--')) || 'evidence/v2/world/beauty/now';
 const sizes = (args.find((a) => a.startsWith('--sizes=')) || '--sizes=1280x720,390x844').slice(8).split(',').map((s) => s.split('x').map(Number));
-const SHOTS = ['street', 'maraWorkshop', 'maraOutlet', 'morningBell', 'gateOpen', 'loftLip', 'seedWheelGate', 'loftVent', 'loft', 'sailsBridge', 'sailsMillIdle', 'sailsCapSail', 'sailsMillRestored', 'pipesValve', 'pipesMillIdle', 'pipesMillRestored', 'laddersShutter', 'laddersMillRestored', 'fragment1', 'frag2FromSail', 'sailsLanding', 'fragment2', 'fragment3', 'skyBridge', 'hollowGate', 'galleryCarvings', 'wellHigh', 'wellMid', 'wellLow', 'topPerch', 'pairedBells', 'finale'];
+const SHOTS = ['street', 'maraWorkshop', 'maraOutlet', 'morningBell', 'yardStores', 'gateOpen', 'loftLip', 'seedWheelGate', 'loftVent', 'loft', 'sailsBridge', 'sailsMillIdle', 'sailsCapSail', 'sailsMillRestored', 'pipesValve', 'pipesMillIdle', 'pipesMillRestored', 'laddersShutter', 'laddersMillRestored', 'fragment1', 'frag2FromSail', 'sailsLanding', 'fragment2', 'fragment3', 'skyBridge', 'hollowGate', 'galleryCarvings', 'wellHigh', 'wellMid', 'wellLow', 'topPerch', 'pairedBells', 'finale'];
 const only = args.find((a) => a.startsWith('--only=')); const list = only ? only.slice(7).split(',') : SHOTS;
 await mkdir(out, {recursive: true});
 const browser = await puppeteer.launch({headless: 'new', args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist']});

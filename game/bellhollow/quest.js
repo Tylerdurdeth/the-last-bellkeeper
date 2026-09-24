@@ -12,6 +12,7 @@
 import { createGuardian as createGuardianStub } from './guardian-stub.js';
 
 export const QUEST_VERSION = 2;
+const GOLD = { r: .91, g: .73, b: .29, isColor: true };
 // Anchors the world must provide in world.points ({x,y,z}); fragment1..3 and farBell optional.
 export const REQUIRED_POINTS = ['start', 'morningBell', 'mara', 'maraOutlet', 'seedWheel', 'seedOutlet', 'terraceGate', 'loft', 'loftGust',
   'sailsGust', 'laddersGust1', 'laddersGust2', 'laddersGust3', 'millSails', 'millPipes', 'millLadders', 'skyBridge', 'hollowGate',
@@ -119,7 +120,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     const ventOk = { loft: progress.seed, ladders1: progress.loft, ladders2: reached.ladders1, ladders3: reached.ladders2, frag1: progress.loft && !fragments.has('fragment1') };
     for (const [id, ok] of Object.entries(ventOk)) if (ok && vents[id]) {
       const shut = id === 'ladders3' && wind.pushValue('laddersShutter') < .8;
-      add({ id, kind: shut ? 'blocked' : 'vent', ...vents[id], range: 3.2, height: 2, label: 'Release the gust into the grille', shut,
+      add({ id, kind: shut ? 'blocked' : 'vent', ...vents[id], range: 3.2, height: 2, label: 'Release the gust into the grille', shut, optional: id === 'frag1',
         need: shut ? 'The shutter covers this grille. Push it aside with a gust, then fill the grille before the ring empties.' : 'A copper grille. Release a held gust into it and it will lift you.' });
     }
     if (progress.loft && !progress.sailsBridge && sails.sailsBridge) add({ ...sails.sailsBridge, id: 'sailsBridge', kind: 'push', range: 7.5, label: 'Push the hanging bridge', need: 'The hanging bridge sways out of reach. A gust released at its sail would swing it across. Catch one at the branch’s copper pipe.' });
@@ -129,7 +130,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     if (cap && progress.sailsBridge && !progress.sailsCap) add({ ...cap, id: 'sailsCap', kind: 'push', range: 5, height: 5, label: 'Push the tail sail to turn the cap', need: 'The mill’s sails face away from the wind. A gust at the tail sail would swing the cap round.' });
     if (progress.sailsBridge && !progress.sails) add({ ...wheels.millSails, id: 'millSails', kind: cap && !progress.sailsCap ? 'blocked' : 'give', range: 5, height: 4, label: 'Give the gust to the Mill of Sails',
       need: cap && !progress.sailsCap ? 'The sails face away from the wind — turn the cap first. Push the tail sail behind the mill.' : 'The Mill of Sails is still. A gust spills from the bridge sail beside it.' });
-    if (fragSail && progress.loft && !progress.fragSail) add({ ...fragSail, id: 'frag2', kind: 'push', range: 6.5, height: 4, label: 'Push the little sail', need: 'A small sail on a pivot. A gust would swing it round.' });
+    if (fragSail && progress.loft && !progress.fragSail) add({ ...fragSail, id: 'frag2', kind: 'push', optional: true, range: 6.5, height: 4, label: 'Push the little sail', need: 'A small sail on a pivot. A gust would swing it round.' });
     if (progress.hollow && carvingsLive() && !progress.carvingOut) add({ ...intake(0), id: 'carvingOut', kind: 'give', range: 4.5, height: 3.5, label: 'Give the gust to the carving', need: 'A carved channel with a copper intake. It is waiting for wind — catch the gust in the gallery.' });
     if (progress.hollow && carvingsLive() && !progress.carvingReturn) add({ ...intake(1), id: 'carvingReturn', kind: progress.carvingOut ? 'give' : 'blocked', range: 4.5, height: 3.5, label: 'Give the gust to the second carving',
       need: progress.carvingOut ? 'The second channel waits for wind.' : 'This channel runs the other way. Wake the first carving, further up the gallery.' });
@@ -145,7 +146,8 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     if (!charged && !progress.staff && progress.bypass) { const s = wind.sourceAt(p); if (s) push(1, { kind: 'info', id: 'nostaff', label: 'Reach for the gust', target: V(s), why: 'The gust slips through your fingers. Mara is holding out her bell staff — take it first.' }); }
     const list = targets();
     if (charged) {
-      const pick = wind.pickTarget(p, yaw, list.filter(c => c.kind !== 'blocked'));
+      // Mandatory targets always win over optional ones (an optional sail must never eat the only gust).
+      const live = list.filter(c => c.kind !== 'blocked'), pick = wind.pickTarget(p, yaw, live.filter(c => !c.optional)) || wind.pickTarget(p, yaw, live.filter(c => c.optional));
       if (pick) push(0, { kind: pick.kind, id: pick.id, label: pick.label, target: V(pick).setY(pick.y + (pick.kind === 'vent' ? .2 : 1.2)), anim: 'release' });
       const shut = list.find(c => c.kind === 'blocked' && near(p, c, c.id === 'ladders3' ? 3.2 : 4.5, 4));
       if (shut && !pick) push(1, { kind: 'info', id: shut.id, label: shut.id === 'ladders3' ? 'Grille · shutter closed' : shut.id === 'millSails' ? 'Mill of Sails · facing away' : 'The carving · not yet', target: V(shut), why: shut.need });
@@ -234,7 +236,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
       return emit({});
     }
     if (id === 'sailsCap') { wind.setPush('sailsCap', 1, { duration: 1.8 }); progress.sailsCap = true; say('The tail sail catches the gust and the cap grinds round. The sails face the wind.', 5); sound('push'); return emit({}); }
-    if (id === 'frag2') { wind.setPush('frag2', 1, { duration: 1.4 }); progress.fragSail = true; say('The little sail swings round, and something glints behind it.', 4); sound('push'); return emit({}); }
+    if (id === 'frag2') { wind.setPush('frag2', 1, { duration: 1.4 }); progress.fragSail = true; say('The little sail swings round into a walkway. Across it, on the small platform, a bell fragment glints.', 6); sound('push'); return emit({ look: pts.fragment2 && arr(pts.fragment2, .6) }); }
     if (id === 'carvingOut' || id === 'carvingReturn') {
       progress[id] = true; applyWorld(); sound(id === 'carvingOut' ? 'bell-out' : 'bell-return'); wind.petals(V(c.target), { count: 30, spread: 1 });
       say(id === 'carvingOut' ? 'The carving drinks the gust. Light runs up the channel, out toward the mills.' : 'The second channel lights — and runs back down, into the roots.', 6);
@@ -308,6 +310,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     time += dt;
     if (pendingCaption && time >= pendingCaption.at) { const q = pendingCaption; pendingCaption = null; q.fn(); }
     syncSources();
+    for (const k of ['fragment1', 'fragment2', 'fragment3']) if (pts[k] && !fragments.has(k)) { const f = pts[k]; for (let i = 0; i < 4; i++) { const a = t * 1.7 + i * Math.PI / 2, tw = .5 + .5 * Math.sin(t * 5 + i * 2); wind.strip(4, (g, o) => o.set(f.x + Math.cos(a) * .35, f.y + .8 + (g - .5) * .5 * tw, f.z + Math.sin(a) * .35), { width: .09 + .06 * tw, alpha: .9 * tw, taper: false, color: GOLD }); } }
     if (!started) return;
     // Reaching a ledge above a grille marks it (checkpoint + unlocks the next gust source).
     if (movement?.grounded) for (const v of Object.values(vents)) {

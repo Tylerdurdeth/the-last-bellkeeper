@@ -28,6 +28,7 @@ const BOARD = {
   maraWorkshop: [P.maraLever, {}, {}, 'terrace-dawn'],
   maraOutlet: [P.maraOutlet, {}, {}, 'terrace-dawn'],
   morningBell: [P.morningBell, {}, {}, 'terrace-dawn'],
+  yardStores: [new T.Vector3(-17.5, 0, -.8), {terraceGate: 1}, {terrace: 1}, 'terrace-dawn', {pos: new T.Vector3(-21.2, 3.6, -2.6), target: new T.Vector3(-14.6, .5, -.7)}],
   gateOpen: [P.seedOutlet, {terraceGate: 1}, {terrace: 1}, 'terrace-dawn'],
   loftLip: [P.loftLedge, OPEN, {terrace: 1}, 'terrace-dawn'],
   seedWheelGate: [P.seedWheel, {terraceGate: 1}, {terrace: 1}, 'terrace-dawn'],

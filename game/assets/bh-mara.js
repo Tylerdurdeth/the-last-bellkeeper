@@ -146,12 +146,13 @@ export default function (THREE, opts = {}) {
       p.setXYZ(i, x, y, z);
       // Paint: base skin, warm blush, lips on a smiling curve, nasolabial and crow's-feet lines, brow furrows.
       c.copy(SKIN);
-      c.lerp(SKIN_SH, smooth(.1, -.6, uz) * .35 + smooth(-.06, -.11, y) * .25);
+      c.lerp(SKIN_SH, smooth(.1, -.6, uz) * .3);                                               // side shading only (no dark jaw: it read as stubble)
+      c.lerp(SKIN_SH, front * .3 * G(x, y + .1, .03, .012));                                   // a soft chin shadow
       c.lerp(BLUSH, front * .9 * G(ax - .045, y + .014, .022, .016));
       const smileY = -.054 + 13 * x * x;
       if (front > .5 && ax < .033) c.lerp(LIP, smooth(.007, .002, y - smileY + .002 > 0 ? (y - smileY) * .5 : smileY - y - .003) * .85);   // fuller lower lip under the smile line
       if (front > .5 && ax < .037) c.lerp(INK, smooth(.0024, .0008, Math.abs(y - smileY)) * .75 * smooth(.04, .022, ax));
-      if (front > .4) c.lerp(LINE, smooth(.0032, .001, nasolabial(x, y)) * .55);
+      if (front > .4) c.lerp(LINE, smooth(.0028, .001, nasolabial(x, y)) * .35);
       for (const k of [-1, 0, 1]) if (front > .3) { const cx = .063, cy = .016 + k * .006, d = Math.abs((ax - cx) * Math.sin(-k * .45) + (y - cy) * Math.cos(-k * .45)); if (Math.abs(ax - cx - .006) < .008) c.lerp(LINE, smooth(.0022, .0008, d) * .5); }
       for (const ly of [.058, .07]) if (front > .5 && ax < .045) c.lerp(LINE, smooth(.0022, .0008, Math.abs(y - ly - .004 * Math.cos(x * 40))) * .3);
       cols[i * 3] = c.r; cols[i * 3 + 1] = c.g; cols[i * 3 + 2] = c.b;

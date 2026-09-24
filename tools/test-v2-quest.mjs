@@ -78,7 +78,8 @@ assert.equal(world.restored.skyBridge, 1 / 3);
 // --- Mill of Pipes: chain two wheels across a gap ---
 catchAt(P.loftGust); at({ x: 8.5, y: 4, z: -13 }); face(world.wheels[1]); act('give', 'pipesA'); tick(1.2);
 assert(wind.sources.has('chain:pipesA'), 'wheel A spits a gust across the gap');
-catchAt(world.wheels[1].outlet); at({ x: 16.5, y: 4, z: -11.5 }); face(world.wheels[2]); act('give', 'pipesB'); tick(1.5);
+catchAt(world.wheels[1].outlet); at({ x: 17.9, y: 4, z: -12.4 }); c = ctx(); assert.equal(c.id, 'pipesB', 'a held gust prefers the mandatory wheel over the optional frag2 sail beside it');
+at({ x: 16.5, y: 4, z: -11.5 }); face(world.wheels[2]); act('give', 'pipesB'); tick(1.5);
 assert(!quest.progress.pipesB, 'valve closed: the gust leaves by the wrong outlet'); assert(!wind.charged); assert.match(quest.objective(), /valve/i);
 at(P.pipesValve); act('lever', 'pipesValve'); assert(quest.progress.pipesValve); tick(1);
 catchAt(world.wheels[1].outlet); at({ x: 16.5, y: 4, z: -11.5 }); face(world.wheels[2]); act('give', 'pipesB'); tick(1.2); assert(quest.progress.pipesB);
