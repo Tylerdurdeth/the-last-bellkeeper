@@ -42,7 +42,8 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
   const sails = Object.fromEntries((world.sails || []).map(v => [v.id, v]));
   const progress = Object.fromEntries(FLAGS.map(k => [k, false]));
   const reached = {}; const fragments = new Set(); const seen = new Set();
-  let bypassAt = Infinity, time = 0, finaleT = -1, last = null, pendingCaption = null;
+  let bypassAt = Infinity, time = 0, finaleT = -1, last = null, pendingCaption = null, farAnswered = false;
+  const FINALE = 16; // s: 0-2 resonance, 2-9 rise over the village, 9-13 the far bell answers, 13-16 back to Mara
   const guardian = createGuardian({ THREE: T, scene, world, wind, movement, sound, caption, onEvent: e => guardianEvent(e) });
   const d2 = (p, q) => Math.hypot(p.x - q.x, p.z - q.z);
   const near = (p, q, r = 2.2, h = 2) => q && d2(p, q) <= r && Math.abs(p.y - q.y) <= h;
@@ -65,6 +66,8 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
   function syncSources() {
     const want = {
       mara: progress.bypass && pts.maraOutlet, loftGust: progress.loft && pts.loftGust,
+      // Optional per-branch supplies (real world): at each branch's start until that branch needs no more.
+      sailsSource: progress.loft && !progress.sails && pts.sailsSource, pipesSource: progress.loft && !progress.pipesA && pts.pipesSource,
       sailsGust: progress.sailsBridge && !progress.sails && pts.sailsGust,
       laddersGust1: progress.loft && !progress.ladders && pts.laddersGust1, laddersGust2: reached.ladders1 && !progress.ladders && pts.laddersGust2,
       laddersGust3: reached.ladders2 && !progress.ladders && pts.laddersGust3,
@@ -77,9 +80,13 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     }
   }
   function applyWind(instant = false) {
-    if (progress.seed) { wind.setPush('terraceGate', 1, { instant }); wind.powerWheel('seed', { outlet: wheels.seed?.outlet, instant, delay: 1.2 }); wind.chainFrom('seed', { x: wheels.seed.x, y: wheels.seed.y + 1.1, z: wheels.seed.z }); }
+    if (progress.seed) { wind.setPush('terraceGate', 1, { instant }); wind.powerWheel('seed', { outlet: wheels.seed?.outlet, instant, delay: 1.2 }); wind.chainFrom('seed', wheels.seed.hub || { x: wheels.seed.x, y: wheels.seed.y + 1.1, z: wheels.seed.z }); }
     if (progress.sailsBridge) wind.setPush('sailsBridge', 1, { instant });
-    for (const id of ['pipesA', 'pipesB']) if (progress[id]) { wind.powerWheel(id, { outlet: progress.pipes ? null : wheels[id]?.outlet, instant }); if (!progress.pipes) wind.chainFrom(id, { x: wheels[id].x, y: wheels[id].y + 1.1, z: wheels[id].z }); }
+    for (const id of ['pipesA', 'pipesB']) if (progress[id]) {
+      wind.powerWheel(id, { outlet: progress.pipes ? null : wheels[id]?.outlet, instant });
+      if (!progress.pipes) wind.chainFrom(id, wheels[id].hub || { x: wheels[id].x, y: wheels[id].y + 1.1, z: wheels[id].z });
+      if (wheels[id].opens) wind.setPush(wheels[id].opens, 1, { instant, duration: 2.4 }); // e.g. the pipes drawbridge lowers when the chained gust lands
+    }
     for (const [k, id] of Object.entries(MILLS)) if (progress[k]) wind.powerWheel(id, { instant });
   }
 
@@ -93,9 +100,9 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
       add({ id, kind: shut ? 'blocked' : 'vent', ...vents[id], range: 3.2, height: 2, label: 'Release the gust into the grille', shut,
         need: shut ? 'The shutter covers this grille. Push it aside with a gust, then fill the grille before the ring empties.' : 'A copper grille. Release a held gust into it and it will lift you.' });
     }
-    if (progress.loft && !progress.sailsBridge && sails.sailsBridge) add({ ...sails.sailsBridge, id: 'sailsBridge', kind: 'push', range: 7.5, label: 'Push the hanging bridge', need: 'The hanging bridge sways out of reach. A gust released at its sail would swing it across. Catch one from the pipe on the loft.' });
+    if (progress.loft && !progress.sailsBridge && sails.sailsBridge) add({ ...sails.sailsBridge, id: 'sailsBridge', kind: 'push', range: 7.5, label: 'Push the hanging bridge', need: 'The hanging bridge sways out of reach. A gust released at its sail would swing it across. Catch one at the branch’s copper pipe.' });
     if (reached.ladders2 && !progress.ladders && sails.laddersShutter && wind.pushValue('laddersShutter') < .8) add({ ...sails.laddersShutter, id: 'laddersShutter', kind: 'push', range: 6, label: 'Push the shutter open', need: 'A heavy shutter lies over the grille. Push it with a gust.' });
-    if (progress.loft && !progress.pipesA) add({ ...wheels.pipesA, id: 'pipesA', kind: 'give', range: 4.5, label: 'Power the pipe wheel', need: 'This pipe wheel feeds the far platform. Give it a gust from the loft pipe.' });
+    if (progress.loft && !progress.pipesA) add({ ...wheels.pipesA, id: 'pipesA', kind: 'give', range: 4.5, label: 'Power the pipe wheel', need: 'This pipe wheel feeds the far platform. Give it a gust from the branch’s copper pipe.' });
     if (progress.pipesA && !progress.pipesB) add({ ...wheels.pipesB, id: 'pipesB', kind: 'give', range: 4.5, label: 'Power the second pipe wheel', need: 'The second wheel is still. The first wheel is puffing a gust across the gap for you.' });
     if (progress.sailsBridge && !progress.sails) add({ ...wheels.millSails, id: 'millSails', kind: 'give', range: 5, height: 4, label: 'Give the gust to the Mill of Sails', need: 'The Mill of Sails is still. A gust spills from the bridge sail beside it.' });
     if (progress.pipesB && !progress.pipes) add({ ...wheels.millPipes, id: 'millPipes', kind: 'give', range: 5, height: 4, label: 'Give the gust to the Mill of Pipes', need: 'The Mill of Pipes is still. The second wheel is puffing a gust at its outlet.' });
@@ -161,7 +168,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
       case 'give': case 'vent': case 'push': return release(current, tip);
       case 'ring': return ring(current);
       case 'talk':
-        progress.staff = true; say('Mara hands you her bell staff. “Catch the gust at my outlet. Give it to the seed wheel.”', 6); sound('chime');
+        progress.staff = true; emit({ mara: 'gesture' }); say('Mara hands you her bell staff. “Catch the gust at my outlet. Give it to the seed wheel.”', 6); sound('chime');
         emit({ checkpoint: arr(pts.mara, 1.2) }); return true;
       case 'lever': wind.setPush('sailsBridge', 0, { duration: 1.2 }); progress.sailsBridge = false; say('The bridge swings back on its rope. Push it again when you’re ready.', 4); sound('release'); emit({}); return true;
       case 'read': {
@@ -193,7 +200,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     if (id === 'sailsBridge') { wind.setPush('sailsBridge', 1, { duration: 1.4 }); progress.sailsBridge = true; say('The sail catches the gust and the bridge swings across. A little wind spills out by the mill.', 5); sound('restore'); return emit({}); }
     if (id === 'laddersShutter') { const s = sails.laddersShutter; wind.setPush('laddersShutter', 1, { duration: .8, hold: s.hold ?? 8, at: s }); say('The shutter slides open — it’s already creeping shut. Catch, and fill the grille before the ring empties.', 5); sound('release'); return emit({}); }
     if (id === 'seed') {
-      progress.seed = true; wind.setPush('terraceGate', 1, { duration: 1.6 }); applyWind(); applyWorld(); sound('restore');
+      progress.seed = true; wind.setPush('terraceGate', 1, { duration: 1.6 }); applyWind(); applyWorld(); sound('restore'); wind.petals(V(wheels.seed).setY(wheels.seed.y + .8), { count: 60 });
       say('The seed wheel spins. The gate swings open, laundry lifts, pinwheels turn. The wheel puffs a gust beyond the gate.', 6);
       later(6.2, () => say('Mara: “Breath goes up before it goes anywhere. Try the grille under the loft.”', 5));
       return emit({ restored: 'terrace', checkpoint: arr(pts.seedWheel) });
@@ -205,7 +212,8 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     }
     const mill = Object.entries(MILLS).find(([, w]) => w === id)?.[0];
     if (mill) {
-      progress[mill] = true; applyWind(); applyWorld(); sound('restore');
+      progress[mill] = true; applyWind(); applyWorld(); sound('mill');
+      wind.petals(V(wheels[id]).setY(wheels[id].y + 1), { count: 50 }); if (wheels[id].hub) wind.petals(V(wheels[id].hub), { count: 90, spread: 3, up: 3 });
       const n = millsDone();
       say(n < 3 ? `The ${MILL_NAMES[mill]} turns. A lantern chain lights on the trunk and the sky bridge grows a plank · ${n}/3` : `The ${MILL_NAMES[mill]} turns. The sky bridge is complete — the Hollow gate stands open.`, 6);
       return emit({ restored: mill, checkpoint: arr(wheels[id]) });
@@ -215,28 +223,31 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
   function ring(c) {
     if (c.id === 'morningBell') {
       if (progress.finale && !progress.complete) {
-        progress.complete = true; applyWorld(); sound('restore');
-        say('The morning bell rings clear. Far across the valley, another bell answers.', 6);
-        later(4.5, () => say('Mara: “I taught you how to call it. I forgot to teach you how to listen.”', 9));
-        return emit({ complete: true, cue: 'far-bell' });
+        progress.complete = true; applyWorld(); sound('bell-clear'); world.setState?.('bellSwing', 1); wind.petals(V(pts.morningBell).setY(pts.morningBell.y + 2), { count: 120, spread: 4 });
+        later(2.2, () => { sound('far-bell'); later(2.3, () => say('Mara: “I taught you how to call it. I forgot to teach you how to listen.”', 9)); });
+        say('The morning bell rings clear, and the far bell answers again.', 5);
+        return emit({ complete: true, mara: 'wave' });
       }
-      progress.bell = true; sound('dull-bell'); bypassAt = time + 2.2;
+      progress.bell = true; sound('dull-bell'); bypassAt = time + 2.2; world.setState?.('bellSwing', 1);
       say('A dull, broken note. Mara: “That bell hasn’t sung properly in years.”', 5);
-      later(2.3, () => { progress.bypass = true; syncSources(); sound('bypass'); say(progress.staff ? 'Mara throws her bypass lever. A gust puffs from her copper outlet.' : 'Mara throws her bypass lever. A gust puffs from her copper outlet. “Take my staff, apprentice.”', 6); emit({}); });
+      later(2.3, () => { progress.bypass = true; syncSources(); sound('bypass'); emit({ mara: 'lever' }); say(progress.staff ? 'Mara throws her bypass lever. A gust puffs from her copper outlet.' : 'Mara throws her bypass lever. A gust puffs from her copper outlet. “Take my staff, apprentice.”', 6); emit({}); });
       return emit({ checkpoint: arr(pts.morningBell) }), true;
     }
     if (c.id === 'morningBellAgain') { sound('dull-bell'); say(progress.complete ? 'The bell rings clear, and the far bell answers again.' : 'Still only half a note.', 3); return true; }
-    if (c.id === 'bellOut') { progress.bellOut = true; sound('dull-bell'); say('The outward note climbs the well toward the village… and nothing comes back.', 5); emit({}); return true; }
+    if (c.id === 'bellOut') { progress.bellOut = true; sound('bell-out'); emit({ bells: 'out' }); say('The outward note climbs the well toward the village… and nothing comes back.', 5); emit({}); return true; }
     if (c.id === 'bellReturn') {
-      progress.bellReturn = true; applyWorld(); sound('restore'); finaleT = 0;
-      say('The return note rolls down into the roots. The tree breathes in.', 6);
-      emit({ finale: { duration: 7 }, restored: 'hollow' }); return true;
+      progress.bellReturn = true; applyWorld(); sound('bell-return'); finaleT = 0; farAnswered = false; emit({ bells: 'return' });
+      say('The return note rolls down into the roots. The tree breathes in.', 5);
+      emit({ finale: { duration: FINALE }, restored: 'hollow' }); return true;
     }
     return false;
   }
   function guardianEvent(e = {}) {
+    if (e.vane || e.phase) { const at = e.vane?.at; if (at) wind.petals({ x: at[0], y: at[1] + 1, z: at[2] }, { count: 45 }); }
     if (e.done) { progress.guardian = true; applyWorld(); later(6.5, () => say('Two bells hang above the high ring: one faces the village, one faces the roots.', 6)); }
-    emit({ ...(e.knock ? { knock: e.knock } : {}), ...(e.checkpoint ? { checkpoint: e.checkpoint } : {}), ...(e.done ? { restored: 'hollow' } : {}) });
+    // Only events main acts on are forwarded (breath/updraft notices are guardian-internal).
+    const out = { ...(e.knock ? { knock: e.knock } : {}), ...(e.checkpoint ? { checkpoint: e.checkpoint } : {}), ...(e.done ? { restored: 'hollow' } : {}) };
+    if (Object.keys(out).length) emit(out);
   }
 
   // ---- per frame ----
@@ -264,11 +275,28 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     if (progress.hollow && !progress.guardian) guardian.update(dt, t, { hero: p, active: true, gentle });
     else guardian.update(dt, t, { hero: p, active: false, gentle });
     if (finaleT >= 0 && !progress.finale) {
-      finaleT += dt;
-      if (finaleT >= 7) { progress.finale = true; finaleT = -1; applyWorld(); say('Back on the terrace, Mara is waiting by the morning bell.', 5); emit({ teleport: arr(pts.finaleSpot), checkpoint: arr(pts.finaleSpot) }); }
+      const before = finaleT; finaleT += dt;
+      if (before < 2 && finaleT >= 2) {
+        // Wind floods back: the whole village animates alive while the camera rises.
+        restoration.village = .95; restoration.terrace = 1; for (const [k, v] of Object.entries(restoration)) world.setRestored?.(k, v);
+        for (const w of Object.values(wheels)) wind.petals(V(w.hub || w).setY((w.hub || w).y + 1), { count: 40, spread: 2.5, up: 3.5 });
+        wind.petals(V(pts.morningBell).setY(pts.morningBell.y + 2), { count: 60, spread: 5 });
+        say('Wind floods up through the tree. Every mill, lantern and pinwheel in Bellhollow wakes.', 5);
+      }
+      if (!farAnswered && finaleT >= 9.4) {
+        farAnswered = true; sound('far-bell');
+        if (pts.farBell) for (let i = 0; i < 3; i++) wind.burst(V(pts.farBell), { radius: 6 + i * 4, duration: 2.4 + i * .5, rays: 0, color: 0xe9b949 });
+        say('Across the valley, faint and clear, the far bell answers.', 4.5);
+      }
+      if (finaleT >= FINALE) finishFinale();
     }
   }
 
+  function finishFinale() {
+    if (progress.finale || finaleT < 0) return;
+    progress.finale = true; finaleT = -1; applyWorld(); say('Back on the terrace, Mara is waiting by the morning bell.', 5);
+    emit({ teleport: arr(pts.finaleSpot), checkpoint: arr(pts.finaleSpot), mara: 'wave' });
+  }
   function objective() {
     const pr = progress, inFlight = wind.busy && !wind.charged; // a gust in flight still counts as held
     if (pr.complete) return 'Bellhollow breathes again';
@@ -290,6 +318,9 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
   }
   function branchNear(p) {
     if (!p || !progress.loft) return null;
+    // Prefer the world's own branch zones when it has them.
+    const zone = world.zones?.find(z => ['sails', 'pipes', 'ladders'].includes(z.id) && z.test?.(p.x, p.y, p.z))?.id;
+    if (zone && !progress[zone]) return zone;
     let best = null, bd = 11;
     for (const k of ['sails', 'pipes', 'ladders']) { if (progress[k]) continue; const w = wheels[MILLS[k]]; const d = d2(p, w) - (k === 'ladders' ? 3 : 0); if (d < bd) { bd = d; best = k; } }
     return best;
@@ -306,11 +337,12 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     if (!pr.seed) return V(c ? pts.seedWheel : pts.maraOutlet);
     if (!pr.loft) return c ? V(vents.loft) : V(wheels.seed.outlet);
     const b = branchNear(movement?.position);
-    if (b === 'sails') return V(!pr.sailsBridge ? (c ? sails.sailsBridge : pts.loftGust) : c ? pts.millSails : pts.sailsGust);
-    if (b === 'pipes') return V(!pr.pipesA ? (c ? wheels.pipesA : pts.loftGust) : !pr.pipesB ? (c ? wheels.pipesB : wheels.pipesA.outlet) : c ? pts.millPipes : wheels.pipesB.outlet);
+    if (b === 'sails') return V(!pr.sailsBridge ? (c ? sails.sailsBridge : pts.sailsSource || pts.loftGust) : c ? pts.millSails : pts.sailsGust);
+    if (b === 'pipes') return V(!pr.pipesA ? (c ? wheels.pipesA : pts.pipesSource || pts.loftGust) : !pr.pipesB ? (c ? wheels.pipesB : wheels.pipesA.outlet) : c ? pts.millPipes : wheels.pipesB.outlet);
     if (b === 'ladders') return V(!reached.ladders1 ? vents.ladders1 : !reached.ladders2 ? vents.ladders2 : !reached.ladders3 ? vents.ladders3 : pts.millLadders);
     return V(pts.loft);
   }
+  function skipFinale() { if (finaleT >= 0 && !progress.finale) { if (!farAnswered) { farAnswered = true; sound('far-bell'); } finishFinale(); } }
   function hint() { return `Nothing to use right here. Next: ${objective().replace(/^./, c => c.toLowerCase())}.`; }
   function area(p) { return world.area?.(p) || (p.y < -1 ? 'hollow' : p.y > 3 ? 'branches' : 'terrace'); }
 
@@ -345,7 +377,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
   applyWorld(); syncSources();
   return {
     progress, reached, restoration, context, interact, update, objective, objectiveTarget, hint, area, serialize, restore, reset, telemetry, guardian,
-    get finaleShot() { return finaleT >= 0 ? Math.min(1, finaleT / 7) : progress.finale ? 1 : 0; }, get finaleActive() { return finaleT >= 0; },
+    get finaleShot() { return finaleT >= 0 ? Math.min(1, finaleT / FINALE) : progress.finale ? 1 : 0; }, get finaleTime() { return finaleT; }, get finaleActive() { return finaleT >= 0; }, skipFinale,
     subject() { return progress.hollow && !progress.guardian ? guardian.subject?.() ?? null : null; },
     get staff() { return progress.staff; },
   };

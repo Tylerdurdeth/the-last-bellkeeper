@@ -64,6 +64,44 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
   const helix = (x, y0, z, y1, r, turns, phase, opts = {}) => strip(opts.n || 40, (f, o) => { const a = phase + f * turns * TAU; o.set(x + Math.cos(a) * r, y0 + (y1 - y0) * f, z + Math.sin(a) * r); }, opts);
   const arc = (a, b, lift, opts = {}) => strip(opts.n || 32, (f, o) => { o.lerpVectors(a, b, f); o.y += Math.sin(Math.PI * f) * lift; }, opts);
 
+  // ---------- petals and leaves (restoration bursts; not wind, so palette coral/leaf/gold) ----------
+  const PMAX = 700, pPos = new Float32Array(PMAX * 3), pCol = new Float32Array(PMAX * 3), pSize = new Float32Array(PMAX), pVel = new Float32Array(PMAX * 3), pLife = new Float32Array(PMAX), pSpin = new Float32Array(PMAX);
+  const pGeo = new T.BufferGeometry();
+  pGeo.setAttribute('position', new T.BufferAttribute(pPos, 3).setUsage(T.DynamicDrawUsage));
+  pGeo.setAttribute('color', new T.BufferAttribute(pCol, 3)); pGeo.setAttribute('size', new T.BufferAttribute(pSize, 1).setUsage(T.DynamicDrawUsage));
+  pGeo.setAttribute('spin', new T.BufferAttribute(pSpin, 1).setUsage(T.DynamicDrawUsage));
+  const petalMat = new T.ShaderMaterial({ transparent: true, depthWrite: false,
+    vertexShader: `attribute vec3 color;attribute float size;attribute float spin;varying vec3 vC;varying float vS;
+      void main(){vC=color;vS=spin;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=size*420./max(1.,-mv.z);gl_Position=projectionMatrix*mv;}`,
+    fragmentShader: `varying vec3 vC;varying float vS;void main(){vec2 p=gl_PointCoord-.5;float c=cos(vS),s=sin(vS);p=vec2(c*p.x-s*p.y,s*p.x+c*p.y);
+      float d=length(p*vec2(1.,2.1));if(d>.5)discard;vec3 col=mix(vC*.55,vC,smoothstep(.5,.25,d));gl_FragColor=vec4(col,1.);}` });
+  const petalsMesh = new T.Points(pGeo, petalMat); petalsMesh.name = 'bellhollow-petals'; petalsMesh.frustumCulled = false; scene.add(petalsMesh);
+  const PAL = [0xd96956, 0xa6c46a, 0xe9b949, 0x5e8f4e, 0xf2e6c9].map(h => new T.Color(h)); let pNext = 0, pAlive = 0;
+  function petals(at, { count = 40, spread = 1.2, up = 4, colors = PAL } = {}) {
+    for (let i = 0; i < count; i++) {
+      const k = pNext; pNext = (pNext + 1) % PMAX; const a = Math.random() * TAU, r = Math.random() * spread;
+      pPos[k * 3] = at.x + Math.cos(a) * r; pPos[k * 3 + 1] = at.y + Math.random() * .6; pPos[k * 3 + 2] = at.z + Math.sin(a) * r;
+      pVel[k * 3] = Math.cos(a) * (1 + Math.random() * 2.2); pVel[k * 3 + 1] = up * (.5 + Math.random() * .7); pVel[k * 3 + 2] = Math.sin(a) * (1 + Math.random() * 2.2);
+      const c = colors[(Math.random() * colors.length) | 0]; pCol[k * 3] = c.r; pCol[k * 3 + 1] = c.g; pCol[k * 3 + 2] = c.b;
+      pLife[k] = 2.4 + Math.random() * 1.6; pSize[k] = .16 + Math.random() * .12; pSpin[k] = Math.random() * TAU;
+    }
+    pGeo.attributes.color.needsUpdate = true; pAlive = PMAX;
+  }
+  function updatePetals(dt, t) {
+    if (!pAlive) { petalsMesh.visible = false; return; }
+    let alive = 0;
+    for (let k = 0; k < PMAX; k++) {
+      if (pLife[k] <= 0) { pSize[k] = 0; continue; }
+      pLife[k] -= dt; alive++;
+      pVel[k * 3 + 1] -= 2.6 * dt; pVel[k * 3 + 1] = Math.max(pVel[k * 3 + 1], -1.1); // drift down like paper
+      const damp = Math.exp(-dt * 1.3); pVel[k * 3] *= damp; pVel[k * 3 + 2] *= damp;
+      pPos[k * 3] += (pVel[k * 3] + Math.sin(t * 3 + k) * .5) * dt; pPos[k * 3 + 1] += pVel[k * 3 + 1] * dt; pPos[k * 3 + 2] += (pVel[k * 3 + 2] + Math.cos(t * 2.3 + k) * .5) * dt;
+      pSpin[k] += dt * (2 + (k % 5)); if (pLife[k] < .6) pSize[k] *= Math.exp(-dt * 4);
+    }
+    pAlive = alive; petalsMesh.visible = alive > 0;
+    for (const n of ['position', 'size', 'spin']) pGeo.attributes[n].needsUpdate = true;
+  }
+
   // ---------- gameplay-facing state ----------
   const sources = new Map();   // id -> {x,y,z,radius,active,repeat,ttl,cool,label,kind}
   const flights = [];          // capture/release flourishes in flight
@@ -107,7 +145,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
     }
     return best;
   }
-  function burst(at, { radius = 1.8, duration = .7, rays = 10, color = null } = {}) { bursts.push({ x: at.x, y: at.y, z: at.z, radius, duration, rays, age: 0, color }); }
+  function burst(at, { radius = 1.8, duration = .7, rays = 10, color = null } = {}) { bursts.push({ x: at.x, y: at.y, z: at.z, radius, duration, rays, age: 0, color: color == null ? null : color.isColor ? color : new T.Color(color) }); }
   // Catch: ribbons spiral from the source into the staff bell. Returns true when caught.
   function catchFrom(id, staffTip) {
     const s = typeof id === 'string' ? sources.get(id) : id;
@@ -127,7 +165,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
     if (!keepCharge) charge = null;
     const to = target.isVector3 ? target.clone() : new T.Vector3(target.x, target.y, target.z);
     flights.push({ type: kind, from: from.clone(), to, age: 0, duration: kind === 'push' ? .38 : .46, lift: kind === 'vent' ? .5 : lift, onArrive, origin });
-    sound('release');
+    sound(kind === 'push' ? 'push' : 'release');
     return true;
   }
   // Updraft: a visible column over a floor vent for `duration` s; the physics lives in movement.lift.
@@ -136,7 +174,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
     vents.set(v.id, rec);
     const handle = movement?.lift({ id: 'vent:' + v.id, x: v.x, z: v.z, radius: radius + .25, top: v.top, base: v.y, duration });
     burst({ x: v.x, y: v.y + .05, z: v.z }, { radius: radius * 1.8, duration: .6 });
-    sound('restore');
+    sound('vent');
     return handle;
   }
   // Push: animate a sail/bridge/shutter state toward `to` (0..1) with a damped settle. It stays
@@ -151,7 +189,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
   // Chain: power a wheel; after `delay` s its outlet spits a new repeatable gust source.
   function powerWheel(id, { outlet = null, delay = .9, instant = false, chainId = 'chain:' + id } = {}) {
     const w = wheels.get(id) || { spin: 0 }; Object.assign(w, { target: 1, outlet, delay: instant ? 0 : delay, chainId, flowAge: 0 });
-    if (instant) w.spin = 1;
+    if (instant) w.spin = 1; else if (outlet) sound('chain');
     wheels.set(id, w);
   }
   const wheelSpin = id => wheels.get(id)?.spin ?? 0;
@@ -163,7 +201,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
   // ---------- per-frame ----------
   const A = new T.Vector3(), B = new T.Vector3(), C = new T.Vector3();
   function update(dt, t, { hero = null, staffTip = null, camera = null, gentle = false } = {}) {
-    time = t; uniforms.uTime.value = gentle ? t * .35 : t;
+    time = t; uniforms.uTime.value = gentle ? t * .35 : t; updatePetals(dt, t);
     if (camera) eye.copy(camera.position);
     vCount = 0; iCount = 0;
     const spin = gentle ? .45 : 1;
@@ -218,10 +256,10 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
     for (let i = bursts.length - 1; i >= 0; i--) {
       const b = bursts[i]; b.age += dt; const f = clamp01(b.age / b.duration), r = b.radius * ease(f), a = (1 - f) * .95;
       if (f >= 1) { bursts.splice(i, 1); continue; }
-      strip(36, (g, o) => { const q = g * TAU; o.set(b.x + Math.cos(q) * r, b.y + .9 + Math.sin(q) * r * .55, b.z + Math.sin(q) * r * .45); }, { width: .32 * (1 - f) + .08, alpha: a, taper: false });
+      strip(36, (g, o) => { const q = g * TAU; o.set(b.x + Math.cos(q) * r, b.y + .9 + Math.sin(q) * r * .55, b.z + Math.sin(q) * r * .45); }, { width: (.32 * (1 - f) + .08) * (b.radius > 4 ? b.radius / 3 : 1), alpha: a, taper: false, color: b.color });
       for (let k = 0; k < b.rays; k++) {
         const q = k * TAU / b.rays + .3; A.set(Math.cos(q), .35 + .5 * Math.sin(q * 3), Math.sin(q)).normalize();
-        strip(6, (g, o) => { const d = r * (.55 + g * .75); o.set(b.x + A.x * d, b.y + .9 + A.y * d, b.z + A.z * d); }, { width: .2 * (1 - f) + .05, alpha: a });
+        strip(6, (g, o) => { const d = r * (.55 + g * .75); o.set(b.x + A.x * d, b.y + .9 + A.y * d, b.z + A.z * d); }, { width: .2 * (1 - f) + .05, alpha: a, color: b.color });
       }
     }
     // Vent columns: grille ring with a countdown arc, four rising helices, vertical streaks, top ring.
@@ -277,10 +315,10 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
   }
   // A chain wheel's flow is drawn from its hub to the outlet; set `from` when powering.
   function chainFrom(id, from) { const w = wheels.get(id); if (w) w.from = from.isVector3 ? from.clone() : new T.Vector3(from.x, from.y, from.z); }
-  function reset() { sources.clear(); flights.length = 0; bursts.length = 0; vents.clear(); push.clear(); wheels.clear(); charge = null; }
+  function reset() { pLife.fill(0); sources.clear(); flights.length = 0; bursts.length = 0; vents.clear(); push.clear(); wheels.clear(); charge = null; }
   function telemetry() { return { charge: charge?.origin ?? null, sources: [...sources.values()].filter(catchable).map(s => ({ id: s.id, x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2) })), vents: [...vents.keys()], push: Object.fromEntries([...push].map(([k, v]) => [k, +v.value.toFixed(2)])), wheels: Object.fromEntries([...wheels].map(([k, v]) => [k, +v.spin.toFixed(2)])), flights: flights.length, strips: iCount / 6 }; }
   return {
-    mesh, strip, ring, helix, arc, burst,
+    mesh, strip, ring, helix, arc, burst, petals,
     addSource, setSource, removeSource, sourceAt, sources, pickTarget,
     catchFrom, setCharge, release, get charge() { return charge; }, get charged() { return !!charge; },
     openVent, setPush, pushValue, pushHoldLeft, powerWheel, chainFrom, wheelSpin, state, update, flush, reset, telemetry,

@@ -86,12 +86,12 @@ export function createGuardian({ THREE: T, scene, world, wind, movement, sound =
       if (wind.charge?.kind !== 'guardian') { wind.release('spill', staffTip, ctx.target); caption('The vane lets ordinary wind slip through. It needs the guardian’s own breath.', 4); return true; }
       const k = phase;
       wind.release('give', staffTip, ctx.target, { onArrive: () => {
-        phase = k + 1; clock = 0; cycleIndex = -1; world.setRestored('vane' + (k + 1), 1); sound('restore');
+        phase = k + 1; clock = 0; cycleIndex = -1; world.setRestored('vane' + (k + 1), 1); sound('vane');
         const r = ring(Math.min(2, phase));
         if (phase === 1) caption('Vane 1 turns. The grille by the wall breathes on its own now.', 5);
         if (phase === 2) caption('Vane 2 turns. The guardian lifts its hood toward the top of the well.', 5);
         if (phase === 3) { caption('The last vane turns. The guardian folds its petals and settles.', 6); onEvent({ done: true }); }
-        onEvent({ phase, checkpoint: [r.x, r.y, r.z] });
+        onEvent({ phase, vane: { index: k + 1, at: [vane(k).x, vane(k).y, vane(k).z] }, checkpoint: [r.x, r.y, r.z] });
       } });
       return true;
     }

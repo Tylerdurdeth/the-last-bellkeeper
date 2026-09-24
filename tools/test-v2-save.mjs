@@ -2,7 +2,7 @@
 // ignored; progress + held gust survive a reload via Continue. Usage: node tools/test-v2-save.mjs
 import puppeteer from 'puppeteer';
 import assert from 'node:assert/strict';
-const URL = 'http://127.0.0.1:4173/the-last-bellkeeper/';
+const URL = 'http://127.0.0.1:4173/the-last-bellkeeper/?stub'; // save logic, on the simple stub layout
 const browser = await puppeteer.launch({ headless: true, args: ['--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage(); await page.setViewport({ width: 1280, height: 720 });
 const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => m.type() === 'error' && errors.push(m.text()));

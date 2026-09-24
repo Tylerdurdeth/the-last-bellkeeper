@@ -110,10 +110,10 @@ assert(quest.progress.guardian);
 at(P.bellReturn); c = ctx(); assert.equal(c.kind, 'info', 'return bell first explains the order');
 at(P.bellOut); act('ring', 'bellOut'); at(P.bellReturn); act('ring', 'bellReturn'); assert(quest.finaleActive);
 assert(events.some(e => e.finale));
-tick(7.2); assert(quest.progress.finale); assert(movement.position.distanceTo(new THREE.Vector3(P.finaleSpot.x, P.finaleSpot.y, P.finaleSpot.z)) < .6, 'finale returns the hero to the terrace');
+tick(16.3); assert(quest.progress.finale); assert(captions.some(t => /far bell answers/.test(t)), 'far bell answers in the finale'); assert(movement.position.distanceTo(new THREE.Vector3(P.finaleSpot.x, P.finaleSpot.y, P.finaleSpot.z)) < .6, 'finale returns the hero to the terrace');
 assert.equal(quest.objective(), 'Ring the morning bell with Mara');
 at(P.morningBell); act('ring', 'morningBell'); assert(quest.progress.complete); assert(events.some(e => e.complete));
-tick(5); assert.match(captions.at(-1), /I taught you how to call it/);
+tick(6); assert.match(captions.at(-1), /I taught you how to call it/);
 assert.equal(world.restored.village, 1);
 
 // --- save/restore v2; v1 ignored ---

@@ -185,7 +185,12 @@ export function createMovement(THREE, {
     } else safeTime = 0;
     // Void banks return quickly, before the camera follows below the scenery.
     // Real lower floors retain the wider fall budget for legitimate landings.
-    if (position.y < checkpoint.y - (ground === null ? 1.25 : maxDrop) && !column) recover();
+    // A drop that crosses a sliver of void on its way to a real floor is not a loss: look ahead
+    // along the horizontal velocity for floor below before treating the void as bottomless.
+    if (position.y < checkpoint.y - (ground === null ? 1.25 : maxDrop) && !column) {
+      const v = Math.hypot(velocity.x, velocity.z), floorAhead = ground === null && v > .5 && [.4, .8, 1.3, 1.9].some(d => { const g = groundAt(position.x + velocity.x / v * d, position.z + velocity.z / v * d); return g !== null && g > checkpoint.y - maxDrop; });
+      if (!floorAhead) recover();
+    }
   }
   function update(dt, { enabled = true, actionSlow = false, faceTarget = null } = {}) {
     if (disposed) return;
@@ -225,7 +230,9 @@ export function createMovement(THREE, {
   // of control; any landing in the void is caught by the normal recovery to the last safe ground.
   function knockback({ x = 0, z = 0, power = 1, to = null, duration = .8, height = 1.6 } = {}) {
     if (disposed) return;
-    clearInput(); inColumn = null;
+    // Held keys survive a knock (the hop/stun ignore them meanwhile), so a player still holding an
+    // arrow keeps moving on landing instead of having to release and press again.
+    bufferedJump = 0; inColumn = null;
     if (to) {
       const target = to.isVector3 ? to.clone() : new THREE.Vector3(...to);
       if (![target.x, target.y, target.z].every(Number.isFinite)) return;
