@@ -11,7 +11,7 @@ const meshes = []; w.root.traverse((o) => { if ((o.isMesh || o.isInstancedMesh) 
 const yaw = Math.atan2(.615, .788), pitch = Math.atan(.48), arm = 10.8, sx = Math.sin(yaw), sz = Math.cos(yaw);
 const cam = new T.PerspectiveCamera(42, 16 / 9, .1, 500), ray = new T.Raycaster();
 for (const n of names.split(',')) {
-  const p = w.points[n]; if (!p) { console.log('no point', n); continue; }
+  const p = n.split('.').reduce((o, k) => o?.[k], w.points); if (!p) { console.log('no point', n); continue; }
   const focus = new T.Vector3(p.x - sx * .8, p.y + 1, p.z - sz * .8);
   cam.position.set(focus.x + sx * Math.cos(pitch) * arm, focus.y + Math.sin(pitch) * arm, focus.z + sz * Math.cos(pitch) * arm); cam.lookAt(focus); cam.updateMatrixWorld();
   const found = new Map();

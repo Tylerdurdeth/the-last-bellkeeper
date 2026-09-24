@@ -199,14 +199,14 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     if (parts.workshopWheel) movers.push({obj: parts.workshopWheel, kind: 'spin', axis: 'z', area: 'terrace', speed: 2.2});
     houseParts.push({type, az, r, x, z, ry, y, h: bb.max.y - bb.min.y});
   }
-  perches.push(['small', -104.5, 33.8, 71, 3.2], ['tall', -80, 36.2, 72, 2.6], ['tower', -125.5, 35.5, 73, 3.6]);
+  perches.push(['small', -104.5, 33.8, 71, 1.7], ['tall', -80, 36.2, 72, 2.6], ['tower', -125.5, 35.5, 73, 3.6]);
   for (const [type, az, r, seed, y] of perches) {
     if (r > 25) {
       // free-hanging house platform out in the air (slung under the branches on chains)
       const [cx, , cz] = at(az, r);
       B.add(new T.CylinderGeometry(3.3, 2.6, .5, 16).translate(cx, y - .25, cz), 'deck');
       B.add(new T.CylinderGeometry(2.4, .4, 2.4, 10).translate(cx, y - 1.7, cz), 'bark');
-      for (let k = 0; k < 3; k++) { const [dx, dz] = polar(az + 60 + k * 120, 3); B.add(rod(T, [cx + dx, y, cz + dz], [cx + dx * .5, y + 6.5, cz + dz * .5], .04, 4), 'copper'); }
+      for (let k = 0; k < 3; k++) { const [dx, dz] = polar(az + 60 + k * 120, 3); B.add(rod(T, [cx + dx, y, cz + dz], [cx + dx * .5, y + 6.5 + (type === 'small' ? 1.5 : 0), cz + dz * .5], .04, 4), 'copper'); }
       B.railArc('perch-' + az, {cx, cz, r: 3.15, a0: 0, a1: 360, y, step: 20, collide: false});
       place(house, {type, seed, id: 'perch-' + az}, cx, y, cz, faceIn(az) + .5, {collide: null});
       houseParts.push({type, az, r, x: cx, z: cz, y, perched: true});
@@ -283,14 +283,15 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     sail.computeVertexNormals(); sail.rotateY(a * DEG + Math.PI / 2); sail.translate(c[0], 6.1, c[2]);
     B.add(sail, 'cloth'); const sailBack = sail.clone(); { const p = sailBack.attributes.position; for (let i = 0; i < p.count; i += 3) for (let k = 0; k < 3; k++) { const t = p.array[(i + 1) * 3 + k]; p.array[(i + 1) * 3 + k] = p.array[(i + 2) * 3 + k]; p.array[(i + 2) * 3 + k] = t; } sailBack.computeVertexNormals(); } B.add(sailBack.toNonIndexed ? sailBack : sailBack, 'cloth');
     // doors (hinged at the piers; swing towards the yard)
-    for (const side of [0, 1]) {
-      const hingeR = side ? GATE.r1 : GATE.r0, p = at(a, hingeR);
+    // one wide leaf hinged at the OUTER jamb: when open it lies along the outer edge, clear of the
+    // wheel -> outlet -> loft-grille walk that hugs the inner jamb
+    { const side = 1, W = GATE.r1 - GATE.r0, p = at(a, GATE.r1);
       const pivot = new T.Group(); pivot.position.set(p[0], 0, p[2]); pivot.rotation.y = a * DEG; root.add(pivot);
-      const leaf = new T.Mesh(bevelBox(T, .12, 2.4, 1.5).translate(0, 1.2, side ? -.75 : .75), M.timber);
-      const tb = new Bins(T, 'terrace-gate-' + side), zc = side ? -.75 : .75;
-      for (let z = -.5; z <= .51; z += .25) tb.add(new T.BoxGeometry(.16, 2.3, .03).translate(0, 1.2, zc + z), 'timberDark');
-      for (const y of [.45, 1.95]) tb.add(new T.BoxGeometry(.17, .1, 1.42).translate(0, y, zc), 'metalWorn');
-      { const d = new T.BoxGeometry(.15, 1.75, .12); d.rotateX((side ? 1 : -1) * Math.atan2(1.2, 1.5)); d.translate(0, 1.2, zc); tb.add(d, 'timberDark'); }
+      const leaf = new T.Mesh(bevelBox(T, .12, 2.4, W).translate(0, 1.2, -W / 2), M.timber);
+      const tb = new Bins(T, 'terrace-gate-' + side), zc = -W / 2;
+      for (let z = -W / 2 + .25; z <= W / 2 - .2; z += .25) tb.add(new T.BoxGeometry(.16, 2.3, .03).translate(0, 1.2, zc + z), 'timberDark');
+      for (const y of [.45, 1.95]) tb.add(new T.BoxGeometry(.17, .1, W - .08).translate(0, y, zc), 'metalWorn');
+      for (const s2 of [-1, 1]) { const d = new T.BoxGeometry(.15, 1.75, .12); d.rotateX(s2 * Math.atan2(1.2, 1.5)); d.translate(0, 1.2, zc + s2 * W / 4); tb.add(d, 'timberDark'); }
       pivot.add(leaf); tb.bake(pivot);
       gateDoors.push({pivot, side});
     }
@@ -349,6 +350,15 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     vents.push(v); return v;
   }
   vent('loft', loftVentP, LOFT.y, 'terrace', {to: 'loft'});
+  // Landing lip: a plank tab reaching out to 1.05 m from the column, edged with a pale stone kerb
+  // and a warm lantern on the rim so the landing reads from the default camera.
+  { const lipA = -91.5 - 1.05 / 20.5 / DEG;
+    B.deckAnnulus('loft-lip', {r0: 18.9, r1: LOFT.r1, a0: LOFT.a1 - .3, a1: lipA, y0: LOFT.y, th: .45, mat: 'deck', side: 'timberDark', step: 1});
+    B.railArc('loft-lip-rim', {r: LOFT.r1 - .15, a0: LOFT.a1 - .3, a1: lipA - .9, y: LOFT.y, step: 1});
+    const st = []; for (let r = 18.9; r <= LOFT.r1 + .01; r += .9) { const i = at(lipA - .6, Math.min(r, LOFT.r1)), o = at(lipA, Math.min(r, LOFT.r1)); st.push({l: [i[0], LOFT.y + .04, i[2]], r: [o[0], LOFT.y + .04, o[2]], b: LOFT.y - .5}); }
+    const g = B.stripGeo(st); B.add(g.top, 'paving'); B.add(g.sides, 'stone'); if (g.caps) B.add(g.caps, 'stone');
+    const lp = at(lipA - 1.3, LOFT.r1 - .45, LOFT.y); B.add(new T.CylinderGeometry(.07, .09, 1.5, 6).translate(lp[0], LOFT.y + .75, lp[2]), 'timberDark');
+    gm.addCircle({id: 'loft-lip-lamp', x: lp[0], z: lp[2], r: .12, y0: LOFT.y, y1: LOFT.y + 1.6}); life.lantern('terrace', lp[0], LOFT.y + 1.5 + .24 * 1.1, lp[2], 1.1, {mount: 'base'}); }
   ledges.push({id: 'loft', x: at(-99.5, 20.5)[0], y: LOFT.y, z: at(-99.5, 20.5)[2], from: 'loftVent'});
 
   // ================================================================================
@@ -672,8 +682,8 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   B.railArc('well-front-lip', {r: H.floorFront - .2, a0: -9.5, a1: 99.5, y: H.low.y, style: 'parapet', step: 4});
   // Ring vents, vanes, carvings, return channel, paired bells frame.
   const ringVents = {
-    low: vent('ring1', at(102, 3.25, H.low.y), H.mid.y, 'hollow', {to: 'ring-mid'}),
-    mid: vent('ring2', at(280, 5.6, H.mid.y), H.high.y, 'hollow', {to: 'ring-high'}),
+    low: vent('ring1', at(102, 3.4, H.low.y), H.mid.y, 'hollow', {to: 'ring-mid'}),
+    mid: vent('ring2', at(280, 5.75, H.mid.y), H.high.y, 'hollow', {to: 'ring-high'}),
     high: vent('ring3', at(184, 8, H.high.y), .5, 'hollow', {to: 'ring-top'}),
   };
   // mid ring widened (r 3.4) where the guardian's phase-2 lanes sweep (az 170..290)
@@ -929,7 +939,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   B.rail('frag1-w', [at(F1.a0 + .3, 13.4, F1.y), at(F1.a0 + .3, F1.r1 - .12, F1.y)]);
   B.rail('frag1-e', [at(F1.a1 - .3, 13.4, F1.y), at(F1.a1 - .3, F1.r1 - .12, F1.y)]);
   for (const a of [F1.a0 + 1.5, F1.a1 - 1.5]) B.add(beam(T, at(a, F1.r1 - .4, F1.y - .5), at(a, 13.3, F1.y - 3), .26, .26), 'timberDark');
-  vent('frag1', at(-31, 17.5, 0), F1.y, 'terrace', {to: 'fragment1-ledge', optional: true});
+  vent('frag1', at(-31, 16.85, 0), F1.y, 'terrace', {to: 'fragment1-ledge', optional: true});
   // shrine niche (stone arch in the bark, dark recess, glinting bell shard, lantern, carving)
   const shrine = (x, y, z, face, seed) => {
     const f = polar(face, 1), side = [f[1], -f[0]];
@@ -949,6 +959,12 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   };
   const sh1 = at(-31, 13.25, F1.y); const frag1Stand = shrine(sh1[0], F1.y, sh1[2], -31, 1);
   B.block('sails'); const sh2 = [frag2C[0] + polar(-104, 1.2)[0], f2y, frag2C[1] + polar(-104, 1.2)[1]]; const frag2Stand = shrine(sh2[0], f2y, sh2[2], -104 + 180, 2);
+  // steady glint over the fragment 2 shrine, readable from the little sail: a gold star and a faint beam
+  { const gp = polar(150, 1.4), gx = frag2C[0] + gp[0], gz = frag2C[1] + gp[1], gy = f2y + 1.75;
+    B.add(new T.CylinderGeometry(.05, .08, 1.55, 6).translate(gx, f2y + .78, gz), 'copper'); gm.addCircle({id: 'frag2-glint', x: gx, z: gz, r: .1, y0: f2y, y1: f2y + 1.6});
+    B.add(new T.OctahedronGeometry(.2, 0).scale(1, 1.4, 1).translate(gx, gy, gz), 'inlayGold');
+    for (const [rx, rz] of [[0, 0], [0, Math.PI / 2]]) B.add(new T.BoxGeometry(.05, .9, .02).rotateY(rz + .4).rotateZ(rx ? 0 : Math.PI / 4).translate(gx, gy, gz), 'inlayGold');
+    B.add(new T.CylinderGeometry(.3, .45, 7, 10, 1, true).translate(gx, gy + 3.3, gz), 'shaft'); }
   leafClump(T, B, ...[frag2C[0] + polar(-40, 1.25)[0], f2y + .7, frag2C[1] + polar(-40, 1.25)[1]], .55, 41); leafClump(T, B, ...[frag2C[0] + polar(-170, 1.25)[0], f2y + .7, frag2C[1] + polar(-170, 1.25)[1]], .55, 42);
   B.block('pipes'); const f3o = [f3d[0], f3d[1]]; const sh3 = [frag3C[0] + f3o[0] * .9, P1y, frag3C[1] + f3o[1] * .9]; const frag3Stand = shrine(sh3[0], P1y, sh3[2], Math.atan2(-f3o[0], -f3o[1]) / DEG, 3);
 
@@ -1085,7 +1101,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const RW = points.guardianWell.rings;
   Object.assign(points, {
     mara: points.maraStand, seedOutlet: G(seedOutletP), loft: points.loftLedge, loftGust: points.pipes.source,
-    sailsGust: points.sails.source, laddersGust1: points.ladders.gusts[0], laddersGust2: points.ladders.gusts[1], laddersGust3: points.ladders.gusts[2],
+    sailsGust: points.sails.millGust, sailsSource: points.sails.source, laddersGust1: points.ladders.gusts[0], laddersGust2: points.ladders.gusts[1], laddersGust3: points.ladders.gusts[2],
     millSails: points.sails.restore, millPipes: points.pipes.restore, millLadders: points.ladders.restore,
     skyBridge: points.bridge.start, carvingOut: points.gallery.carvings[0].stand, carvingReturn: points.gallery.carvings[1].stand,
     arena: RW.low.centre, guardian: new T.Vector3(0, H.low.y + 3, 0),
@@ -1094,6 +1110,12 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     bellOut: Pt(229, 7.5, H.high.y), bellReturn: Pt(221, 7.5, H.high.y),
     finale: new T.Vector3(0, -2, 0), finaleSpot: Pt(-65.5, 20.4, 0),
   });
+  // the gust that 'spills out by the mill' after the bridge swings: on the mill deck, 1.6 m from the
+  // restore stand toward the bridge landing (landing -> gust < 10 m, no walking back over the bridge)
+  { const r = points.sails.restore, b = points.sails.bridgeTo, L = Math.hypot(b.x - r.x, b.z - r.z), x = r.x + (b.x - r.x) / L * 1.6, z = r.z + (b.z - r.z) / L * 1.6;
+    points.sails.millGust = G([x, r.y, z]); points.sailsGust = points.sails.millGust;
+    const sx = r.x + (b.x - r.x) / L * .75, sz = r.z + (b.z - r.z) / L * .75, m = new T.LatheGeometry([[.16, 0], [.2, .12], [.34, .3], [.4, .34]].map(([u, v]) => new T.Vector2(u, v)), 12);
+    m.rotateX(Math.PI / 2); m.rotateY(Math.atan2(x - sx, z - sz)); m.translate(sx, r.y + .35, sz); B.block('sails'); B.add(m, 'copper'); B.add(new T.CylinderGeometry(.12, .16, .35, 8).translate(sx, r.y + .17, sz), 'verdigris'); }
   // quest wheel/sail records
   const wheelRec = (id, p, outlet) => ({id, x: p.x, y: p.y, z: p.z, ...(outlet ? {outlet: {x: outlet.x, y: outlet.y, z: outlet.z, radius: 1.3}} : {})});
   const W0 = Object.fromEntries(wheels.map((w) => [w.id, w]));
@@ -1308,7 +1330,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     } else { introWake = 0; introShut = false; }
     for (const k of Object.keys(vis)) vis[k] = smooth(vis[k], dyn[k], dt, k === 'hollowGate' && intro?.phase === 'shutter' ? 7 : 2.5);
     // gate doors
-    for (const {pivot, side} of gateDoors) pivot.rotation.y = GATE.az * DEG + (side ? -1 : 1) * vis.terraceGate * 1.45;
+    for (const {pivot, side} of gateDoors) pivot.rotation.y = GATE.az * DEG + (side ? 1.75 : -1.45) * vis.terraceGate;  // wide leaf folds out into the yard, beyond the grille
     for (const {pivot, side} of hollowDoors) { const base = pivot.userData.base ??= pivot.rotation.y; pivot.rotation.y = base + (side ? -1 : 1) * vis.hollowGate * 1.5; }
     // hanging bridge swings; drawbridge lowers
     sailBridge.pivot.rotation.y = sailBridge.yaw + (1 - vis.sailBridge) * 1.15 + Math.sin(t * .9) * .02 * (1 - vis.sailBridge);
