@@ -41,7 +41,9 @@ const SHOTS = {
 };
 const shotName = q.get('shot') || 'start';
 const target = new T.Vector3();
-let yaw = Math.atan2(.615, .788), pitch = num('pitch', 38) * Math.PI / 180, dist = num('dist', 11);
+// Defaults = main.js gameplay camera: yaw atan2(.615,.788), pitch atan(.48), arm 10.8 (11.5 portrait), focus 1 m up, 0.8 m ahead.
+const GAME_PITCH = Math.atan(.48) * 180 / Math.PI, GAME_ARM = () => (innerHeight > innerWidth ? 11.5 : 10.8);
+let yaw = Math.atan2(.615, .788), pitch = num('pitch', GAME_PITCH) * Math.PI / 180, dist = num('dist', GAME_ARM());
 const special = {
   overview: () => { target.set(-2, 4, 6); dist = 95; pitch = 34 * Math.PI / 180; },
   overviewWest: () => { target.set(-18, 6, 4); dist = 70; pitch = 28 * Math.PI / 180; yaw = -.35; },
@@ -49,8 +51,8 @@ const special = {
   hollowWide: () => { target.set(0, -6, 0); dist = 36; pitch = 30 * Math.PI / 180; },
 };
 function applyShot(name) {
-  yaw = Math.atan2(.615, .788); pitch = num('pitch', 38) * Math.PI / 180; dist = num('dist', 11);
-  if (special[name]) { if (special[name]()) return 'fixed'; } else target.copy(SHOTS[name] || P.start).add(new T.Vector3(0, 1, 0));
+  yaw = Math.atan2(.615, .788); pitch = num('pitch', GAME_PITCH) * Math.PI / 180; dist = num('dist', GAME_ARM());
+  if (special[name]) { if (special[name]()) return 'fixed'; } else target.copy(SHOTS[name] || P.start).add(new T.Vector3(-Math.sin(yaw) * .8, 1, -Math.cos(yaw) * .8));
   return 'orbit';
 }
 let mode = applyShot(shotName);

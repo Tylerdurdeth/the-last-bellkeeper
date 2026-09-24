@@ -2,7 +2,7 @@
 // trunk above y 14, crowned by canopy masses. Its south-east face is split open like
 // a geode (az -10..100) to show the Hollow: gallery, rings and well.
 // Exposes the shape functions so collision uses exactly the drawn radii.
-import {taperTube, blob, polar, DEG, leafClump} from './core.js';
+import {taperTube, blob, polar, DEG, leafClump, mossDrape} from './core.js';
 
 export const HOLLOW = {
   open0: -10, open1: 100,          // opening wedge (az degrees)
@@ -143,7 +143,7 @@ export function buildTrunk(T, B, seed = 11) {
   for (let i = 0; i < 26; i++) {
     const a = rnd() * 360; if (inOpen(a) && rnd() < .7) continue;
     const y = 10 + rnd() * 14, [x, z] = polar(a, trunkR(y) + .35);
-    B.add(blob(T, 1.1 + rnd() * .8, i + 40, 0, 1.6).translate(x, y, z), rnd() < .5 ? 'leaf' : 'leafLight');
+    mossDrape(T, B, x, y, z, 1.4 + rnd(), 2 + rnd() * 1.5, i + 40, a * DEG + Math.PI / 2);
   }
 
   // Carved bell galleries ringing the trunk (visual): stone band, arches, small bells.

@@ -196,19 +196,52 @@ export function blob(THREE, r, seed = 1, detail = 1, squash = .75) {
   return g;
 }
 
-/**
- * Rounded leaf clump in the R-foliage-tree language: a dark underside, a mid-green body of
- * lobes and sunlit light-green caps. Adds to bins `B` (anything with add(geo, key)).
- */
-export function leafClump(THREE, B, x, y, z, r, seed = 1, lobes = 5, seg = 10) {
-  const rnd = rng(seed * 7919 + 13);
-  const sph = (rr, sy = .78) => new THREE.SphereGeometry(rr, seg, Math.max(4, Math.round(seg * .7))).scale(1, sy, 1);
-  B.add(sph(r * .92, .55).translate(x, y - r * .28, z), 'leafShade');
-  B.add(sph(r * .8).translate(x, y, z), 'leaf');
-  for (let i = 0; i < lobes; i++) {
-    const a = i / lobes * Math.PI * 2 + rnd() * .6, d = r * (.55 + rnd() * .2), rr = r * (.42 + rnd() * .14);
-    B.add(sph(rr).translate(x + Math.cos(a) * d, y - r * .05 + rnd() * r * .2, z + Math.sin(a) * d), 'leaf');
-    B.add(sph(rr * .72, .6).translate(x + Math.cos(a) * d * .9, y + rr * .45 + r * .08, z + Math.sin(a) * d * .9), 'leafLight');
+/** Smooth-shaded icosahedron lobe (normals from the centre: rounded, not faceted). */
+const lobeCache = new Map();
+function lobe(THREE, detail) {
+  if (!lobeCache.has(detail)) {
+    const g = new THREE.IcosahedronGeometry(1, detail), p = g.attributes.position, n = g.attributes.normal;
+    for (let i = 0; i < p.count; i++) { const l = Math.hypot(p.getX(i), p.getY(i), p.getZ(i)); n.setXYZ(i, p.getX(i) / l, p.getY(i) / l, p.getZ(i) / l); }
+    lobeCache.set(detail, g);
   }
-  B.add(sph(r * .5, .6).translate(x, y + r * .5, z), 'leafLight');
+  return lobeCache.get(detail);
+}
+function putLobe(THREE, B, key, x, y, z, rx, ry = rx, rz = rx, detail = 1) {
+  const g = lobe(THREE, detail).clone();
+  g.scale(rx, ry, rz); g.translate(x, y, z);
+  B.add(g, key);
+}
+
+/**
+ * Leaf cluster in the R-foliage-tree language: many small rounded lobes on a domed mass,
+ * sunlit light-green caps, mid-green body, a deep-shade underside, a few coral blossoms.
+ * Adds to bins `B`. `seg` < 8 selects the low-detail lobes used for distant masses.
+ */
+export function leafClump(THREE, B, x, y, z, r, seed = 1, lobes = 0, seg = 10) {
+  const rnd = rng(seed * 7919 + 13), detail = seg < 8 ? 0 : 1;
+  const n = lobes > 5 ? lobes : Math.max(7, Math.min(18, Math.round(5 + r * 2.4)));
+  putLobe(THREE, B, 'leafShade', x, y - r * .12, z, r * .78, r * .5, r * .78, detail);
+  for (let i = 0; i < n; i++) {
+    const u = rnd(), th = rnd() * Math.PI * 2, dy = -.35 + u * 1.3, h = Math.sqrt(Math.max(0, 1 - dy * dy));
+    const d = r * (.58 + rnd() * .2), lr = r * (.3 + rnd() * .12);
+    const px = x + Math.cos(th) * h * d, py = y + dy * d * .72, pz = z + Math.sin(th) * h * d;
+    const key = dy > .45 ? 'leafLight' : dy > -.05 ? 'leaf' : 'leafShade';
+    putLobe(THREE, B, key, px, py, pz, lr, lr * .82, lr, detail);
+    if (key === 'leaf' && rnd() < .5) putLobe(THREE, B, 'leafLight', px + Math.cos(th) * lr * .2, py + lr * .55, pz + Math.sin(th) * lr * .2, lr * .62, lr * .4, lr * .62, detail);
+  }
+  putLobe(THREE, B, 'leafLight', x, y + r * .52, z, r * .42, r * .3, r * .42, detail);
+  if (detail && r > .7 && seed % 3 === 0) for (let k = 0; k < 2 + (seed % 4); k++) { const th = rnd() * Math.PI * 2, d = r * (.3 + rnd() * .35); putLobe(THREE, B, 'cloth', x + Math.cos(th) * d, y + r * .6 - d * .3, z + Math.sin(th) * d, Math.max(.07, r * .05), Math.max(.07, r * .05), Math.max(.07, r * .05), 0); }
+}
+
+/** Hanging moss / ivy drape: a short curtain of small lobes (bark walls, gallery soffits). */
+export function mossDrape(THREE, B, x, y, z, w = 1.2, h = 1.6, seed = 1, face = 0) {
+  const rnd = rng(seed * 31 + 7), c = Math.cos(face), s = Math.sin(face);
+  const rows = Math.max(2, Math.round(h / .35));
+  for (let j = 0; j < rows; j++) {
+    const f = j / rows, span = w * (1 - f * .6), cnt = Math.max(1, Math.round(span / .3));
+    for (let k = 0; k < cnt; k++) {
+      const lx = (k / Math.max(1, cnt - 1) - .5) * span + (rnd() - .5) * .15, lr = .16 + rnd() * .12;
+      putLobe(THREE, B, j === 0 ? 'leaf' : rnd() < .35 ? 'leafLight' : rnd() < .5 ? 'leafShade' : 'leaf', x + lx * c, y - f * h - rnd() * .1, z - lx * s, lr, lr * 1.2, lr, 1);
+    }
+  }
 }

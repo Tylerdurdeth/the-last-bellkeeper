@@ -20,8 +20,7 @@ export function buildBackdrop(T, B, root, {bellTower, place}) {
     for (let k = 0; k < p.count; k++) { p.setX(k, p.getX(k) * (.8 + rnd() * .4)); p.setZ(k, p.getZ(k) * (.8 + rnd() * .4)); }
     g.computeVertexNormals(); g.translate(x, (top - 42) / 2, z);
     B.add(g, rnd() < .5 ? 'far' : 'stoneShade');
-    B.add(blob(T, w * 1.1, i + 3, 1, .55).translate(x, top + w * .3, z), rnd() < .5 ? 'leaf' : 'far');
-    B.add(blob(T, w * .7, i + 9, 1, .6).translate(x + w * .4, top + w * .7, z - w * .3), 'leafLight');
+    leafClump(T, B, x, top + w * .35, z, w * .9, i + 3, 0, 6); leafClump(T, B, x + w * .45, top + w * .8, z - w * .3, w * .6, i + 9, 0, 6);
     crags.push({x, z, top, w, a, r});
     // waterfall ribbon down the face towards the trunk
     if (rnd() < .5) { const [dx, dz] = polar(a + 180, 1); const fall = new T.PlaneGeometry(w * .25, top + 38, 1, 1); fall.rotateY(Math.atan2(dx, dz)); fall.translate(x + dx * w * .9, (top - 38) / 2, z + dz * w * .9); B.add(fall, 'mist'); }
@@ -46,12 +45,15 @@ export function buildBackdrop(T, B, root, {bellTower, place}) {
     B.add(taperTube(T, [[x, -30, z], [x + 1.5, top * .45, z - 1], [x - 1, top, z + 1]], tr, tr * .55, 8, 8, .1, a), 'bark');
     for (let k = 0; k < 5; k++) { const [dx, dz] = polar(k * 72 + a, k === 0 ? 0 : tr * 2.4); leafClump(T, B, x + dx, top + 3 + (k === 0 ? 3 : 0), z + dz, tr * (k === 0 ? 2.2 : 1.7), k + a, 4, 7); }
   }
+  // near canopy layer below the branches (30-65 m out, 12-20 m under the terrace), so looking
+  // down from a branch shows layered green, not a white void
+  for (let i = 0; i < 30; i++) { const a = -175 + rnd() * 200, [x, z] = polar(a, 32 + rnd() * 34); leafClump(T, B, x, -14 + rnd() * 6, z, 5 + rnd() * 3, i + 500, 0, 6); if (i % 3 === 0) B.add(taperTube(T, [[x, -30, z], [x, -16, z]], 1.4, 1, 3, 6, .1, i), 'bark'); }
   // forest canopy band far below (tree tops poking through the mist)
   for (let i = 0; i < 26; i++) { const [x, z] = polar(rnd() * 360, 40 + rnd() * 75); if (Math.hypot(x, z) < 38) continue; leafClump(T, B, x, -24 + rnd() * 5, z, 4 + rnd() * 3, i + 300, 3, 6); }
   // the far bell: a crag to the west with a bell tower on top
   const fa = -96, fr = 108, [fx, fz] = polar(fa, fr), ftop = 3;
   const crag = new T.CylinderGeometry(8, 14, ftop + 44, 8, 2); crag.translate(fx, (ftop - 44) / 2, fz); B.add(crag, 'stoneShade');
-  B.add(blob(T, 9, 77, 1, .45).translate(fx - 3, ftop - 1, fz + 2), 'leaf');
+  leafClump(T, B, fx - 3, ftop, fz + 2, 7, 77, 0, 6);
   B.add(taperTube(T, [[fx + 7, ftop - 2, fz], [fx + 10, ftop - 12, fz + 3], [fx + 12, ftop - 30, fz + 2]], 1.6, .6, 8, 6, .1, 5), 'bark');
   const scale = 1.6;
   const {parts} = place(bellTower, {seed: 8, id: 'far-bell'}, fx, ftop, fz, Math.atan2(-fx, -fz), {collide: null, scale, moving: ['bell']});

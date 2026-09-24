@@ -8,7 +8,7 @@
 // trunk stands at the origin. Azimuths ("az") are degrees from +z towards +x.
 // Dynamic pieces are driven by `state` (see STATE_KEYS) passed to update() or setState():
 // the world holds no gameplay progression, only what those values say is open/in place.
-import {PAL, materials, rng, polar, DEG, Bins, bevelBox, rod, taperTube, blob} from './kit/core.js';
+import {PAL, materials, rng, polar, DEG, Bins, bevelBox, rod, taperTube, blob, leafClump, mossDrape} from './kit/core.js';
 import {createGroundModel} from './kit/ground.js';
 import {Builder, beam, ribbonSide} from './kit/structures.js';
 import {buildTrunk, trunkSolid, trunkR, HOLLOW} from './kit/trunk.js';
@@ -192,7 +192,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     if (parts.workshopWheel) movers.push({obj: parts.workshopWheel, kind: 'spin', axis: 'z', area: 'terrace', speed: 2.2});
     houseParts.push({type, az, r, x, z, ry, y, h: bb.max.y - bb.min.y});
   }
-  perches.push(['small', -104.5, 33.8, 71, 3.2], ['tall', -80, 36.2, 72, 2.6]);
+  perches.push(['small', -104.5, 33.8, 71, 3.2], ['tall', -80, 36.2, 72, 2.6], ['tower', -125.5, 35.5, 73, 3.6]);
   for (const [type, az, r, seed, y] of perches) {
     if (r > 25) {
       // free-hanging house platform out in the air (slung under the branches on chains)
@@ -292,7 +292,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   // Yard clutter (barrels, crates, hay) + planters around the village.
   const barrel = (x, y, z, s = 1) => { B.add(new T.CylinderGeometry(.3 * s, .26 * s, .75 * s, 10).translate(x, y + .375 * s, z), 'timber'); for (const yy of [.15, .6]) B.add(new T.TorusGeometry(.29 * s, .03, 4, 12).rotateX(Math.PI / 2).translate(x, y + yy * s, z), 'verdigris'); gm.addCircle({id: 'barrel', x, z, r: .3 * s, y0: y, y1: y + .75 * s}); };
   const crate = (x, y, z, s = .55, ry = 0) => { B.add(bevelBox(T, s, s, s, s * .08).rotateY(ry).translate(x, y + s / 2, z), 'timber'); B.add(new T.BoxGeometry(s * 1.02, .06, s * 1.02).rotateY(ry).translate(x, y + s * .5, z), 'timberDark'); gm.addCircle({id: 'crate', x, z, r: s * .6, y0: y, y1: y + s}); };
-  const planter = (x, y, z, s = 1) => { B.add(bevelBox(T, .9 * s, .45, .9 * s).translate(x, y + .225, z), 'stone'); B.add(blob(T, .5 * s, x * 3 + z, 1, .8).translate(x, y + .65, z), R() < .5 ? 'leaf' : 'leafLight'); if (R() < .6) B.add(new T.IcosahedronGeometry(.09, 0).translate(x + .2, y + .95, z), 'cloth'); gm.addCircle({id: 'planter', x, z, r: .5 * s, y0: y, y1: y + 1}); };
+  const planter = (x, y, z, s = 1) => { B.add(bevelBox(T, .9 * s, .45, .9 * s).translate(x, y + .225, z), 'stone'); leafClump(T, B, x, y + .75, z, .5 * s, Math.round(Math.abs(x * 13 + z * 7)) + 3); if (R() < .6) B.add(new T.IcosahedronGeometry(.09, 0).translate(x + .2, y + .95, z), 'cloth'); gm.addCircle({id: 'planter', x, z, r: .5 * s, y0: y, y1: y + 1}); };
   for (const [az, r] of [[-96.5, 14.4], [-98.5, 15.6], [-95, 15.3]]) { const [x, , z] = at(az, r); barrel(x, 0, z); }
   for (const [az, r] of [[-89.5, 26], [-92.5, 26.4], [-91, 25.3]]) { const [x, , z] = at(az, r); crate(x, 0, z, .6, az); }
   { const [x, , z] = at(-97, 24.8); B.add(blob(T, 1.3, 5, 1, .55).translate(x, .4, z), 'leafLight'); B.add(blob(T, .9, 6, 1, .6).translate(x + .6, .9, z), 'leafLight'); gm.addCircle({id: 'hay', x, z, r: 1.2, y0: 0, y1: 1.2}); }
@@ -308,7 +308,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const LOFT = {a0: -118, a1: -96, r0: 12.95, r1: 22.5, y: 5};
   B.deckAnnulus('loft', {r0: LOFT.r0, r1: LOFT.r1, a0: LOFT.a0, a1: LOFT.a1, y0: LOFT.y, th: .45, mat: 'deck', side: 'timberDark', step: 3});
   // struts from the deck's rim down into the bole
-  for (let a = LOFT.a0 + 2; a < LOFT.a1; a += 6) { const o = at(a, LOFT.r1 - .6, LOFT.y - .45), i = at(a, 13.3, -1.5); B.add(beam(T, o, i, .28, .28), 'timberDark'); }
+  for (let a = LOFT.a0 + 2; a < LOFT.a1; a += 5) { const o = at(a, LOFT.r1 - .5, LOFT.y + .1), t = at(a, trunkR(LOFT.y + 7) + .2, LOFT.y + 7); B.add(rod(T, o, t, .05, 5), 'copper'); B.add(beam(T, at(a, 15.2, LOFT.y - .45), at(a, 13.3, LOFT.y - 2.6), .26, .26), 'timberDark'); B.add(new T.TorusGeometry(.12, .035, 4, 8).translate(...o), 'verdigris'); }
   const SAILS_START = -110, PIPES_START = -100;
   {
     const rr = LOFT.r1 - .15, gapHalf = 1.6 / rr / DEG;
@@ -481,10 +481,10 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const ladMill = placeMill('ladders', ladMillC, ladMillY, 27);
   // The great branch the ledges hang from: a bark limb leaning out of the Hollow's west lip,
   // with timber struts to every ledge (reads as one vertical structure, not floating decks).
-  B.add(taperTube(T, [at(-20, 12.6, 1), at(-10, 15.8, 3.2), at(2, 16.9, 7.7), at(16, 17.6, 12.2), at(30, 20.5, 12.9), at(38, 23.5, 13.4)], 1.7, .8, 20, 9, .12, 7), 'bark');
-  for (const L of [L0, L1, L2]) for (const a of [L.a0 + 1.5, (L.a0 + L.a1) / 2, L.a1 - 1.5]) { const o = at(a, L.r1 - .5, L.y - .5), i = at(a, 16.5, L.y - 3.4); B.add(beam(T, o, i, .26, .26), 'timberDark'); }
+  // hung from the trunk on copper rods (supports stay above/behind the walkways and street)
+  for (const L of [L0, L1, L2]) for (const a of [L.a0 + 1.5, (L.a0 + L.a1) / 2, L.a1 - 1.5]) { const o = at(a, L.r1 - .4, L.y + .1), t = at(a, trunkR(L.y + 7) + .2, L.y + 7); B.add(rod(T, o, t, .05, 5), 'copper'); B.add(beam(T, at(a, L.r0 + .4, L.y - .5), at(a, trunkR(L.y - 2.6) + .1, L.y - 2.6), .26, .26), 'timberDark'); }
   
-  B.add(blob(T, 2.2, 31, 1, .7).translate(...at(38, 24, 13.8)), 'leaf'); B.add(blob(T, 1.6, 32, 1, .7).translate(...at(42, 25.5, 14.4)), 'leafLight');
+
 
   // ================================================================================
   // SKY BRIDGE (terrace east end -> Hollow gate landing), three stages
@@ -592,7 +592,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
       const y0 = 8 - k * 1.8, a0 = 212 + (k % 2 ? 4 : -4);
       B.add(taperTube(T, [at(a0 - 8, H.gallery.r1 - .1, y0 + .6), at(212, H.gallery.r1 - .5, y0), at(a0 + 8, H.gallery.r1 - .1, y0 - .9)], .32, .12, 10, 6, .15, k), 'bark');
     }
-    for (let k = 0; k < 5; k++) B.add(blob(T, .6, k + 70, 0, 1.2).translate(...at(212 + (k - 2) * 3, H.gallery.r1 - .4, 1 + k * 1.3)), 'leaf');
+    for (let k = 0; k < 5; k++) mossDrape(T, B, ...at(212 + (k - 2) * 3, H.gallery.r1 - .35, 2 + k * 1.3), .8, 1.2, k + 70, (212 + (k - 2) * 3) * DEG + Math.PI / 2);
   }
   // Paired bells frame hanging over the well from the back wall (finale).
   const pbStand = at(225, 7.4, H.high.y);
@@ -668,9 +668,76 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
       const top = at(a, H.gallery.r1 - .1, 9.5), mid = at(a + 3, H.gallery.r1 - .3, galY(a) + 3.4), lip = at(a + 5, H.high.r0 + .15, H.high.y + .15), low = at(a + 7, H.high.r0 - .02, H.mid.y + .8);
       B.add(taperTube(T, [top, mid, [mid[0] * .99, galY(a) + 2.4, mid[2] * .99]], .75, .45, 10, 7, .15, k), 'bark');
       B.add(taperTube(T, [[lip[0], lip[1] + .6, lip[2]], lip, low, at(a + 8, H.mid.r0 + .05, H.mid.y - 3)], .42, .16, 12, 6, .12, k + 9), 'bark');
-      B.add(blob(T, .9, k + 90, 0, 1.1).translate(...at(a + 2, H.gallery.r1 - .45, galY(a) + 3.8)), 'leaf');
+      mossDrape(T, B, ...at(a + 2, H.gallery.r1 - .35, galY(a) + 4.4), 1.3, 1.5, k + 90, (a + 2) * DEG + Math.PI / 2);
     }
-    for (let a = 115; a < 340; a += 21) B.add(blob(T, .8, a, 0, 1.8).translate(...at(a, H.gallery.r1 - .6, 8.6)), (a % 2) ? 'leaf' : 'leafShade');
+    for (let a = 115; a < 340; a += 21) mossDrape(T, B, ...at(a, H.gallery.r1 - .5, 9), 1.6, 2.2, a, a * DEG + Math.PI / 2);
+  }
+
+  // ---- Branch life: planters, lanterns hung under the limbs, perched birds, gallery frieze ----
+  // Small songbird (ivory body, coral breast, dark wings, copper beak), 0.3 m, baked static.
+  const bird = (x, y, z, yaw, s = 1) => {
+    const q = (g, key) => { g.scale(s, s, s); g.rotateY(yaw); g.translate(x, y, z); B.add(g, key); };
+    q(new T.SphereGeometry(.11, 8, 6).scale(1, .85, 1.45).translate(0, .12, 0), 'clothIvory');
+    q(new T.SphereGeometry(.075, 7, 5).scale(1, .9, .8).translate(0, .11, .09), 'cloth');
+    q(new T.SphereGeometry(.07, 7, 5).translate(0, .23, .1), 'clothIvory');
+    q(new T.ConeGeometry(.022, .07, 5).rotateX(Math.PI / 2).translate(0, .23, .19), 'copper');
+    q(new T.BoxGeometry(.03, .025, .14).translate(0, .14, -.16).rotateX(-.35), 'timberDark');
+    for (const sd of [-1, 1]) q(new T.SphereGeometry(.07, 6, 4).scale(.35, .6, 1.3).translate(sd * .1, .14, -.02), 'timberDark');
+  };
+  B.block('sails');
+  for (const [L, n] of [[sailsA, 3], [sailsB, 2]]) for (let i = 1; i < L.length - 1; i += n) {
+    const p = L[i]; B.add(rod(T, [p[0], p[1] - .4, p[2]], [p[0], p[1] - 1.6, p[2]], .02, 4), 'copper'); life.lantern('sails', p[0], p[1] - 1.9, p[2], .9);
+  }
+  for (const a of [160, -30]) { const [dx, dz] = polar(a, 3.1); leafClump(T, B, sailsMillC[0] + dx, sailsMillY + .7, sailsMillC[1] + dz, .6, a + 5); B.add(bevelBox(T, .8, .5, .8).translate(sailsMillC[0] + dx, sailsMillY + .25, sailsMillC[1] + dz), 'stone'); gm.addCircle({id: 'planter', x: sailsMillC[0] + dx, z: sailsMillC[1] + dz, r: .45, y0: sailsMillY, y1: sailsMillY + 1}); }
+  B.block('pipes');
+  for (let i = 1; i < pipesBr.length - 2; i += 3) { const p = pipesBr[i]; B.add(rod(T, [p[0], p[1] - .4, p[2]], [p[0], p[1] - 1.6, p[2]], .02, 4), 'copper'); life.lantern('pipes', p[0], p[1] - 1.9, p[2], .9); }
+  for (const [t, u] of [[-3.2, 1.6], [2.8, -2.4]]) { const p = Pl(t, u); leafClump(T, B, p[0], P1y + .7, p[2], .6, Math.round(t * 10 + 50)); B.add(bevelBox(T, .8, .5, .8).translate(p[0], P1y + .25, p[2]), 'stone'); gm.addCircle({id: 'planter', x: p[0], z: p[2], r: .45, y0: P1y, y1: P1y + 1}); }
+  { const p = Il(3.2, -1.8); B.add(new T.CylinderGeometry(.3, .26, .75, 10).translate(p[0], P1y + .375, p[2]), 'timber'); gm.addCircle({id: 'barrel', x: p[0], z: p[2], r: .3, y0: P1y, y1: P1y + .75}); }
+  B.block('ladders');
+  for (const [L, a, rr] of [[L0, -12.5, L0.r0 + .7], [L1, 6.1, L1.r1 - .8], [L2, 17, L2.r0 + .7]]) { const p = at(a, rr, L.y); leafClump(T, B, p[0], L.y + .7, p[2], .55, Math.round(a * 3 + 99)); B.add(bevelBox(T, .7, .5, .7).translate(p[0], L.y + .25, p[2]), 'stone'); gm.addCircle({id: 'planter', x: p[0], z: p[2], r: .42, y0: L.y, y1: L.y + 1}); }
+  // birds on rail posts, roofs and mill galleries (static; they scatter in a later pass)
+  B.block('terrace');
+  const railTops = [];
+  for (const r of B.pending || []) { const [id, base, opts] = r; if (opts.collide === false || (opts.style && opts.style !== 'timber' && opts.style !== 'stone')) continue; railTops.push([base[Math.floor(base.length / 2)], id]); }
+  let bi = 0;
+  for (const [p, id] of railTops) { if ((bi++ % 5) !== 0) continue; bird(p[0], p[1] + .95, p[2], bi * 1.7, 1); void id; }
+  for (const hp of houseParts.slice(0, 6)) bird(hp.x + .4, (hp.y || 0) + (hp.h || 7) - .1, hp.z, hp.az * DEG, 1.1);
+  // Gallery frieze and pilasters (the Hollow wall reads as carved in bands)
+  B.block('hollow-dressing');
+  {
+    const st = []; for (let a = 104; a <= 346; a += 3) { const y = galY(a) + 1.1, i = polar(a, H.gallery.r1 - .2), o = polar(a, H.gallery.r1 + .05); st.push({l: [i[0], y + 1.3, i[1]], r: [o[0], y + 1.3, o[1]], b: y}); }
+    const g = B.stripGeo(st); B.add(g.top, 'stoneShade'); B.add(g.sides, 'stoneShade');
+    for (let a = 108; a <= 342; a += 7) {
+      const y = galY(a) + 1.75, p = at(a, H.gallery.r1 - .24, y);
+      if (Math.round(a) % 14 === 10) B.add(new T.LatheGeometry([[0, 0], [.1, -.02], [.12, -.12], [.14, -.26], [.2, -.36], [0, -.35]].reverse().map(([u, v]) => new T.Vector2(u, v)), 7).translate(p[0], y + .2, p[2]), 'verdigris');
+      else B.add(new T.TorusGeometry(.22, .05, 4, 10, Math.PI * 1.5).rotateY(a * DEG + Math.PI / 2).translate(p[0], y, p[2]), 'copper');
+    }
+    for (let a = 131; a < 335; a += 26) { const y0 = galY(a), p = at(a, H.gallery.r1 - .25, y0 + 2.1); B.add(bevelBox(T, .5, 4.2, .34, .05).rotateY(a * DEG).translate(p[0], p[1], p[2]), 'stone'); }
+  }
+
+  // ---- The finale arena: floor mosaic, guardian grille, ring lips, hanging lantern chains ----
+  B.block('hollow-dressing');
+  {
+    const yF = H.low.y + .025;
+    // eight petal inlays around a copper breath grille (the guardian hovers above it)
+    for (let k = 0; k < 8; k++) {
+      const a = k * 45 + 22.5, sh = new T.Shape(); sh.moveTo(0, 0); sh.quadraticCurveTo(.9, 1.4, 0, 3.1); sh.quadraticCurveTo(-.9, 1.4, 0, 0);
+      const g = new T.ShapeGeometry(sh, 6); g.rotateX(-Math.PI / 2); g.translate(0, 0, 0); g.rotateY(a * DEG + Math.PI); g.translate(...polar(a, 1.25).flatMap((v, i) => i ? [yF, v] : [v]));
+      B.add(g, k % 2 ? 'tileCoral' : 'tileVerdigris');
+    }
+    const grille = new T.RingGeometry(.35, 1.15, 24, 1); grille.rotateX(-Math.PI / 2); grille.translate(0, yF + .01, 0); B.add(grille, 'copper');
+    for (let k = 0; k < 12; k++) { const g = new T.BoxGeometry(.06, .04, .8); g.translate(0, 0, .75); g.rotateY(k * Math.PI / 6); g.translate(0, yF + .02, 0); B.add(g, 'verdigris'); }
+    // copper lips on each ring's inner edge so the drops read clearly
+    for (const [ring, a0, a1] of [[H.high, 100.5, 349.5], [H.mid, 100.5, 349.5]]) {
+      const st = []; for (let a = a0; a <= a1 + .01; a += 3) { const i = polar(a, ring.r0 - .02), o = polar(a, ring.r0 + .28); st.push({l: [i[0], ring.y + .03, i[1]], r: [o[0], ring.y + .03, o[1]], b: ring.y - .12}); }
+      const g = B.stripGeo(st); B.add(g.top, 'copper'); B.add(g.sides, 'copper');
+    }
+    // lantern chains hanging from the dome at the back of the well
+    for (const [a, k] of [[150, 0], [195, 1], [240, 2], [285, 3], [320, 4]]) {
+      const top = at(a, 8.8, 11.5), bot = at(a, 8.8, 1.2 + (k % 2) * 1.5);
+      B.add(rod(T, top, bot, .03, 4), 'copper');
+      life.lantern('hollow', bot[0], bot[1] - .3, bot[2], 1.4);
+    }
   }
 
   // ================================================================================
@@ -991,7 +1058,8 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const WHEEL_ALIAS = {seedWheel: 'seed', pipesWheel1: 'pipesA', pipesWheel2: 'pipesB', terraceGate: 'seed'};
   const setState = (k, v) => { if (k in dyn) dyn[k] = v; };
   const setRestored = (area, amount) => { if (area in restored) restored[area] = Math.max(0, Math.min(1, amount)); };
-  const alive = (area) => Math.max(restored[area] || 0, restored.finale || 0);
+  let introWake = 0, introShut = false;
+  const alive = (area) => Math.max(restored[area] || 0, restored.finale || 0, introWake);
   const smooth = (cur, target, dt, k = 3) => cur + (target - cur) * Math.min(1, dt * k);
   const vis = {terraceGate: 0, sailBridge: 0, ladderShutter: 0, skyPlanks: 0, hollowGate: 0};
   let wheelSpin = {}; const vaneTurn = {low: 0, mid: 0, high: 0};
@@ -1007,7 +1075,16 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
       if (state.hollowGate === undefined) dyn.hollowGate = state.intro ? 0 : (rs.skyBridge ?? 0) >= .999 ? 1 : 0;
       for (const [i, k] of [[1, 'low'], [2, 'mid'], [3, 'high']]) if (rs['vane' + i] !== undefined) vaneTurn[k] = rs['vane' + i];
     }
-    for (const k of Object.keys(vis)) vis[k] = smooth(vis[k], dyn[k], dt, 2.5);
+    // Intro (state.intro {t, phase}): dawn/bell = the village briefly alive; sag = lanterns droop and
+    // dim, flags fall, pinwheels stop; shutter = the Hollow gate slams shut; settle = frozen.
+    const intro = state.intro;
+    if (intro) {
+      const ph = intro.phase;
+      introWake = ph === 'dawn' || ph === 'bell' ? 1 : ph === 'sag' ? Math.max(0, introWake - dt * .7) : 0;
+      dyn.hollowGate = ph === 'dawn' || ph === 'bell' || ph === 'sag' ? 1 : 0;
+      if (ph === 'shutter' && !introShut) { introShut = true; vis.hollowGate = Math.max(vis.hollowGate, 1); }
+    } else { introWake = 0; introShut = false; }
+    for (const k of Object.keys(vis)) vis[k] = smooth(vis[k], dyn[k], dt, k === 'hollowGate' && intro?.phase === 'shutter' ? 7 : 2.5);
     // gate doors
     for (const {pivot, side} of gateDoors) pivot.rotation.y = GATE.az * DEG + (side ? -1 : 1) * vis.terraceGate * 1.45;
     for (const {pivot, side} of hollowDoors) { const base = pivot.userData.base ??= pivot.rotation.y; pivot.rotation.y = base + (side ? -1 : 1) * vis.hollowGate * 1.5; }
