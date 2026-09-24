@@ -29,8 +29,8 @@ async function hold(keys) {
   for (const k of keys) if (!held.includes(k)) await page.keyboard.down(k);
   held = keys;
 }
-async function steer(dx, dz, d, yaw) {
-  const sx = dx * Math.cos(yaw) - dz * Math.sin(yaw), sy = -dx * Math.sin(yaw) - dz * Math.cos(yaw), n = Math.hypot(sx, sy) || 1, m = Math.min(1, Math.max(.3, d * .8));
+async function steer(dx, dz, d, yaw, slow = false) {
+  const sx = dx * Math.cos(yaw) - dz * Math.sin(yaw), sy = -dx * Math.sin(yaw) - dz * Math.cos(yaw), n = Math.hypot(sx, sy) || 1, m = slow ? .3 : Math.min(1, Math.max(.3, d * .8));
   if (!stickActive) { await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 1, x: stick.x, y: stick.y }] }); stickActive = true; }
   stickPoint = { x: stick.x + sx / n * stick.r * m, y: stick.y - sy / n * stick.r * m };
   await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 1, ...stickPoint }] });
@@ -53,7 +53,7 @@ async function jump() {
 const OCT = [['ArrowRight'], ['ArrowRight', 'ArrowUp'], ['ArrowUp'], ['ArrowLeft', 'ArrowUp'], ['ArrowLeft'], ['ArrowLeft', 'ArrowDown'], ['ArrowDown'], ['ArrowRight', 'ArrowDown']];
 function dither(sx, sy) { const a = (Math.atan2(sy, sx) / (Math.PI / 4) + 8) % 8, lo = Math.floor(a), f = a - lo; return OCT[(Math.random() < f ? lo + 1 : lo) % 8]; }
 // Steer toward (x,z). keep: don't release input on arrival (path following). jumpWhen(g): one jump.
-async function go(x, z, label, { tol = .45, jumpWhen = null, walk = false, timeout = 400, keep = false } = {}) {
+async function go(x, z, label, { tol = .45, jumpWhen = null, walk = false, timeout = 400, keep = false, slow = false } = {}) {
   let stuck = 0, old = await read(), jumped = false, best = Infinity, sinceBest = 0;
   for (let i = 0; i < timeout; i++) {
     const g = await read(), dx = x - g.pos[0], dz = z - g.pos[1], d = Math.hypot(dx, dz);
@@ -61,9 +61,9 @@ async function go(x, z, label, { tol = .45, jumpWhen = null, walk = false, timeo
     if (g.recovered) return { recovered: true };
     if (d < tol) { if (!keep) { await hold([]); await sleep(100); } return g; }
     if (jumpWhen && !jumped && jumpWhen(g)) { jumped = true; await jump(); }
-    if (touch) await steer(dx, dz, d, g.cameraYaw);
+    if (touch) await steer(dx, dz, d, g.cameraYaw, slow);
     else {
-      const sx = dx * Math.cos(g.cameraYaw) - dz * Math.sin(g.cameraYaw), sy = -dx * Math.sin(g.cameraYaw) - dz * Math.cos(g.cameraYaw), keys = d > 1.4 && !walk || jumpWhen ? ['ShiftLeft'] : [];
+      const sx = dx * Math.cos(g.cameraYaw) - dz * Math.sin(g.cameraYaw), sy = -dx * Math.sin(g.cameraYaw) - dz * Math.cos(g.cameraYaw), keys = (d > 1.4 && !walk && !slow) || jumpWhen ? ['ShiftLeft'] : [];
       keys.push(...dither(sx, sy)); await hold(keys);
     }
     await sleep(50);
@@ -105,7 +105,7 @@ async function travel(p, label, { tol = .6 } = {}) {
       }
       const res = prev.kind === 'jump'
         ? await go(w.x, w.z, label + ' (jump)', { tol: .7, keep: !last, jumpWhen: () => true })
-        : await go(w.x, w.z, label, { tol: last ? tol : .55, keep: !last, walk: false });
+        : await go(w.x, w.z, label, { tol: last ? tol : .55, keep: !last && prev.kind !== 'drop', walk: false, slow: prev.kind === 'drop' }); // step off drops gently, like a player
       if (res.recovered) { fell = true; const e = await read(); console.log(`  ${label}: re-plan at [${e.pos.map(v => v.toFixed(1))}] y=${e.y.toFixed(1)} heading to wp ${i}/${wps.length - 1} [${w.x},${w.y},${w.z}] ${prev.kind}->`); await shot('replan-' + label.replace(/\W+/g, '-')); result.steps.push({ label: label + ': recovered, re-planning' }); await hold([]); await sleep(900); break; }
     }
     if (!fell) { const e = await read(); result.steps.push({ label, pos: e.pos, y: +e.y.toFixed(2) }); return e; }
@@ -138,7 +138,7 @@ async function approach(target, label, range = 4.5) {
     const a = i / 16 * Math.PI * 2, c = { x: target.x + Math.cos(a) * r, y: target.y, z: target.z + Math.sin(a) * r };
     for (const dy of [0, -1, -2, 1]) { const q = { ...c, y: target.y + dy }; if (!planner.snap(q)) continue; const pl = planner.plan(from, q); if (pl.ok && (!best || pl.path.length < best.n)) best = { q, n: pl.path.length }; break; }
   }
-  if (!best) throw Error('No standable spot near ' + label);
+  if (!best) { if (!approach.retry) { approach.retry = true; await waitFor(() => window.__GAME__.grounded && !window.__GAME__.knocked, 'settle', 8000).catch(() => {}); try { return await approach(target, label, range + 1.5); } finally { approach.retry = false; } } throw Error('No standable spot near ' + label + ' ' + JSON.stringify({ target, from })); }
   return travel(best.q, label, { tol: .6 });
 }
 async function ride(vent, name) {
@@ -248,7 +248,7 @@ if (gsrc) {
 await travel(P.ring1, 'down into the well', { tol: 1 }); beat('guardian');
 // ---- Guardian: dodge, catch its spent breath, turn the vanes ----
 // Vane per phase; the last one is on the top perch (the guardian's rings.top.vane when present).
-const vaneFor = k => { const r = P.guardianWell?.rings, top = r && !Array.isArray(r) && r.top?.vane; return k === 2 && top ? { x: top.x, y: top.y, z: top.z } : P['vane' + (k + 1)]; };
+const vaneFor = k => { const r = P.guardianWell?.rings, lv = r && !Array.isArray(r) && r[['low', 'mid', 'top'][k]] || null, alt = k === 2 && r && !Array.isArray(r) && !r.top ? r.high : null, q = (lv || alt) && ((lv || alt).vaneStand || (lv || alt).vane); return q ? { x: q.x, y: q.y, z: q.z } : P['vane' + (k + 1)]; };
 for (let phase = 0; phase < 3; phase++) {
   if (phase === 1) await ride(vent('ring1'), 'ride-ring1');
   if (phase === 2) { await travel(vent('ring2'), 'pulse grille', { tol: .4 }); await ride(vent('ring2'), 'ride-pulse'); }

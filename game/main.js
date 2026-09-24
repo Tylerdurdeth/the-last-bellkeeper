@@ -5,13 +5,11 @@ import {createMovement} from './movement.js';
 import {loadCodeCharacter} from './code-character.js';
 import buildApprovedHero from './assets/hero-study-a.js';
 import {createAdventureMotion} from './adventure-motion.js';
-import {createArtDirection} from './art-direction.js';
 import {readSave,writeSave,hasLegacySave,clearSave} from './adventure-save.js';
 import {createOpening} from './opening.js';
 import {createTitleMusic} from './title-music.js';
 import {createWind} from './bellhollow/wind.js';
 import {createQuest} from './bellhollow/quest.js';
-import {buildBellhollow as buildStubWorld} from './bellhollow/stub-world.js';
 import {MODULES} from './bellhollow/manifest.js';
 import {createMap} from './bellhollow/map.js';
 import {adaptWorld} from './bellhollow/adapt-world.js';
@@ -32,14 +30,13 @@ const DEFAULT_YAW=Math.atan2(.615,.788);let cameraYaw=DEFAULT_YAW,cameraDrag=nul
 let hero,movement,animator,world,wind,quest,look=null,staff,staffHand,mara,captionEnd=0,context=null,travel=0,fps=60,start3=[0,0,0];
 let saveTimer=0,introTime=0,introActive=false,lastShot=-1,queued=null,uiTimer=0,endingAt=0,liftLead=0;
 // Game feel: hit-stop (sim frozen, render continues), camera kick, finale arrival blend; Mara acting.
-let map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
+let villagers=null,map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
 // Camera spring arm, subject framing and chart tucking state (see frame()).
 let armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
 const loadedSave=readSave(),legacy=!loadedSave&&hasLegacySave();
 const CARD=7,CARDS=3*CARD,ENGINE=20;// prologue cards, then the 20 s in-engine intro
 function save(){if(!state.started||introActive||!quest||quest.finaleActive||!movement)return;const c=movement.checkpoint;writeSave({quest,checkpoint:[c.x,c.y,c.z],map});}
-const art=createArtDirection(T,renderer);
 function later(delay,text,duration=5,then){queued={at:state.t+delay,text,duration,then};}
 function caption(text,duration=4){$('#caption').textContent=text;$('#caption').style.opacity=captionsEnabled&&text?'1':'0';captionEnd=state.t+Math.max(duration,Math.min(9,text.length/19));}
 const soundscape=createSoundscape();soundscape.setMuted(state.muted);titleMusic.setMuted(state.muted);
@@ -197,13 +194,14 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  if(!(hero&&movement&&quest)){renderer.render(scene,camera);return;}
  const p=movement.position,cinematic=introActive||quest.finaleActive;
  const simDt=hitStop>0?0:dt;hitStop=Math.max(0,hitStop-dt);
- if(!state.paused&&simDt>0){const dt=simDt;state.t+=dt;art.update?.(state.t,state.gentle,p);
+ if(!state.paused&&simDt>0){const dt=simDt;state.t+=dt;
   movement.update(dt,{enabled:state.started&&!cinematic,actionSlow:!!state.action,faceTarget:state.action?state.actionTarget:null});
   if(movement.recovered){recoveredCount++;caption('A little current catches you and carries you back.',3);sound('capture');}
   travel+=movement.speed*dt;hero.position.copy(p);hero.rotation.y=state.started?movement.yaw:.35;
   if(introActive)updateIntro(dt);
   wind.update(dt,state.t,{hero:p,staffTip:quest.staff?staffTip():null,camera,gentle:state.gentle});
   quest.update(dt,state.t,p,{started:state.started&&!introActive,gentle:state.gentle});
+  villagers?.update(dt,state.t,{hero:movement.position,restored:quest.restoration,gentle:state.gentle});
   const e=introEngineTime();world.update(dt,state.t,{wind:wind.state(),restored:quest.restoration,intro:introActive?{t:e??-1,phase:e===null?'cards':['dawn','bell','sag','shutter','settle'][introShot().index]}:null,gentle:state.gentle,hero:p,camera,progress:quest.progress,finale:quest.finaleShot});
   saveTimer+=dt;if(saveTimer>12&&state.started&&!introActive){saveTimer=0;save();}
   if(queued&&state.t>=queued.at){const q=queued;queued=null;if(q.text)caption(typeof q.text==='function'?q.text():q.text,q.duration);q.then?.();}
@@ -261,16 +259,16 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  window.__GAME__={pos:[pos.x,pos.z],y:pos.y,fps,speed:movement.speed,mode:movement.mode,grounded:movement.grounded,lifting:movement.lifting,knocked:movement.knocked,score:state.complete?1:0,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:wind.charged,chargeKind:wind.charge?.kind??null,paused:state.paused,started:state.started,introActive,introTime,introPhase:shot?SHOTS[shot.index].focus:null,context:context?.kind||null,contextId:context?.id||null,contextLabel:context?.label||null,objective:quest.objective(),area,quest:qt,wind:wind.telemetry(),restoration:{...quest.restoration},finaleTime:quest.finaleTime,finaleActive:quest.finaleActive,recoveredCount,freed:movement.freed,blocked:!!world.blocked(pos.x,pos.z,.23,pos.y),travel,checkpoint:movement.checkpoint.toArray(),cameraYaw,stubWorld:!!world.stub,look:!!look,version:2};
 }
 async function loadWorld(){
- if((MODULES.world||params.get('world')==='1')&&!params.has('stub')){try{const m=await import('./bellhollow/world.js');return adaptWorld(await m.buildBellhollow({THREE:T,scene,loadAsset:ASSET,art}),{THREE:T});}catch(e){console.warn('Bellhollow world failed to build; using the stub world.',e);}}
- return buildStubWorld({THREE:T,scene});
+ if((MODULES.world||params.get('world')==='1')&&!params.has('stub')){try{const m=await import('./bellhollow/world.js');return adaptWorld(await m.buildBellhollow({THREE:T,scene,loadAsset:ASSET}),{THREE:T});}catch(e){console.warn('Bellhollow world failed to build; using the stub world.',e);}}
+ return (await import('./bellhollow/stub-world.js')).buildBellhollow({THREE:T,scene});
 }
 async function loadGuardian(){if(!(MODULES.guardian||params.get('guardian')==='1')||params.get('guardian')==='stub')return undefined;try{return (await import('./bellhollow/guardian.js')).createGuardian;}catch(e){console.warn('guardian.js failed; using the stub encounter.',e);return undefined;}}
 async function loadLook(){if(!MODULES.look||params.get('look')==='0')return null;try{const m=await import('./render/look.js');return m.createLook({THREE:T,renderer,scene,camera});}catch(e){console.warn('look.js failed; plain renderer.',e);return null;}}
 try{
  if(legacy)$('#legacyNote').hidden=false;
- const loaded=await Promise.all([loadWorld(),loadCodeCharacter(buildApprovedHero),Promise.resolve(buildMara(T)),ASSET('./assets/staff.js'),loadGuardian(),art.ready.catch(()=>{})]);
+ const loaded=await Promise.all([loadWorld(),loadCodeCharacter(buildApprovedHero),Promise.resolve(buildMara(T)),ASSET('./assets/staff.js'),loadGuardian(),loadLook()]);
  world=loaded[0];const character=loaded[1];mara=loaded[2];staff=loaded[3];const createGuardian=loaded[4];
- hero=character.root;hero.userData.joints=hero.children[0].userData.joints;scene.add(hero);art.style(staff);staff.scale.setScalar(.73);staffHand=hero.userData.joints.rightHand;staffHand.add(staff);staff.visible=false;
+ hero=character.root;hero.userData.joints=hero.children[0].userData.joints;scene.add(hero);staff.scale.setScalar(.73);staffHand=hero.userData.joints.rightHand;staffHand.add(staff);staff.visible=false;
  const P=world.points;start3=[P.start.x,P.start.y,P.start.z];
  if(P.bellOut&&P.arena&&!world.stub){// Paired bells on the high ring behind the ringing stand, facing the well.
   pairedBells=buildPairedBells(T);const s=P.bellOut,dx=s.x-P.arena.x,dz=s.z-P.arena.z,L=Math.hypot(dx,dz)||1,x=s.x+dx/L*1.3,z=s.z+dz/L*1.3,g=world.ground(x,z,s.y+.5);pairedBells.position.set(x,g??s.y,z);pairedBells.rotation.y=Math.atan2(-dx,-dz);pairedBells.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=true;});scene.add(pairedBells);}
@@ -278,7 +276,7 @@ try{
  movement=createMovement(T,{start:start3,sampleGround:(x,z,y)=>world.ground(x,z,y),blocked:(x,z,r,y)=>world.blocked(x,z,r,y),stickElement:$('#stick'),jumpButton:$('#jump'),runButton:$('#run'),walkSpeed:1.65,runSpeed:5.8,acceleration:12,deceleration:16,turnResponse:12,cameraYaw:()=>cameraYaw,maxDrop:14});
  animator=createAdventureMotion(character,movement);hero.position.copy(movement.position);
  wind=createWind({THREE:T,scene,movement,sound,fx:()=>look?.fx?.wind});
- look=await loadLook();
+ look=loaded[5];
  quest=createQuest({THREE:T,scene,world,wind,movement,caption,sound,onChange:questEvent,...(createGuardian?{createGuardian:o=>createGuardian({...o,look})}:{})});if(look){for(const [o,role,opts] of [[hero,'character'],[mara,'character'],[quest.guardian?.object,'outline',{dynamic:true,occluder:false}],[pairedBells,'outline',{dynamic:true}]])try{if(o)look.applyTo(o,role,opts);}catch(e){console.warn(e);}
   try{look.setAreaParams?.('hollow',{height:new T.Vector4(P.arena.y,P.hollowGate.y,.55,.62)});}catch(e){console.warn(e);}
   // Aim the valley backdrop so the far bell sits where the finale camera turns (sky azimuth: from -z toward +x).
@@ -293,8 +291,9 @@ try{
   return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe};};
  // Lazy-load the prologue illustrations once the game is ready (not counted against start-up).
  (window.requestIdleCallback||setTimeout)(()=>{for(const n of [1,2,3]){const i=new Image();i.src=new URL(`./textures/v2/card${n}.webp`,import.meta.url).href;}});
- // Chart: bake from the live scene after the first rendered frame.
- requestAnimationFrame(()=>{try{map=createMap({THREE:T,renderer,scene,world,canvas:mapCanvas,look,hide:[hero,mara,staff,pairedBells,quest.guardian?.object].filter(Boolean)});requestAnimationFrame(()=>{try{map.bake();}catch(e){console.warn('map bake failed',e);}});}catch(e){console.warn('map unavailable',e);map=null;}});
+ // After ready (never blocking it): villagers, then the chart bake from the live scene.
+ const afterReady=import('./bellhollow/villagers.js').then(m=>{villagers=m.createVillagers({THREE:T,scene,world,look});}).catch(e=>console.warn('villagers unavailable',e));
+ afterReady.then(()=>requestAnimationFrame(()=>{try{map=createMap({THREE:T,renderer,scene,world,canvas:mapCanvas,look,hide:[hero,mara,staff,pairedBells,quest.guardian?.object,villagers?.root].filter(Boolean)});requestAnimationFrame(()=>{try{map.bake();}catch(e){console.warn('map bake failed',e);}});}catch(e){console.warn('map unavailable',e);map=null;}}));
  $('#startb').disabled=false;$('#startb').textContent=loadedSave?'Start a new adventure':'Start adventure';$('#continueb').hidden=!loadedSave;updateUI();window.__START__=()=>start(true);
 }catch(e){console.error(e);$('#error').hidden=false;$('#error').textContent='Bellhollow could not load. '+e.message;}
 requestAnimationFrame(frame);

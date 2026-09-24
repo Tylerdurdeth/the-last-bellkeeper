@@ -7,6 +7,7 @@ import { buildBellhollow } from './world.js';
 import { adaptWorld } from './adapt-world.js';
 import { createLook } from '../render/look.js';
 import { createMap } from './map.js';
+import { createVillagers } from './villagers.js';
 const q = new URLSearchParams(location.search);
 const canvas = document.getElementById('world'), mapCanvas = document.getElementById('map');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
@@ -24,6 +25,8 @@ addEventListener('resize', resize); resize();
 camera.position.set(at.x + Math.sin(yaw) * 11, at.y + 8, at.z + Math.cos(yaw) * 11); camera.lookAt(at.x, at.y + 1, at.z);
 world.update?.(0, 0, {});
 if (look) { look.update(1, { area: 'terrace-dawn' }); look.render(); } else renderer.render(scene, camera);
+const villagers = q.get('villagers') === '1' ? createVillagers({ THREE, scene, world, look }) : null;
+const restoredQ = +(q.get('restored') || 0);
 const map = createMap({ THREE, renderer, scene, world, canvas: mapCanvas, look, lowTier: q.get('tier') === 'min' });
 const bakeMs = map.bake();
 // Exploration so far: reveal along the route up to this anchor.
@@ -38,9 +41,10 @@ let t = 0, last = performance.now();
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; t += dt;
   if (look) { look.update(dt, { area: world.area(at) === 'hollow' ? 'hollow' : world.area(at) === 'branches' ? 'branches-day' : 'terrace-dawn' }); look.render(); } else renderer.render(scene, camera);
+  villagers?.update(dt, t, { hero: at, restored: { terrace: restoredQ, sails: restoredQ, pipes: restoredQ, ladders: restoredQ }, gentle: false });
   map.update(dt, { hero: at, heroYaw: yaw + Math.PI, camYaw: yaw, objective, progress, fragments: [] }); map.draw();
   document.getElementById('info').textContent = JSON.stringify({ ...map.telemetry(), bounds: undefined, bakeMs: +bakeMs.toFixed(1) });
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-window.__MAPLAB__ = { map, world, ready: true, bakeMs, save: () => map.serialize(), png: i => map.levelImages[i].toDataURL() };
+window.__MAPLAB__ = { map, world, villagers, renderer, ready: true, bakeMs, save: () => map.serialize(), png: i => map.levelImages[i].toDataURL() };
