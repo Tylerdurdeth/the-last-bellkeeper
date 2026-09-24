@@ -34,7 +34,7 @@ let hero,movement,animator,world,garden,discoveries,staff,staffHand,captionEnd=0
 let campaignWorld,campaign,campaignActors,mara,checkpoint=[...START],saveTimer=0,introTime=0,introActive=false,lastIntroBeat=-1,restoring=false,bypassAt=0,queued=null;
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
 // Camera spring arm, subject framing and chart tucking state (see frame()).
-let armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,tuckUntil=0,hudTimer=0,safe=null;const subjects={},frameOffset=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
+let armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,tuckUntil=0,hudTimer=0,safe=null;const subjects={},frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
 const loadedSave=readSave();
 function save(){if(!state.started||introActive||restoring)return;writeSave(state,campaign,discoveries,checkpoint);}
 function setCheckpoint(p){if(p?.isVector3)checkpoint=p.toArray();else if(Array.isArray(p))checkpoint=[...p];save();}
@@ -158,10 +158,11 @@ addEventListener('keydown',e=>{if(state.started&&!state.paused&&['KeyQ','KeyE'].
 // ridge or deck lies between the look target and the lens. Height queries only, no raycasts.
 function viewGround(x,z,solids=true){const g=campaignWorld?.ground(x,z);if(g!==undefined)return g===null?-Infinity:g;let y=Math.max(height(x,z),-.6);if(solids)for(const c of world?.cameraSolids||[])if(Math.hypot(x-c.x,z-c.z)<c.r)y=Math.max(y,c.top);return y;}
 function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch);for(let i=1;i<=10;i++){const d=length*i/10;if(o.y+s*d<viewGround(o.x+sx*c*d,o.z+sz*c*d,d>2)+.35+.055*i)return d;}return 0;}
-function placeCamera(dt,sx,sz,pitch,length){let p=pitch,l=length;while(p<1.05&&armHit(cameraTarget,sx,sz,p,l))p+=.05;if(p>=1.05){p=1.05;const hit=armHit(cameraTarget,sx,sz,p,l);if(hit)l=Math.max(2.4,hit-.8);}
+function placeCamera(dt,sx,sz,pitch,length){// Test the arm from a point kept above the floor: framing may pan the look target below a descending deck.
+ armOrigin.copy(cameraTarget);armOrigin.y=Math.max(armOrigin.y,viewGround(armOrigin.x,armOrigin.z,false)+.9);let p=pitch,l=length;while(p<1.05&&armHit(armOrigin,sx,sz,p,l))p+=.05;if(p>=1.05){p=1.05;const hit=armHit(armOrigin,sx,sz,p,l);if(hit)l=Math.max(5,hit-.8);}
  armPitch??=p;armLength??=l;armPitch=T.MathUtils.damp(armPitch,p,p>armPitch?12:2.4,dt);armLength=T.MathUtils.damp(armLength,l,l<armLength?12:2,dt);
  const c=Math.cos(armPitch)*armLength;camera.position.set(cameraTarget.x+sx*c,cameraTarget.y+Math.sin(armPitch)*armLength,cameraTarget.z+sz*c);
- let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,viewGround(camera.position.x+a,camera.position.z+b));camera.position.y=Math.max(camera.position.y,floor+.55);}
+ let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,viewGround(camera.position.x+a,camera.position.z+b));camera.position.y=Math.max(camera.position.y,floor+1.1);}
 function screenBox(box){let l=1e9,t=1e9,r=-1e9,b=-1e9;for(let i=0;i<8;i++){ndc.set(i&1?box.max.x:box.min.x,i&2?box.max.y:box.min.y,i&4?box.max.z:box.min.z).project(camera);if(ndc.z>1)return null;const x=(ndc.x+1)/2*innerWidth,y=(1-ndc.y)/2*innerHeight;l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}return {l,t,r,b};}
 // Play area left by the HUD: below the objective panel, above caption/buttons, left of an open chart.
 function hudSafe(){const s={l:12,t:12,r:innerWidth-12,b:innerHeight-12},top=$('#hud>div')?.getBoundingClientRect();if(top?.height)s.t=Math.max(s.t,top.bottom+10);
@@ -175,7 +176,7 @@ function frameSubject(subject,pos,dt){
  if(!subject){frameOffset.multiplyScalar(Math.exp(-dt*1.2));frameDist=T.MathUtils.damp(frameDist,0,1.2,dt);return;}
  heroBox.min.set(pos.x-.35,pos.y,pos.z-.35);heroBox.max.set(pos.x+.35,pos.y+1.75,pos.z+.35);const a=screenBox(heroBox),b=screenBox(subject),s=safe||hudSafe();if(!a||!b)return;
  const l=Math.min(a.l,b.l),r=Math.max(a.r,b.r),t=Math.min(a.t,b.t),bottom=Math.max(a.b,b.b),ppm=innerHeight/(2*Math.tan(T.MathUtils.degToRad(camera.fov/2))*(armLength||11)),k=Math.min(1,dt*2.5),sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw);
- const ex=(l+r-s.l-s.r)/2/ppm,ey=(t+bottom-s.t-s.b-16)/2/ppm;frameOffset.x+=sz*ex*k;frameOffset.z-=sx*ex*k;frameOffset.y-=ey*k/Math.max(.4,Math.cos(armPitch||.45));if(frameOffset.length()>4.5)frameOffset.setLength(4.5);
+ const ex=(l+r-s.l-s.r)/2/ppm,ey=(t+bottom-s.t-s.b-16)/2/ppm;frameOffset.x+=sz*ex*k;frameOffset.z-=sx*ex*k;frameOffset.y-=ey*k/Math.max(.4,Math.cos(armPitch||.45));frameOffset.y=T.MathUtils.clamp(frameOffset.y,-1.2,1.2);if(frameOffset.length()>4.5)frameOffset.setLength(4.5);
  const wide=(r-l)/(s.r-s.l),fit=Math.max(wide,(bottom-t)/(s.b-s.t-16))/.82;frameDist=T.MathUtils.clamp(frameDist+(fit-1)*(armLength||11)*Math.min(1,dt*1.5),0,9);
  if(!state.gentle&&wide>.9&&frameDist>3&&performance.now()/1000-lastCameraInput>2.5){const c=subject.getCenter(tmpA),want=Math.atan2(pos.x-c.x,pos.z-c.z);cameraYaw+=T.MathUtils.clamp(Math.atan2(Math.sin(want-cameraYaw),Math.cos(want-cameraYaw)),-.35*dt,.35*dt);}
 }
@@ -183,7 +184,8 @@ function objectiveTargets(){const pr=campaign?.progress,pts=campaignWorld?.point
  return [state.restored?finish:state.charged?wheelPoint:!state.awakened?bellPoint:!state.porchRead?porchPoint:source];}
 function updateChart(pos){const now=performance.now()/1000;let hit=introActive||!!encounterSubject(pos);
  if(!hit&&!mapCanvas.hidden){const m=mapCanvas.getBoundingClientRect();for(const p of [...objectiveTargets(),context?.target]){if(!p||p.distanceTo(pos)>28)continue;const r=screenBox(new T.Box3(tmpA.set(p.x-.6,p.y,p.z-.6),tmpB.set(p.x+.6,p.y+1.9,p.z+.6)));if(r&&r.r>m.left-16&&r.l<m.right+16&&r.b>m.top-16&&r.t<m.bottom+16){hit=true;break;}}}
- if(hit)tuckUntil=now+1.6;const next=now<tuckUntil;if(next!==chartTuck){chartTuck=next;if(!next)chartOverride=false;chartUI();}}
+ // The chart stays tucked unless the player opens it; the intro and encounters tuck it again.
+ if(!chartTuck){chartTuck=true;chartUI();}if((introActive||encounterSubject(pos))&&chartOverride){chartOverride=false;chartUI();}}
 const cameraTarget=new T.Vector3(...START);let vista=0,last=performance.now(),wasGrounded=true,lastMode='idle';
 function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;last=now;const dt=Math.max(0,Math.min(.05,elapsed));fps=T.MathUtils.lerp(fps,1/Math.max(.001,elapsed),.03);
  if(hero&&movement){if(!state.paused){state.t+=dt;waterfall.update(state.t);art.update?.(state.t,state.gentle,movement.position);movement.update(dt,{enabled:state.started&&!introActive,actionSlow:!!state.action,faceTarget:state.action?state.actionTarget:null});if(movement.recovered){state.recoveryUntil=state.t+.9;caption('A little current catches you and carries you back.',3);sound('capture');}const p=movement.position;travel+=movement.speed*dt;hero.position.copy(p);hero.rotation.y=state.started?movement.yaw:.35;
