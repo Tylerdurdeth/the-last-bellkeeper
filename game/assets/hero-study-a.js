@@ -24,7 +24,7 @@ export default function(THREE) {
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
   return mesh(parent,g,detailMat);
  }
- const TRIM=0x2f6f6a,BRASS=0xd9a441,CORALC=0xc95845,CREAMC=0xebe0c5,LEATHER_L=0x8f6d4f,LEATHER_D=0x4f3d34,PATCH=0x1d4244,STITCH=0x86a79c;
+ const TRIM=0x2f6f6a,BRASS=0xd9a441,CORALC=0xc95845,CREAMC=0xebe0c5,LEATHER_L=0x8f6d4f,LEATHER_D=0x4f3d34,PATCH=0x1f4749,STITCH=0x5f8a82;
 
  // Curved cloth sections retain a soft silhouette and a few broad folds under cel light.
  function garment(parent,material,sections,fold=.003,open=false){const g=new THREE.CylinderGeometry(1,1,1,20,sections.length>3?9:4,open),p=g.attributes.position,low=sections[0][0],high=sections.at(-1)[0];for(let i=0;i<p.count;i++){const t=p.getY(i)+.5,y=low+(high-low)*t,x=p.getX(i),z=p.getZ(i),a=Math.atan2(z,x),r=Math.hypot(x,z);let rx=sections[0][1],rz=sections[0][2];for(let j=1;j<sections.length;j++)if(y>=sections[j-1][0]&&y<=sections[j][0]){const A=sections[j-1],B=sections[j],u=(y-A[0])/(B[0]-A[0]);rx=THREE.MathUtils.lerp(A[1],B[1],u);rz=THREE.MathUtils.lerp(A[2],B[2],u);}const f=fold*.35*Math.sin(t*Math.PI)*Math.sin(a*6+.3);p.setXYZ(i,Math.cos(a)*(rx+f)*r,y,Math.sin(a)*(rz+f)*r);}g.computeVertexNormals();const result=mesh(parent,g,material);result.receiveShadow=false;return result;}
@@ -106,8 +106,12 @@ export default function(THREE) {
   garment(leg,teal,[[-.33,.054,.049],[-.27,.062,.052],[-.15,.077,.061],[-.04,.078,.061],[.005,.070,.058]],.0025);
   const knee=pivot(pre+'LowerLeg',leg,0,-.335,0);ell(knee,teal,0,0,.007,.055,.052,.05);
   details(knee,(put,rope)=>{
-   put(new THREE.SphereGeometry(1,10,6),PATCH,side*.004,-.02,.052,0,0,side*.15,.03,.036,.009);                      // knee patch
-   const st=[];for(let i=0;i<=10;i++){const a=i/10*Math.PI*2;st.push([side*.004+Math.cos(a)*.029,-.02+Math.sin(a)*.034,.059]);}rope(st,.0014,STITCH);
+   { // subtle irregular patch shaped to the knee: a jittered, slightly darker teal pad with dashed stitches
+    const g=new THREE.SphereGeometry(1,10,6),q=g.attributes.position;for(let i=0;i<q.count;i++){const x=q.getX(i),y=q.getY(i),z=q.getZ(i),a=Math.atan2(y,x),k=1+.16*Math.sin(a*3+side)+.08*Math.sin(a*5);q.setXYZ(i,x*k,y*k,z);}g.computeVertexNormals();
+    put(g,PATCH,side*.006,-.024,.049,-.2,0,side*.3,.027,.031,.006);
+    for(let i=0;i<9;i++){const a=i/9*Math.PI*2,k=1+.16*Math.sin(a*3+side)+.08*Math.sin(a*5),x=side*.006+Math.cos(a+side*.3)*.025*k,y=-.024+Math.sin(a+side*.3)*.029*k;
+     rope([[x,y,.056],[x+Math.cos(a+1.6)*.004,y+Math.sin(a+1.6)*.004,.056]],.0011,STITCH);}
+   }
    put(new THREE.LatheGeometry([[.05,-.258],[.056,-.215],[.059,-.17],[.058,-.13],[.061,-.115]].map(v=>new THREE.Vector2(...v)),14),LEATHER_L,0,0,.002,0,0,0,1,1,.86);   // boot shaft
    put(new THREE.TorusGeometry(.06,.008,6,16),LEATHER_D,0,-.117,.002,Math.PI/2,0,0,1,.86,1);                                // folded boot top
    for(let k=0;k<4;k++){const pts=[];for(let i=0;i<=8;i++){const a=i/8*Math.PI*2+k*.9,y=-.245+k*.032+i/8*.028;pts.push([Math.sin(a)*.061,y,Math.cos(a)*.061*.86+.002]);}rope(pts,.0045,LEATHER_D);}   // leather bindings
