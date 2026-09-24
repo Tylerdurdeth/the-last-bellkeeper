@@ -19,6 +19,8 @@ export function createMovement(THREE, {
   let stickX = 0, stickY = 0, runToggle = false, disposed = false, recovered = false;
   // Updraft columns (physics only; visuals belong to wind.js) and scripted knock-back hops.
   const columns = []; let columnSerial = 0, inColumn = null, hop = null, stun = 0, landed = false;
+  // Anti-stuck: held input that goes nowhere while blocked (or with no valid step) returns the hero to safety.
+  let stuckT = 0, freed = 0; const stuckAnchor = new THREE.Vector3();
   const knob = stickElement?.querySelector('[data-knob], #knob, .knob');
   const on = (target, type, fn, options) => {
     if (!target) return;
@@ -85,6 +87,23 @@ export function createMovement(THREE, {
     }
     return null;
   }
+  // Depenetration: if the body overlaps a collider (e.g. a barrier that appeared around it), move to the
+  // nearest spot within 1.2 m that is free and has floor at about this height.
+  function depenetrate() {
+    if (!isBlocked(position.x, position.z, position.y)) return false;
+    for (let r = .1; r <= 1.2001; r += .1) for (let i = 0; i < 16; i++) {
+      const a = i / 16 * Math.PI * 2, nx = position.x + Math.cos(a) * r, nz = position.z + Math.sin(a) * r;
+      if (isBlocked(nx, nz, position.y)) continue;
+      const g = groundAt(nx, nz, position.y);
+      if (grounded ? g === null || Math.abs(g - position.y) > stepHeight + .1 : g !== null && g > position.y + .03) continue;
+      position.x = nx; position.z = nz; if (grounded) position.y = g; freed++; return true;
+    }
+    return false;
+  }
+  function hasValidStep() {
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, nx = position.x + Math.cos(a) * .15, nz = position.z + Math.sin(a) * .15; if (isBlocked(nx, nz, position.y)) continue; const g = groundAt(nx, nz, position.y); if (g === null || g <= position.y + stepHeight) return true; }
+    return false;
+  }
   function recover() {
     recovered = true; clearInput(); position.copy(checkpoint); velocity.set(0, 0, 0); grounded = true; bufferedJump = 0; coyote = 0;
     inColumn = null; hop = null; stun = 0;
@@ -107,6 +126,7 @@ export function createMovement(THREE, {
   function integrate(dt, actionSlow, faceTarget) {
     if (hop) return integrateHop(dt);
     stun = Math.max(0, stun - dt);
+    depenetrate();
     // A is reserved for jump; keyboard strafe-left remains on ArrowLeft.
     const stunned = stun > 0;
     const x = stunned ? 0 : stickX + (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
@@ -142,7 +162,8 @@ export function createMovement(THREE, {
     bufferedJump = Math.max(0, bufferedJump - dt);
     const previousY = position.y;
     function canEnter(nx, nz) {
-      if (isBlocked(nx, nz, position.y)) return false;
+      // Never refuse a step that gets the body out of an overlap.
+      if (isBlocked(nx, nz, position.y)) return false; // depenetrate() already moved the body clear of any overlap
       const h = groundAt(nx, nz, position.y);
       return h === null || h <= position.y + (grounded ? stepHeight : .03);
     }
@@ -176,10 +197,15 @@ export function createMovement(THREE, {
       }
     }
     inColumn = column;
+    // Held input for 2 s with < 5 cm travel while blocked or boxed in: carry the hero back to safety.
+    if (intent && !stunned && !column && !actionSlow) {
+      if (Math.hypot(position.x - stuckAnchor.x, position.z - stuckAnchor.z) > .05) { stuckAnchor.copy(position); stuckT = 0; }
+      else if ((stuckT += dt) >= 2 && (isBlocked(position.x, position.z, position.y) || !hasValidStep())) { stuckT = 0; recover(); return; }
+    } else { stuckT = 0; stuckAnchor.copy(position); }
     if (grounded && !stunned && !column) {
       safeTime += dt;
       // Only record an interior landing, not a sliver at an edge.
-      if (safeTime > .25 && [[radius,0],[-radius,0],[0,radius],[0,-radius]].every(([a,b]) => {
+      if (safeTime > .25 && !isBlocked(position.x, position.z, position.y) && [[radius,0],[-radius,0],[0,radius],[0,-radius]].every(([a,b]) => {
         const g = groundAt(position.x + a, position.z + b); return g !== null && Math.abs(g - position.y) < stepHeight;
       })) checkpoint.copy(position);
     } else safeTime = 0;
@@ -243,10 +269,13 @@ export function createMovement(THREE, {
     velocity.x = x / n * 6 * p; velocity.z = z / n * 6 * p; velocity.y = 4.5 * Math.max(.6, p);
     grounded = false; coyote = 0; stun = .4;
   }
+  // A spot is safe when it has floor right there, the body fits, and it is not a sliver at an edge.
+  function isSafe(p) { const v = p?.isVector3 ? p : Array.isArray(p) ? { x: p[0], y: p[1], z: p[2] } : p; if (!v || ![v.x, v.y, v.z].every(Number.isFinite)) return false; const g = groundAt(v.x, v.z, v.y + .3); return g !== null && Math.abs(g - v.y) < .35 && !isBlocked(v.x, v.z, g); }
   function setCheckpoint(p) { const v = p?.isVector3 ? p : Array.isArray(p) ? new THREE.Vector3(...p) : null; if (v && [v.x, v.y, v.z].every(Number.isFinite)) checkpoint.copy(v); }
   reset();
   return { position, velocity, checkpoint, get yaw() { return yaw; }, set yaw(v) { if (Number.isFinite(v)) yaw = v; }, get speed() { return speed; }, get recovered() { return recovered; }, get landed() { return landed; }, get grounded() { return grounded; }, get mode() { return mode; }, get verticalVelocity() { return velocity.y; },
     get lifting() { return !!inColumn && !grounded; }, get column() { return inColumn ? inColumn.id : null; }, get columns() { return columns.map(c => ({ id: c.id, x: c.x, z: c.z, radius: c.radius, top: c.top, base: c.base, remaining: c.duration - c.age, fade: c.fade })); },
     get knocked() { return !!hop || stun > 0; },
+    get freed() { return freed; }, isSafe, returnToSafety() { recover(); },
     update, reset, jump, impulse, lift, knockback, setCheckpoint, dispose };
 }

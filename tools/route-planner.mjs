@@ -25,8 +25,8 @@ export function createPlanner(world, { cell = .5, margin = .4, maxJump = 3.6, ma
     for (const [dx, dz] of DIRS) {
       const step = Math.hypot(dx, dz) * cell;
       // Walk to the adjacent cell when it is standable at about this height.
-      const ix = n.ix + dx, iz = n.iz + dz, x = ix * cell, z = iz * cell, g = G(x, z, n.y + .3);
-      if (g !== null && Math.abs(g - n.y) <= .3 && stand(ix, iz, g) && !solid((n.ix * cell + x) / 2, (n.iz * cell + z) / 2, n.y)) { out.push({ ix, iz, y: g, cost: step * (nearWall(ix, iz, g) ? 3 : 1), kind: 'walk' }); continue; }
+      const ix = n.ix + dx, iz = n.iz + dz, x = ix * cell, z = iz * cell, g = G(x, z, n.y + .42);
+      if (g !== null && Math.abs(g - n.y) <= .4 && stand(ix, iz, g) && !solid((n.ix * cell + x) / 2, (n.iz * cell + z) / 2, n.y)) { out.push({ ix, iz, y: g, cost: step * (nearWall(ix, iz, g) ? 3 : 1), kind: 'walk' }); continue; }
       // Otherwise look a little further along this direction: a drop to a lower floor (walk off an
       // edge) or, across void, a running jump to a floor at about the same height.
       if (!stand(n.ix - dx, n.iz - dz, n.y)) continue; // needs a run-up cell behind

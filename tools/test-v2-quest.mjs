@@ -69,13 +69,19 @@ assert(quest.progress.sailsBridge && wind.pushValue('sailsBridge') > .95); asser
 // The lever resets it (visible reset), and a push restores it.
 at(world.sails[0].lever); act('lever'); tick(1.4); assert(!quest.progress.sailsBridge); assert.equal(world.ground(-11.5, -13, 4), null);
 catchAt(P.loftGust); at({ x: -6, y: 4, z: -13 }); face(world.sails[0]); act('push', 'sailsBridge'); tick(1.6);
-catchAt(P.sailsGust); at({ x: -13, y: 4, z: -12.5 }); face(P.millSails); act('give', 'millSails'); assert(quest.progress.sails);
+catchAt(P.sailsGust); assert.match(quest.objective(), /cap/i, 'objective names the cap');
+at({ x: -12.8, y: 4, z: -11.2 }); face(P.millSails); c = ctx(); assert.equal(c.kind, 'info', 'wrong order: the mill refuses'); assert.match(c.why, /face away.*turn the cap/i);
+at({ x: -15, y: 4, z: -14.2 }); face(world.sails.find(x => x.id === 'sailsCap')); act('push', 'sailsCap'); tick(1.9); assert(quest.progress.sailsCap && wind.pushValue('sailsCap') > .95);
+tick(1); catchAt(P.sailsGust); at({ x: -13, y: 4, z: -12.5 }); face(P.millSails); act('give', 'millSails'); assert(quest.progress.sails);
 assert.equal(world.restored.skyBridge, 1 / 3);
 
 // --- Mill of Pipes: chain two wheels across a gap ---
 catchAt(P.loftGust); at({ x: 8.5, y: 4, z: -13 }); face(world.wheels[1]); act('give', 'pipesA'); tick(1.2);
 assert(wind.sources.has('chain:pipesA'), 'wheel A spits a gust across the gap');
-catchAt(world.wheels[1].outlet); at({ x: 16.5, y: 4, z: -11.5 }); face(world.wheels[2]); act('give', 'pipesB'); tick(1.2);
+catchAt(world.wheels[1].outlet); at({ x: 16.5, y: 4, z: -11.5 }); face(world.wheels[2]); act('give', 'pipesB'); tick(1.5);
+assert(!quest.progress.pipesB, 'valve closed: the gust leaves by the wrong outlet'); assert(!wind.charged); assert.match(quest.objective(), /valve/i);
+at(P.pipesValve); act('lever', 'pipesValve'); assert(quest.progress.pipesValve); tick(1);
+catchAt(world.wheels[1].outlet); at({ x: 16.5, y: 4, z: -11.5 }); face(world.wheels[2]); act('give', 'pipesB'); tick(1.2); assert(quest.progress.pipesB);
 catchAt(world.wheels[2].outlet); at({ x: 16, y: 4, z: -15.5 }); face(P.millPipes); act('give', 'millPipes'); assert(quest.progress.pipes);
 
 // --- Mill of Ladders: three updrafts, the timed shutter ---
@@ -96,7 +102,13 @@ assert.equal(world.ground(-18, -17.5, 4), 4, 'sky bridge complete');
 
 // --- Hollow gallery, guardian (stub) and the paired bells ---
 at(P.hollowGate); assert(quest.progress.hollow);
-at(P.carvingOut); act('read', 'carvingOut'); at(P.carvingReturn); act('read', 'carvingReturn');
+assert.equal(quest.objective(), 'Catch the gust in the gallery');
+catchAt(P.gallery.source); at(P.carvingReturn); face(P.gallery.carvings[1].intake); c = ctx(); assert.equal(c.kind, 'info', 'second carving waits for the first');
+at(P.carvingOut); face(P.gallery.carvings[0].intake); act('give', 'carvingOut'); assert(quest.progress.carvingOut); assert.equal(world.restored.carving0, 1);
+catchAt(P.gallery.source); at(P.carvingReturn); face(P.gallery.carvings[1].intake); act('give', 'carvingReturn'); assert(quest.progress.carvingReturn); assert.equal(world.restored.carving1, 1);
+at(P.gallery.carvings[2].stand); act('read', 'lore2');
+for (const k of ['fragment1', 'fragment2', 'fragment3']) { at(P[k]); act('pick', k); }
+assert(quest.progress.keepsake, 'three fragments make the keepsake'); assert(captions.some(t => /hold the door/.test(t)));
 assert(!captions.some(t => /exhausted|only ever|villain|protecting the tree/i.test(t)), 'captions never state the twist');
 at(P.ring1); for (let phase = 0; phase < 3; phase++) {
   // Wait for a spent breath; stand in it, catch, give to the vane.
@@ -131,4 +143,4 @@ assert(quest.progress.pipes && quest.progress.sails && !quest.progress.ladders);
 assert(wind.pushValue('sailsBridge') === 1 && wind.pushValue('terraceGate') === 1, 'pushed states persist instantly');
 assert.equal(world.restored.skyBridge, 2 / 3);
 assert(!readSave({ getItem: () => '{"version":2,"quest":{},"checkpoint":[0,0,1e9]}' }), 'rejects out-of-range checkpoint');
-console.log(`PASS: v2 quest route with stub world — terrace beats, chain, updraft, push+reset lever, pipes chain, timed shutter, three mills in order, sky bridge, gallery, guardian stub 3 phases, paired bells, finale, Mara ending; saves v2 (v1 ignored). ${captions.length} captions.`);
+console.log(`PASS: v2 quest route with stub world — terrace beats, chain, updraft, push+reset lever, sails cap (wrong-order hint), pipes valve (wrong outlet, no penalty), timed shutter, gallery carvings by wind, fragments + keepsake, three mills in order, sky bridge, gallery, guardian stub 3 phases, paired bells, finale, Mara ending; saves v2 (v1 ignored). ${captions.length} captions.`);

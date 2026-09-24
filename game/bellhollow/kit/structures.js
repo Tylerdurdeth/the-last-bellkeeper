@@ -19,8 +19,8 @@ export class Builder {
    * Solid strip from stations [{l:[x,y,z], r:[x,y,z], b: bottomY}] with metre UVs.
    * Returns {top, sides} geometries (top can take the deck material, sides the skirt).
    */
-  stripGeo(st, {capStart = true, capEnd = true} = {}) {
-    const T = this.T, top = [], tuv = [], side = [], suv = [];
+  stripGeo(st, {capStart = true, capEnd = true, detail = null} = {}) {
+    const T = this.T, top = [], tuv = [], side = [], suv = [], capP = [], capU = [];
     let along = 0;
     const quad = (arr, uvs, a, b, c, d, ua, ub, uc, ud) => { arr.push(...a, ...b, ...c, ...a, ...c, ...d); uvs.push(...ua, ...ub, ...uc, ...ua, ...uc, ...ud); };
     for (let i = 1; i < st.length; i++) {
@@ -36,7 +36,7 @@ export class Builder {
       quad(side, suv, p.r, q.r, qr, pr, [u0, p.r[1]], [u1, q.r[1]], [u1, qr[1]], [u0, pr[1]]);
       quad(side, suv, pl, pr, qr, ql, [0, u0], [wp, u0], [wq, u1], [0, u1]);
     }
-    const cap = (s, flip) => {
+    const cap = (s, flip) => { const side = capP, suv = capU;
       const bl = [s.l[0], s.b ?? s.l[1] - .6, s.l[2]], br = [s.r[0], s.b ?? s.r[1] - .6, s.r[2]], w = Math.hypot(s.r[0] - s.l[0], s.r[2] - s.l[2]);
       if (flip) quad(side, suv, s.l, s.r, br, bl, [0, s.l[1]], [w, s.r[1]], [w, br[1]], [0, bl[1]]);
       else quad(side, suv, s.l, bl, br, s.r, [0, s.l[1]], [0, bl[1]], [w, br[1]], [w, s.r[1]]);
@@ -44,11 +44,38 @@ export class Builder {
     if (capStart) cap(st[0], true);
     if (capEnd) cap(st[st.length - 1], false);
     const mk = (pos, uv) => { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.computeVertexNormals(); return g; };
-    const topG = mk(top, tuv), sideG = mk(side, suv);
+    const topG = mk(top, tuv), sideG = mk(side, suv), capG = capP.length ? mk(capP, capU) : null;
+    if (detail) this.plankDetail(st, detail);
     // Make sure the top faces up (orientation depends on l/r handedness).
     const n = topG.attributes.normal; let sum = 0; for (let i = 0; i < n.count; i++) sum += n.getY(i);
-    if (sum < 0) { flipGeo(topG); flipGeo(sideG); }
-    return {top: topG, sides: sideG};
+    if (sum < 0) { flipGeo(topG); flipGeo(sideG); if (capG) flipGeo(capG); }
+    return {top: topG, sides: sideG, caps: capG};
+  }
+
+  /**
+   * Plank variation laid over a strip deck: planks ~0.21 m across the walkway; about one in eight a
+   * darker board, one in thirty a dark gap, and nail heads at both ends of every fourth board.
+   */
+  plankDetail(st, {seed = 1, pitch = .21} = {}) {
+    const T = this.T; let s = seed * 9301 + 49297; const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    const dark = [], gap = [], nail = [];
+    const push = (arr, a, b, c, d) => arr.push(...a, ...b, ...c, ...a, ...c, ...d);
+    let along = 0, next = pitch * rnd();
+    for (let i = 1; i < st.length; i++) {
+      const p = st[i - 1], q = st[i], L = Math.hypot((q.l[0] + q.r[0] - p.l[0] - p.r[0]) / 2, (q.l[2] + q.r[2] - p.l[2] - p.r[2]) / 2);
+      while (next < along + L) {
+        const f = (next - along) / L, lerp = (A, Bq, t) => A.map((v, k) => v + (Bq[k] - v) * t);
+        const l0 = lerp(p.l, q.l, f), r0 = lerp(p.r, q.r, f), f1 = Math.min(1, f + pitch * .92 / L), l1 = lerp(p.l, q.l, f1), r1 = lerp(p.r, q.r, f1);
+        const up = (v, h) => [v[0], v[1] + h, v[2]], k = rnd();
+        if (k < .12) push(dark, up(l0, .012), up(l1, .012), up(r1, .012), up(r0, .012));
+        else if (k < .155) { const lm = lerp(l0, l1, .35), rm = lerp(r0, r1, .35); push(gap, up(l0, .013), up(lm, .013), up(rm, .013), up(r0, .013)); }
+        if (Math.floor(next / pitch) % 4 === 0) for (const t of [.06, .94]) { const c = lerp(lerp(l0, l1, .5), lerp(r0, r1, .5), t), dx = (r0[0] - l0[0]) * .012, dz = (r0[2] - l0[2]) * .012; push(nail, [c[0] - dx - .025, c[1] + .015, c[2] - dz], [c[0] - dx + .025, c[1] + .015, c[2] - dz], [c[0] + dx + .025, c[1] + .015, c[2] + dz], [c[0] + dx - .025, c[1] + .015, c[2] + dz]); }
+        next += pitch;
+      }
+      along += L;
+    }
+    const mk = (pos) => { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); const n = g.attributes.normal; let sy = 0; for (let i = 0; i < n.count; i++) sy += n.getY(i); if (sy < 0) flipGeo(g); return g; };
+    if (dark.length) this.add(mk(dark), 'deckDark'); if (gap.length) this.add(mk(gap), 'barkShade'); if (nail.length) this.add(mk(nail), 'ink');
   }
 
   /** Flat (or planar-sloped) polygon deck. pts: [[x,z]...]. */
@@ -68,15 +95,15 @@ export class Builder {
   }
 
   /** Annular sector deck; height y0->y1 across a0->a1 (az degrees). */
-  deckAnnulus(id, {cx = 0, cz = 0, r0, r1, a0, a1, y0, y1 = y0, ease, bottom, th = .7, mat = 'stone', side = 'stoneShade', enabled, dy, capStart = true, capEnd = true, step = 4}) {
+  deckAnnulus(id, {cx = 0, cz = 0, r0, r1, a0, a1, y0, y1 = y0, ease, bottom, th = .7, mat = 'stone', side = 'stoneShade', capMat, enabled, dy, capStart = true, capEnd = true, step = 4}) {
     this.gm.addSurface({id, type: 'annulus', cx, cz, r0, r1, a0, a1, y0, y1, ease, enabled, dy, body: bottom !== undefined && typeof bottom !== 'function' ? Math.max(th, Math.max(y0, y1) - bottom) : th});
     const n = Math.max(2, Math.ceil((a1 - a0) / step)), st = [];
     for (let i = 0; i <= n; i++) {
       const f = i / n, a = (a0 + (a1 - a0) * f) * Math.PI / 180, u = ease ? ease(f) : f, y = y0 + (y1 - y0) * u;
       st.push({l: [cx + r0 * Math.sin(a), y, cz + r0 * Math.cos(a)], r: [cx + r1 * Math.sin(a), y, cz + r1 * Math.cos(a)], b: bottom !== undefined ? (typeof bottom === 'function' ? bottom(f) : bottom) : y - th});
     }
-    const {top, sides} = this.stripGeo(st, {capStart, capEnd});
-    this.add(top, mat); this.add(sides, side);
+    const {top, sides, caps} = this.stripGeo(st, {capStart, capEnd, detail: /deck/.test(mat) ? {seed: id.length * 7 + st.length} : null});
+    this.add(top, mat); this.add(sides, side); if (caps) this.add(caps, capMat || side);
     return st;
   }
 
@@ -118,8 +145,8 @@ export class Builder {
       const nx = -tz * w / 2 * k, nz = tx * w / 2 * k, y = pts[i][1];
       st.push({l: [pts[i][0] + nx, y, pts[i][2] + nz], r: [pts[i][0] - nx, y, pts[i][2] - nz], b: y - th});
     }
-    const {top, sides} = this.stripGeo(st);
-    this.add(top, mat); this.add(sides, side);
+    const {top, sides, caps} = this.stripGeo(st, {detail: /deck/.test(mat) ? {seed: id.length * 13 + pts.length} : null});
+    this.add(top, mat); this.add(sides, side); if (caps) this.add(caps, side);
     if (log) {
       // The great branch the boardwalk rides on: a tapered bark limb below the deck.
       const lp = pts.map((p, i) => [p[0], p[1] - th - log.r0 * (1 - i / pts.length * .4) * .8, p[2]]);
@@ -178,6 +205,17 @@ export class Builder {
     }
     // de-duplicate close posts
     const P = posts.filter((p, i) => i === 0 || Math.hypot(p[0] - posts[i - 1][0], p[2] - posts[i - 1][2]) > .25);
+    if (style === 'rope') {
+      // rope-and-post: stout posts every ~2.8 m, two sagging ropes; reads light against the sky
+      const P2 = [base[0]]; let acc = 0;
+      for (let i = 1; i < base.length; i++) { acc += Math.hypot(base[i][0] - base[i - 1][0], base[i][2] - base[i - 1][2]); if (acc >= 2.8 || i === base.length - 1) { P2.push(base[i]); acc = 0; } }
+      for (const p of P2) { this.add(new T.CylinderGeometry(.07, .09, H + .08, 6).translate(p[0], p[1] + (H + .08) / 2, p[2]), 'timberDark'); this.add(new T.CylinderGeometry(.1, .1, .05, 6).translate(p[0], p[1] + H + .08, p[2]), 'timberDark'); }
+      for (let i = 1; i < P2.length; i++) for (const [hh, sag] of [[H - .02, .1], [.5, .06]]) {
+        const a = P2[i - 1], b = P2[i], pts = []; for (let k = 0; k <= 6; k++) { const f = k / 6; pts.push(new T.Vector3(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f + hh - sag * 4 * f * (1 - f), a[2] + (b[2] - a[2]) * f)); }
+        this.add(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 8, .028, 4), 'timberDark');
+      }
+      return;
+    }
     if (style === 'parapet') {
       // calm solid stone parapet with a coping: one big form instead of many thin posts
       for (let i = 1; i < base.length; i++) {

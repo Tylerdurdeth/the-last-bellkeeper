@@ -23,6 +23,7 @@ import { createWindFx, DISTORT_LAYER } from './fx/wind-fx.js';
 import { createFireFx } from './fx/fire.js';
 import { createWaterFx } from './fx/water.js';
 import { createShafts } from './fx/shafts.js';
+import { prepareFoliage } from './fx/foliage.js';
 export { createWindMaterial };
 import { setPaintedCel } from '../art-direction.js';
 
@@ -274,7 +275,7 @@ void main() {
   const characterMaterial = (o, m) => toon.roleOf(m) === 'character' || [...characters].some(c => { for (let q = o; q; q = q.parent) if (q === c) return true; return false; });
   const tiled = new WeakSet(), surfaced = new WeakSet(), hsl = {};
   // Rule 1 (value/saturation hierarchy): large surfaces calm and weathered, saturation kept for accents.
-  const HONEY_GREY = new THREE.Color('#A58B6B');
+  const HONEY_GREY = new THREE.Color('#A58B6B'), LEAF_BLUE_GREEN = new THREE.Color('#6F9A63');
   function classifySurface(m) {
     const role = toon.roleOf(m);
     const glowing = m.emissive && (m.emissive.r + m.emissive.g + m.emissive.b) * (m.emissiveIntensity ?? 1) > .15;
@@ -287,19 +288,41 @@ void main() {
     if (/^bark/.test(key) || name === 'bark') return { sat: .72, moss: .6, grime: .4 };
     if (name === 'tile' || /^tile/.test(key)) return { sat: coral ? .7 : .6, moss: .45, grime: .5 };   // roofs are large: calm
     if (name === 'metal') return teal ? { sat: .45, grime: .5 } : { sat: .82, grime: .2 };   // verdigris pipes calm; polished copper stays warm
-    if (name === 'fabric' || /^cloth/.test(key)) return coral ? null : { sat: .8, grime: .3 };   // coral cloth is the accent
-    if (name === 'foliage' || /^leaf/.test(key) || key === 'far' || key === 'farLight') return { sat: hsl.l > .5 ? .7 : .84 };   // lime tips calmer
+    if (name === 'fabric' || /^cloth/.test(key) || /Double$/.test(key)) return coral ? null : { sat: .8 };   // cloth is an accent: no grime/streaks/moss
+    if (name === 'foliage' || /^leaf/.test(key) || key === 'far' || key === 'farLight') return { sat: hsl.l > .5 ? .66 : .82, tint: LEAF_BLUE_GREEN, tintAmt: hsl.l > .5 ? .12 : .06 };   // lime → palette greens   // lime tips calmer
     if (role === 'terrain' || name === 'ground') return { sat: .78, moss: .3, grime: .2 };
     return hsl.s > .5 ? { sat: .78, grime: .4 } : { sat: .92, grime: .3 };
   }
+  // Foliage (auto): palette leaf materials and anything named 'foliage' get mass normals + the foliage role.
+  const isFoliageMat = m => m && !m.transparent && (m.name === 'foliage' || /^(leaf|leafLight|leafShade|far|farLight)$/.test(m.userData?.bhKey || '')) && !/Double$/.test(m.userData?.bhKey || '');
+  let foliageStats = { meshes: 0, ms: 0 };
+  const foliageOn = !(typeof location !== 'undefined' && new URLSearchParams(location.search).get('foliage') === '0');   // ?foliage=0 comparison
+  function scanFoliage() {
+    if (!foliageOn) return;
+    const fresh = [];
+    scene.traverse(o => {
+      if (!o.isMesh || o.userData.lookHull || o.userData.lookFoliage || o.isInstancedMesh || o.isSkinnedMesh) return;
+      const ms = [].concat(o.material); if (!ms.every(isFoliageMat)) return;
+      for (let q = o; q; q = q.parent) if (characters.has(q)) return;
+      if (o.geometry.userData.lookFoliage) { o.userData.lookFoliage = true; } else fresh.push(o);
+      for (const m of ms) if (toon.roleOf(m) !== 'foliage') toon.patch(m, 'foliage');
+    });
+    if (fresh.length) {
+      const st = prepareFoliage(THREE, fresh); for (const o of fresh) o.geometry.userData.lookFoliage = true;
+      foliageStats = { meshes: foliageStats.meshes + st.meshes, ms: foliageStats.ms + st.ms };
+    }
+  }
   const scan = () => {
     toon.patchObject(scene);
+    scanFoliage();
     scene.traverse(o => {
       if (!o.isMesh || o.userData.lookHull) return;
       for (const m of [].concat(o.material)) {
         if (m && AUTO_ROLES[m.userData?.bhKey]) toon.patch(m, AUTO_ROLES[m.userData.bhKey]);
         if (m && lanternGlass(o) && toon.roleOf(m) !== 'glow') toon.patch(m, 'glow');
         if (o.name === 'bellhollow-wind' && !fx.wind.attached.has(o)) fx.wind.attach(o);   // zero-wiring fallback for wind.js
+        // Thin double-sided cloth (sails, awnings, flags, laundry, banners): no self-shadow → no shadow acne stipple.
+        if (m && m.side === THREE.DoubleSide && (m.name === 'fabric' || /^cloth|Double$/.test(m.userData?.bhKey || '')) && o.receiveShadow) o.receiveShadow = false;
         if (m && hierarchy && !surfaced.has(m) && toon.isPatched(m) && !characterMaterial(o, m)) { surfaced.add(m); const c = classifySurface(m); if (c) toon.setSurface(m, c); }
         const role = m && AUTO_TILES[m.userData?.bhKey];
         if (role && !tiled.has(m)) { tiled.add(m); toon.setTile(m, tile(role)); }
@@ -395,6 +418,7 @@ void main() {
     U.bkAmbSteps.value = r.ambSteps; U.bkHeight.value.copy(r.height); U.bkLowTint.value.copy(r.lowTint);
     U.bkRimColor.value.copy(r.rim).multiplyScalar(r.rimIntensity);
     U.bkMist.value.copy(r.fogColor).lerp(WHITE, .35);
+    U.bkSway.value = .035 + .045 * restoredNow; U.bkLeafTrans.value.copy(r.keyColor).lerp(C(THREE, '#E8D27A'), .5);
     U.bkAerial.value.copy(r.aerial); U.bkAerialColor.value.copy(r.aerialColor); sky.uniforms.uSunGlow.value = r.sunGlow; shafts.amount = r.shafts;
     if (!beauty) { U.bkAerial.value.z = 0; sky.uniforms.uSunGlow.value = 0; shafts.amount = 0; post.uniforms.uAo.value = 0; } shafts.dir.copy(r.keyDir); shafts.color.copy(r.keyColor);
     U.bkSunDir.value.copy(r.keyDir);
@@ -433,6 +457,7 @@ void main() {
   let focus = null, focusExplicit = false, autoHero = null; const autoFeet = new THREE.Vector3(), characters = new Set(), camPos = new THREE.Vector3();
   const fA = toon.uniforms.bkFocusA.value, fB = toon.uniforms.bkFocusB.value, pv = new THREE.Vector3(), pw = new THREE.Vector3();
   /** f = {hero: feet Vector3, heroObject?: Object3D (excluded from the probe), extra?: [feet Vector3...]} or null. */
+  const fadeOn = !(typeof location !== 'undefined' && new URLSearchParams(location.search).get('fade') === '0');   // ?fade=0 comparison
   function setFocus(f) { focusExplicit = true; focus = f && f.hero ? f : null; }
   function projectPx(p, out) { pv.copy(p).project(camera); out.set((pv.x * .5 + .5) * size.x, (pv.y * .5 + .5) * size.y, pv.z); return out; }
   const pFeet = new THREE.Vector3(), pHead = new THREE.Vector3(), pMid = new THREE.Vector3();
@@ -457,10 +482,10 @@ void main() {
     }
     if (focus) {
       camera.updateMatrixWorld(); renderer.getDrawingBufferSize(size);
-      if (focusEllipse(focus.hero, .92, n)) n++;
+      if (focusEllipse(focus.hero, 1, n)) n++;   // full strength: clean core, dithered rim only
       for (const e of focus.extra || []) { if (n >= 4) break; if (e && focusEllipse(e, .8, n)) n++; }
     }
-    toon.uniforms.bkFocusCount.value = n;
+    toon.uniforms.bkFocusCount.value = fadeOn ? n : 0;
   }
   /** Test/telemetry: can the camera see the hero's head? Rays to 5 head points; a ray counts as blocked if the first
    *  non-character hit would stay (fade < 60%) under the shader's fade rule. Raycasts the scene: call sparingly. */
@@ -484,7 +509,9 @@ void main() {
       const h = hits[0], hitDepth = -h.point.clone().applyMatrix4(camera.matrixWorldInverse).z;
       const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
       const m = Array.isArray(h.object.material) ? h.object.material[0] : h.object.material;
-      const fade = m?.userData && toon.isPatched(m) ? ss(.4, 1.1, heroDepth - hitDepth) * ss(feet.y + .15, feet.y + .6, h.point.y) * .92 : 0;
+      const fn = h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : new THREE.Vector3(0, 1, 0);
+      const allowed = Math.max(1 - ss(.45, .6, Math.abs(fn.y)), ss(feet.y + 1, feet.y + 1.3, h.point.y));
+      const fade = m?.userData && toon.isPatched(m) && !toon.isNoFade?.(m) ? ss(1, 1.6, heroDepth - hitDepth) * allowed * .92 : 0;
       if (fade < .6) { after++; names.push(`${h.object.name || h.object.type}:${(heroDepth - hitDepth).toFixed(1)}m`); }
     }
     return { rays: pts.length, blockedRaw: raw, blockedAfterFade: after, headVisible: after <= 2, blockers: [...new Set(names)].slice(0, 3) };
@@ -551,7 +578,7 @@ void main() {
       Object.assign(rigs[name], params);
       if (restored) restoredRigs[name] = restoredOf(THREE, rigs[name]);
     },
-    get tier() { return tier; }, set tier(v) { tier = v; },
+    get tier() { return tier; }, set tier(v) { tier = v; }, get foliage() { return foliageStats; },
     get area() { return area; }, get restored() { return restoredNow; },
     get lights() { return { sun, hemi }; },
     areas: Object.keys(rigs),

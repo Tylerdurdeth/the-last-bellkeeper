@@ -246,7 +246,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     if (parts.rotor) movers.push({obj: parts.rotor, kind: 'spin', axis: 'z', area: 'terrace', speed: 2.6, key: 'terraceGate'});
   }
   // Mara's bypass lever + outlet pipe (the first gust), in front of her workshop.
-  const leverP = at(-79.6, 22.9), outletP = at(-74.6, 22.9);
+  const leverP = at(-79.6, 22.9), outletP = at(-71.2, 22.9);  // outlet 2+ m from Mara so she and the gust read apart
   {
     B.add(bevelBox(T, .9, .5, .7).translate(leverP[0], .25, leverP[2]), 'stoneShade');
     B.add(rod(T, [leverP[0], .5, leverP[2]], [leverP[0] + .25, 1.45, leverP[2]], .06, 6), 'timberDark');
@@ -254,7 +254,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     B.add(new T.TorusGeometry(.3, .06, 5, 12, Math.PI).rotateY(faceOut(-16)).translate(leverP[0], .5, leverP[2]), 'copper');
     gm.addCircle({id: 'mara-lever', x: leverP[0], z: leverP[2], r: .45, y0: 0, y1: 1.5});
     // copper outlet pipe from the workshop wall, bell-mouthed, facing the street
-    const wall = at(-75.4, 24.8), mouth = [outletP[0], .9, outletP[2]];
+    const wall = at(-74.3, 24.6), mouth = [outletP[0], .9, outletP[2]];
     B.add(taperTube(T, [[wall[0], 2.2, wall[2]], [wall[0], .32, wall[2]], [wall[0] + (mouth[0] - wall[0]) * .5, .22, wall[2] + (mouth[2] - wall[2]) * .5], [mouth[0], .22, mouth[2]]], .17, .17, 14, 7, 0, 3), 'verdigris');
     for (const f of [.3, .7]) { const bx = wall[0] + (mouth[0] - wall[0]) * f, bz = wall[2] + (mouth[2] - wall[2]) * f; B.add(new T.BoxGeometry(.5, .12, .16).rotateY(Math.atan2(mouth[0] - wall[0], mouth[2] - wall[2]) + Math.PI / 2).translate(bx, .1, bz), 'timberDark'); }
     const bellMouth = new T.LatheGeometry([[.17, 0], [.2, .12], [.34, .3], [.4, .34]].map(([a, b]) => new T.Vector2(a, b)), 12);
@@ -352,7 +352,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   // WINDMILL BRANCHES
   // ================================================================================
   const branch = (id, ctrl, w, opts = {}) => B.deckRibbon(id, ctrl, w, {mat: 'deckOld', side: 'timberDark', th: .4, log: {r0: 1.25, r1: .8, seed: id.length, extend: opts.extend ?? 0}, ...opts});
-  const railBoth = (id, pts, w, o = {}) => B.railRibbon(id, pts, w, {style: 'timber', ...o});
+  const railBoth = (id, pts, w, o = {}) => B.railRibbon(id, pts, w, {style: 'rope', ...o});
   const polarCtrl = (list) => list.map(([az, r, y]) => at(az, r, y));
   const lanternAlong = (pts, area, every = 7, side = 1, w = 3) => {
     for (let i = 2; i < pts.length - 1; i += every) {
@@ -461,7 +461,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const f3Isl = azAbout(ISL, [ISL[0] + f3d[0], ISL[1] + f3d[1]]), f3Back = azAbout(frag3C, ISL);
   discRail('frag3-rail', frag3C, F3r, P1y, [[f3Back - 26, f3Back + 26]]);
   discRail('pipes-island-rail', ISL, ISLr, P1y, [[inIsl - 15, inIsl + 15], [f3Isl - 15, f3Isl + 15]]);
-  for (const [c, r, a] of [[P1, P1r, outAz], [ISL, ISLr, inIsl], [ISL, ISLr, f3Isl], [frag3C, F3r, f3Back]]) { const st = []; for (let k = -15; k <= 15; k += 5) { const i = polar(a + k, r - .35), o = polar(a + k, r + .02); st.push({l: [c[0] + i[0], P1y + .02, c[1] + i[1]], r: [c[0] + o[0], P1y + .02, c[1] + o[1]], b: P1y - .08}); } const {top, sides} = B.stripGeo(st); B.add(top, 'copper'); B.add(sides, 'copper'); }
+  for (const [c, r, a] of [[P1, P1r, outAz], [ISL, ISLr, inIsl], [ISL, ISLr, f3Isl], [frag3C, F3r, f3Back]]) { const st = []; for (let k = -15; k <= 15; k += 5) { const i = polar(a + k, r - .3), o = polar(a + k, r + .02); st.push({l: [c[0] + i[0], P1y + .015, c[1] + i[1]], r: [c[0] + o[0], P1y + .015, c[1] + o[1]], b: P1y - .06}); } const {top, sides} = B.stripGeo(st); B.add(top, 'metalWorn'); B.add(sides, 'metalWorn'); }
   const Pl = (t, u) => [P1[0] + dt[0] * t + du[0] * u, P1y, P1[1] + dt[1] * t + du[1] * u];
   const Il = (t, u) => [ISL[0] + dt[0] * t + du[0] * u, P1y, ISL[1] + dt[1] * t + du[1] * u];
   const w1P = Pl(2.1, .6), w2P = Il(2.2, .2);
@@ -634,8 +634,8 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const galY = (a) => 4 - 8 * galEase((a - GAL.a0) / (GAL.a1 - GAL.a0));
   B.railArc('gallery-inner', {r: H.gallery.r0 + .15, a0: GAL.a0 + .5, a1: 311, yfn: (f) => galY(GAL.a0 + .5 + f * (311 - GAL.a0 - .5)), style: 'parapet', step: 4});
   // Rings.
-  B.deckAnnulus('ring-high', {r0: H.high.r0, r1: H.high.r1, a0: 100, a1: 350, y0: H.high.y, bottom: H.mid.y - .6, mat: 'paving', side: 'stoneShade', step: 3});
-  B.deckAnnulus('ring-mid', {r0: H.mid.r0, r1: H.mid.r1, a0: 100, a1: 350, y0: H.mid.y, bottom: H.low.y - .6, mat: 'paving', side: 'stoneShade', step: 3});
+  B.deckAnnulus('ring-high', {r0: H.high.r0, r1: H.high.r1, a0: 100, a1: 350, y0: H.high.y, bottom: H.mid.y - .6, mat: 'paving', side: 'stoneShade', capMat: 'bark', step: 3});
+  B.deckAnnulus('ring-mid', {r0: H.mid.r0, r1: H.mid.r1, a0: 100, a1: 350, y0: H.mid.y, bottom: H.low.y - .6, mat: 'paving', side: 'stoneCool', capMat: 'bark', step: 3});
   B.deckDisc('ring-low', {r: H.low.r, y: H.low.y, th: 1.4, mat: 'paving', side: 'stoneShade', seg: 36});
   B.deckAnnulus('well-front', {r0: H.low.r - .05, r1: H.floorFront, a0: -10, a1: 100, y0: H.low.y, th: 1.4, mat: 'paving', side: 'stoneShade', step: 3});
   for (const [id, ring] of [['high', H.high], ['mid', H.mid]]) {
@@ -692,15 +692,19 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     B.add(taperTube(T, [at(210, 11.4, 10.5), at(225, 8.6, 9.6), at(240, 11.4, 10.5)], .35, .2, 12, 6, .1, 9), 'bark');
   }
   // Windworks gears on the back wall + copper pipes spiralling down (old machinery).
-  for (const [az, y, r] of [[160, 6.3, 1.6], [255, 3.6, 2.1], [305, 1.3, 1.3], [128, 7.2, 1.1]]) {
+  for (const [az, y, r] of [[255, 3.6, 2.1]]) {
     const p = at(az, H.gallery.r1 - .25, y);
     const gear = new T.TorusGeometry(r, .18, 5, 20); gear.rotateY(az * DEG); gear.translate(...p); B.add(gear, 'verdigris');
     for (let k = 0; k < 10; k++) { const t = new T.BoxGeometry(.3, .3, .3); const ang = k / 10 * Math.PI * 2; t.translate(Math.cos(ang) * (r + .2), Math.sin(ang) * (r + .2), 0); t.rotateY(az * DEG); t.translate(...p); B.add(t, 'verdigris'); }
     B.add(new T.CylinderGeometry(.3, .3, .5, 10).rotateX(Math.PI / 2).rotateY(az * DEG).translate(...p), 'copper');
   }
-  for (const off of [-1, 1]) {
-    const pts = []; for (let a = 110; a <= 345; a += 8) pts.push(at(a, H.gallery.r1 - .2, galY(a) + 3.1 + off * .45));
-    B.add(new T.TubeGeometry(new T.CatmullRomCurve3(pts.map((p) => V(p))), 60, .16, 6), off < 0 ? 'verdigris' : 'copper');
+  { // one copper wind channel following the gallery, clamped to the wall
+    const pts = []; for (let a = 110; a <= 345; a += 8) pts.push(at(a, H.gallery.r1 - .25, galY(a) + 3.2));
+    B.add(new T.TubeGeometry(new T.CatmullRomCurve3(pts.map((p) => V(p))), 60, .24, 8), 'verdigris');
+    for (let a = 118; a <= 340; a += 24) { const c = at(a, H.gallery.r1 - .25, galY(a) + 3.2); B.add(new T.TorusGeometry(.3, .06, 5, 12).rotateY(a * DEG).translate(...c), 'copper'); }
+    // the great root arch: one strong silhouette spanning the dome
+    B.add(taperTube(T, [at(135, H.gallery.r1 - .3, 6.5), at(170, 8.5, 11.5), at(225, 2, 13.2), at(280, 8.5, 11.5), at(318, H.gallery.r1 - .3, 5.5)], 1.15, .8, 24, 10, .14, 42), 'bark');
+    B.add(taperTube(T, [at(225, 2.5, 13), at(210, 5, 12.6), at(195, 9, 11), at(185, H.gallery.r1 - .3, 9.5)], .45, .2, 10, 7, .2, 43), 'bark');
   }
   // Hollow lanterns (dim until the hollow is restored) — along the gallery rail.
   for (let a = 118; a < 330; a += 44) { const p = at(a, H.gallery.r0 + .15, galY(a)); B.add(new T.CylinderGeometry(.06, .07, 1.6, 6).translate(p[0], p[1] + .8, p[2]), 'verdigris'); life.lantern('hollow', p[0], p[1] + 1.6 + .24 * .9, p[2], .9, {mount: 'base'}); }
@@ -712,20 +716,21 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   // ---- Hollow dressing: structure on every riser so the well reads as carved windworks ----
   B.block('hollow-dressing');
   {
-    const riser = (r, yTop, yBot, a0, a1, face) => {
+    const riser = (r, yTop, yBot, a0, a1, face, tone = 'stoneShade') => {
       // ribs (buttresses) every 18 deg, a cornice band and a base band, copper pipe runs
-      for (let a = a0 + 12; a < a1 - 4; a += 30) {
+      for (let a = a0 + 12; a < a1 - 4; a += 45) {
         const p = at(a, r - face * .18, (yTop + yBot) / 2);
-        B.add(bevelBox(T, .55, yTop - yBot, .42, .05).rotateY(a * DEG).translate(p[0], p[1], p[2]), 'stoneShade');
+        B.add(bevelBox(T, .7, yTop - yBot, .46, .06).rotateY(a * DEG).translate(p[0], p[1], p[2]), tone);
         const cap = at(a, r - face * .3, yTop - .35); B.add(bevelBox(T, .8, .5, .7, .06).rotateY(a * DEG).translate(cap[0], cap[1], cap[2]), 'stone');
       }
       for (const [yy, th, mat] of [[yTop - .12, .24, 'stoneShade'], [yBot + .18, .36, 'stoneShade']]) {
         const st = []; for (let a = a0; a <= a1 + .01; a += 4) { const i = polar(a, r - face * .28), o = polar(a, r + face * .02); st.push({l: [i[0], yy + th / 2, i[1]], r: [o[0], yy + th / 2, o[1]], b: yy - th / 2}); }
         const g = B.stripGeo(st); B.add(g.top, mat); B.add(g.sides, mat);
       }
-      for (const off of [.35, .6]) {
-        const pts = []; for (let a = a0 + 2; a <= a1 - 2; a += 6) pts.push(V(at(a, r - face * .3, yBot + (yTop - yBot) * off)));
-        B.add(new T.TubeGeometry(new T.CatmullRomCurve3(pts), pts.length * 3, .11, 6), off < .5 ? 'verdigris' : 'copper');
+      // carved growth-ring relief: three shallow bands, the tree's years cut into the stone
+      for (const off of [.3, .52, .74]) {
+        const st = []; for (let a = a0; a <= a1 + .01; a += 4) { const yy = yBot + (yTop - yBot) * off + .08 * Math.sin(a * .21), i = polar(a, r - face * .06), o = polar(a, r + face * .02); st.push({l: [i[0], yy + .06, i[1]], r: [o[0], yy + .06, o[1]], b: yy - .06}); }
+        const g = B.stripGeo(st, {capStart: false, capEnd: false}); B.add(g.sides, off === .52 ? 'barkShade' : tone === 'stoneShade' ? 'stoneCool' : 'stoneDeep');
       }
       // bell niches in alternate bays: dark recess, stone arch, small bell, lantern
       for (let a = a0 + 24; a < a1 - 9; a += 60) {
@@ -738,11 +743,20 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
       }
     };
     riser(H.high.r0, H.high.y, H.mid.y, 100.5, 349.5, 1);
-    riser(H.mid.r0, H.mid.y, H.low.y, 100.5, MIDW.a0, 1); riser(H.mid.r0, H.mid.y, H.low.y, MIDW.a1, 349.5, 1); riser(MIDW.r0, H.mid.y, H.low.y, MIDW.a0, MIDW.a1, 1);
+    riser(H.mid.r0, H.mid.y, H.low.y, 100.5, MIDW.a0, 1, 'stoneCool'); riser(H.mid.r0, H.mid.y, H.low.y, MIDW.a1, 349.5, 1, 'stoneCool'); riser(MIDW.r0, H.mid.y, H.low.y, MIDW.a0, MIDW.a1, 1, 'stoneCool');
+    // root masses descending the ring faces between the niches (hugging the wall; visible, solid)
+    for (const [a, ring, k] of [[160, H.high, 1], [238, H.high, 2], [330, H.high, 3], [150, H.mid, 4], [262, H.mid, 5], [336, H.mid, 6]]) {
+      const yTop = ring.y, yBot = ring === H.high ? H.mid.y : H.low.y, r = ring.r0;
+      const pts = [at(a, r + .15, yTop + .35), at(a + 1.5, r - .2, yTop - 1.2), at(a - 1, r - .25, (yTop + yBot) / 2), at(a + 2, r - .3, yBot + .6), at(a + 4, r - .75, yBot + .05)];
+      B.add(taperTube(T, pts, .55, .22, 14, 8, .18, k * 3), 'bark');
+      B.add(taperTube(T, [at(a - 1, r - .2, yTop - 1.5), at(a - 4, r - .2, yTop - 2.6), at(a - 6, r - .45, yBot + .2)], .28, .1, 8, 6, .2, k * 3 + 1), 'bark');
+      for (const f of [.25, .75]) { const y = yTop + (yBot - yTop) * f; const c = at(a + .5, r - .25, y); gm.addCircle({id: 'hollow-root', x: c[0], z: c[2], r: .5, y0: yBot, y1: yTop}); }
+      mossDrape(T, B, ...at(a + 1, r - .1, yTop + .1), .9, 1.1, k * 11, a * DEG + Math.PI / 2);
+    }
     // gallery inner face: ribs following the ramp
     for (let a = 112; a < 318; a += 15) { const top = galY(a), p = at(a, H.gallery.r0 - .16, (top + H.high.y) / 2); if (top - H.high.y < 1) continue; B.add(bevelBox(T, .5, top - H.high.y, .38, .05).rotateY(a * DEG).translate(p[0], p[1], p[2]), 'stoneShade'); }
     // carved bell arches in the bark wall above the gallery (R-trunk-gallery)
-    for (let a = 118; a < 335; a += 26) {
+    for (let a = 124; a < 335; a += 52) {
       const y0 = galY(a) + 4.2, c = at(a, H.gallery.r1 - .25, y0);
       B.add(new T.BoxGeometry(2.6, .28, .7).rotateY(a * DEG).translate(...at(a, H.gallery.r1 - .4, y0 - .2)), 'timber');
       for (const side of [-1, 1]) { const q = at(a + side * 1.05 / H.gallery.r1 / DEG, H.gallery.r1 - .35, y0 + .75); B.add(new T.CylinderGeometry(.12, .14, 1.6, 6).translate(q[0], q[1], q[2]), 'stone'); }
@@ -977,7 +991,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     morningBellObject: V(at(bellAz, bellR, PLZ.y + 2.4)),
     maraLever: Pt(-79.6, 21.8, 0),
     maraLeverObject: V([leverP[0], 1.4, leverP[2]]),
-    maraOutlet: Pt(-74.6, 21.8, 0),
+    maraOutlet: Pt(-71.2, 21.7, 0),
     maraOutletMouth: V([outletP[0], .9, outletP[2]]),
     maraStand: Pt(-77, 22.2, 0),
     seedWheel: Pt(-81.8, 18.1, 0),
@@ -1107,8 +1121,9 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     // gantry at the A end (static): two posts and a beam; chains down to the deck ends (visual)
     const gl = at(0, 0, 0); void gl;
     const nx = Math.cos(yaw), nz = -Math.sin(yaw);
-    for (const sx of [-1, 1]) { const px = a[0] + nx * sx * (w / 2 + .5), pz = a[2] + nz * sx * (w / 2 + .5); B.add(new T.CylinderGeometry(.13, .17, 3.3, 7).translate(px, a[1] + 1.65, pz), 'timber'); gm.addCircle({id: id + '-post', x: px, z: pz, r: .2, y0: a[1], y1: a[1] + 3.3}); }
-    B.add(beam(T, [a[0] + nx * (w / 2 + .6), a[1] + 3.2, a[2] + nz * (w / 2 + .6)], [a[0] - nx * (w / 2 + .6), a[1] + 3.2, a[2] - nz * (w / 2 + .6)], .2, .2), 'timber');
+    // one short pivot post with a verdigris hinge collar (no tall gantry framing the foreground)
+    { const px = a[0] + nx * (w / 2 + .35), pz = a[2] + nz * (w / 2 + .35); B.add(new T.CylinderGeometry(.16, .2, 1.3, 8).translate(px, a[1] + .65, pz), 'timberDark'); B.add(new T.TorusGeometry(.2, .06, 5, 12).rotateX(Math.PI / 2).translate(px, a[1] + .9, pz), 'verdigris'); B.add(new T.CylinderGeometry(.24, .28, .18, 8).translate(px, a[1] + 1.35, pz), 'copper'); gm.addCircle({id: id + '-post', x: px, z: pz, r: .24, y0: a[1], y1: a[1] + 1.45}); }
+
     // reset lever beside the gantry
     const lever = [a[0] - nx * (w / 2 + .5) - Math.sin(yaw) * 1.2, a[1], a[2] - nz * (w / 2 + .5) - Math.cos(yaw) * 1.2];
     if (withLever) {

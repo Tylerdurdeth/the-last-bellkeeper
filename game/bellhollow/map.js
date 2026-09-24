@@ -21,7 +21,7 @@ export const MAP_LEVELS = [
 const ZONE_NAMES = { terrace: 'Canopy Terrace', loft: 'The Lantern Loft', sails: 'Mill of Sails', pipes: 'Mill of Pipes', ladders: 'Mill of Ladders', skybridge: 'The Sky Bridge', hollow: 'The Hollow', well: 'The Guardian Well' };
 const INK = '#2A1E1C', PAPER = '#F1E4C4', PAPER_D = '#E2CFA3', CORAL = '#D96956', GOLD = '#E9B949', VERD = '#3E9C8C', COPPER = '#B8733F', TIMBER = '#7A4E33', WIND = '#8FD3E0';
 
-export function createMap({ THREE: T, renderer, scene, world, canvas, look = null, hide = [], size = 896, lowTier = null, fogCells = 72, revealRadius = 11 } = {}) {
+export function createMap({ THREE: T, renderer, scene, world, canvas, look = null, hide = [], size = 896, lowTier = null, fogCells = 80, revealRadius = 14 } = {}) {
   const ctx = canvas.getContext('2d');
   const pts = world.points || {};
   // ---- world bounds from every anchor we know (square, padded) ----
@@ -76,20 +76,20 @@ export function createMap({ THREE: T, renderer, scene, world, canvas, look = nul
           if(uClipR>0. && length(w)>uClipR) a=0.;
           vec3 c=tone(s.rgb); float l=dot(c,vec3(.3,.59,.11)); float h=hgt(vUv);
           // watercolour wash: desaturate, lift, tint by level, soft 4-step value banding, pigment mottling
-          vec3 wash=mix(c*vec3(1.1,1.0,.82),uTint*(.5+.75*l),.5); wash=mix(wash,vec3(.97,.92,.8),.1);
+          vec3 wash=mix(c*vec3(1.1,1.0,.82),uTint*(.5+.75*l),.5); wash*=vec3(1.04,1.0,.94);
           float band=floor(l*4.+.5)/4.; wash*=mix(1.,.85+.3*band,.5);
           float m=noise(w*.9)*.6+noise(w*3.1)*.4; wash*=.9+.16*m;
           wash*=.78+.22*clamp((h-uY0)/max(1.,uY1-uY0)*1.6,0.,1.);                   // lower floors read a touch deeper
           // ink: colour edges + ledge (height) edges + silhouette edges
-          vec2 e=uTexel*1.3; float le=0.,he=0.,ae=0.;
+          vec2 e=uTexel*1.9; float le=0.,he=0.,ae=0.;
           for(int i=0;i<4;i++){ vec2 o=i==0?vec2(e.x,0.):i==1?vec2(-e.x,0.):i==2?vec2(0.,e.y):vec2(0.,-e.y);
             vec2 q=vUv+o; float aq=texture2D(tColor,q).a>0.001?1.:0.; vec2 wq=vec2(uB.x+q.x*uB.z,uB.y+(1.-q.y)*uB.z); if(uClipR>0.&&length(wq)>uClipR) aq=0.;
             ae=max(ae,abs(aq-a)); if(aq*a>0.){ le=max(le,abs(lum(q)-l)); he=max(he,abs(hgt(q)-h)); } }
-          float ink=smoothstep(.07,.2,le)*.55+smoothstep(.25,.6,he)*.9+ae;
+          float ink=smoothstep(.05,.15,le)*.75+smoothstep(.2,.5,he)*1.1+ae*1.2;
           ink*=.75+.25*noise(w*6.);
           vec3 inkC=vec3(.165,.118,.110);
-          vec3 col=mix(wash,inkC,clamp(ink,0.,1.)*.85);
-          gl_FragColor=vec4(col,max(a*.94,clamp(ae,0.,1.)*.9));
+          vec3 col=mix(wash,inkC,clamp(ink,0.,1.)*.95);
+          gl_FragColor=vec4(col,max(a,clamp(ae,0.,1.)));
         }`,
       depthTest: false, depthWrite: false,
     });
@@ -237,6 +237,8 @@ export function createMap({ THREE: T, renderer, scene, world, canvas, look = nul
     g.restore();
   }
 
+  // First look is inviting: the workshop yard and the start are already sketched in.
+  for (const p of [pts.mara || pts.maraStand, pts.start, pts.morningBell]) if (p) reveal(levelOf(p), p, 20);
   // ---------------- per tick ----------------
   function update(dt = 0, o = {}) {
     time += dt || 0;
@@ -253,10 +255,12 @@ export function createMap({ THREE: T, renderer, scene, world, canvas, look = nul
     const W = canvas.width, H = canvas.height, g = ctx, h = view.hero || { x: cx, y: 0, z: cz };
     const css = canvas.getBoundingClientRect?.().width || W, u = Math.max(1, W / Math.max(60, css));  // canvas px per CSS px
     const lvl = currentLevel(), yaw = view.camYaw || 0;
-    const metres = expanded ? 110 : 60, s = W / metres;
+    // Corner: a local view (~45 m) centred on the hero. Enlarged: the whole level, centred on its footprint.
+    const metres = expanded ? B.L * .78 : 45, s = W / metres;
+    const focus = expanded ? { x: cx, z: cz } : h;
     const rx = Math.cos(yaw), rz = -Math.sin(yaw), sy = Math.sin(yaw), cy = Math.cos(yaw);
     const ox = W / 2, oy = H * .54;
-    const a = s * rx, c = s * rz, b = s * sy, d = s * cy, e = ox - (a * h.x + c * h.z), f = oy - (b * h.x + d * h.z);
+    const a = s * rx, c = s * rz, b = s * sy, d = s * cy, e = ox - (a * focus.x + c * focus.z), f = oy - (b * focus.x + d * focus.z);
     const toScreen = p => [a * p.x + c * p.z + e, b * p.x + d * p.z + f];
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
     // paper
@@ -274,17 +278,17 @@ export function createMap({ THREE: T, renderer, scene, world, canvas, look = nul
     g.lineWidth = .45; g.setLineDash([.9, .7]); g.strokeStyle = 'rgba(42,30,28,.55)'; g.beginPath(); g.arc(0, 0, 10.4, 0, TAU); g.stroke(); g.setLineDash([]);
     g.restore();
     // landmarks (upright), only once their spot is discovered; other levels' landmarks are ghosted
-    const iconS = 17 * u, placed = [];
+    const small = !expanded && (canvas.getBoundingClientRect?.().width || 300) < 200, iconS = (small ? 25 : 17) * u, placed = [];
     const KEY = new Set(['house', 'mill', 'bridge', 'gate', 'well', 'bells', 'loft', 'wheel']);
     for (const m of landmarks()) {
       const seen = revealedAt(m.lvl, m.p); if (!seen) continue;
       const [x, y] = toScreen(m.p); if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
-      const other = m.lvl !== lvl; if (m.kind === 'fragment' && other) continue;
+      const other = m.lvl !== lvl; if (m.kind === 'fragment' && other) continue; if (small && (other || m.kind === 'carving' || m.kind === 'grille' && Math.hypot(m.p.x - h.x, m.p.z - h.z) > 12)) continue;
       g.globalAlpha = other ? .32 : 1;
       icon(g, m.kind, x, y, m.kind === 'grille' ? iconS * .75 : m.kind === 'mill' || m.kind === 'well' ? iconS * 1.25 : iconS, m);
       if (expanded && m.label && !other && KEY.has(m.kind)) {
         g.font = `600 ${Math.round(9.5 * u)}px Georgia, serif`; const tw = g.measureText(m.label).width, box = [x - tw / 2 - 2 * u, y + iconS * .62, tw + 4 * u, 12 * u];
-        if (!placed.some(r => r[0] < box[0] + box[2] && box[0] < r[0] + r[2] && r[1] < box[1] + box[3] && box[1] < r[1] + r[3]) && Math.hypot(x - ox, y - oy) > 18 * u) {
+        if (!placed.some(r => r[0] < box[0] + box[2] && box[0] < r[0] + r[2] && r[1] < box[1] + box[3] && box[1] < r[1] + r[3]) && Math.hypot(x - toScreen(h)[0], y - toScreen(h)[1]) > 18 * u) {
           placed.push(box); g.textAlign = 'center'; g.lineWidth = 3 * u; g.strokeStyle = 'rgba(241,228,196,.92)'; g.strokeText(m.label, x, y + iconS * 1.02); g.fillStyle = INK; g.fillText(m.label, x, y + iconS * 1.02); } }
       g.globalAlpha = 1;
     }
@@ -295,8 +299,8 @@ export function createMap({ THREE: T, renderer, scene, world, canvas, look = nul
       const k = .5 + .5 * Math.sin(time * 4);
       if (inside) { g.beginPath(); g.arc(x, y, (11 + k * 5) * u, 0, TAU); g.strokeStyle = CORAL; g.lineWidth = 3 * u; g.stroke(); g.beginPath(); g.arc(x, y, 4 * u, 0, TAU); g.fillStyle = CORAL; g.fill(); }
       else {
-        const ang = Math.atan2(y - oy, x - ox), t = Math.min(Math.abs((W / 2 - pad) / (Math.cos(ang) || 1e-6)), Math.abs((H * .46 - pad) / (Math.sin(ang) || 1e-6)));
-        x = ox + Math.cos(ang) * t; y = oy + Math.sin(ang) * t;
+        const [px0, py0] = toScreen(h), ang = Math.atan2(y - py0, x - px0), t = Math.min(Math.abs((W / 2 - pad) / (Math.cos(ang) || 1e-6)), Math.abs((H * .4 - pad) / (Math.sin(ang) || 1e-6)));
+        x = W / 2 + Math.cos(ang) * t; y = H * .54 + Math.sin(ang) * t;
         g.save(); g.translate(x, y); g.rotate(ang); g.beginPath(); g.moveTo(12 * u, 0); g.lineTo(-7 * u, -8 * u); g.lineTo(-3 * u, 0); g.lineTo(-7 * u, 8 * u); g.closePath();
         g.fillStyle = CORAL; g.globalAlpha = .75 + .25 * k; g.fill(); g.strokeStyle = INK; g.lineWidth = 1.5 * u; g.stroke(); g.restore(); g.globalAlpha = 1;
       }
@@ -304,7 +308,7 @@ export function createMap({ THREE: T, renderer, scene, world, canvas, look = nul
     }
     // player arrow (facing, camera-relative)
     const hy = view.heroYaw || 0, fa = Math.atan2(Math.sin(hy) * rx + Math.cos(hy) * rz, -(Math.sin(hy) * sy + Math.cos(hy) * cy));
-    g.save(); g.translate(ox, oy); g.rotate(fa); g.beginPath(); g.moveTo(0, -11 * u); g.lineTo(7.5 * u, 8 * u); g.lineTo(0, 4 * u); g.lineTo(-7.5 * u, 8 * u); g.closePath();
+    const [hx, hy2] = toScreen(h); g.save(); g.translate(hx, hy2); g.rotate(fa); g.beginPath(); g.moveTo(0, -11 * u); g.lineTo(7.5 * u, 8 * u); g.lineTo(0, 4 * u); g.lineTo(-7.5 * u, 8 * u); g.closePath();
     g.fillStyle = CORAL; g.fill(); g.strokeStyle = '#FFF4DE'; g.lineWidth = 3.4 * u; g.stroke(); g.strokeStyle = INK; g.lineWidth = 1.4 * u; g.stroke(); g.restore();
     drawFrame(g, W, H, u, lvl, yaw, h);
   }
@@ -360,7 +364,7 @@ export function createMap({ THREE: T, renderer, scene, world, canvas, look = nul
     setExpanded(b) { expanded = !!b; if (!expanded) manualLevel = null; },
     setLevel(i) { manualLevel = i == null ? null : Math.max(0, Math.min(2, i)); },
     serialize() { return { v: 1, n: fogCells, b: [B.x0, B.z0, B.L].map(v => +v.toFixed(2)), fog: fog.map(pack) }; },
-    restore(s) { if (!s || s.v !== 1 || s.n !== fogCells) return false; s.fog?.forEach((str, i) => { if (fog[i]) { unpack(str, fog[i]); fogDirty[i] = true; } }); return true; },
+    restore(s) { if (!s || s.v !== 1 || s.n !== fogCells) return false; s.fog?.forEach((str, i) => { if (fog[i]) { const t = new Uint8Array(fog[i].length); unpack(str, t); for (let k = 0; k < t.length; k++) fog[i][k] = Math.max(fog[i][k], t[k]); fogDirty[i] = true; } }); return true; },
     revealAll() { fog.forEach((f, i) => { f.fill(255); fogDirty[i] = true; }); },
     telemetry() { return { mode, bakeMs: +bakeMs.toFixed(1), level: MAP_LEVELS[currentLevel()].id, manual: manualLevel != null, bounds: B, discovered: fog.map(f => +(f.reduce((s, v) => s + (v > 128), 0) / f.length).toFixed(3)) }; },
     get levelImages() { return levelImg; },

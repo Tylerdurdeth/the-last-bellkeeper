@@ -31,7 +31,9 @@ leg('hollow gate -> carving out', P.hollowGate, P.carvingOut, pl); leg('carving 
 leg('carving return -> low ring', P.carvingReturn, P.ring1, pl); leg('low ring -> vane 1', P.ring1, P.vane1, pl);
 leg('mid ring -> vane 2', P.ring2, P.vane2, pl); leg('high ring -> vane 3', P.ring3, P.vane3, pl); leg('high ring -> bells', P.ring3, P.bellOut, pl);
 leg('finale spot -> morning bell', P.finaleSpot, P.morningBell, pl);
-for (const [k, from] of [['fragment1', V('loft').ledge], ['fragment2', V('loft').ledge], ['fragment3', V('ladders2').ledge]]) if (P[k]) leg('-> ' + k, from, P[k], pl);
+setState({ terraceGate: 1, sailsBridge: 1, pipesBridge: 1, frag2: 1, sailsCap: 1, pipesValve: 1 }, { terrace: .8, sails: 1, pipes: 1, ladders: 1, skyBridge: 1 }); pl = planner();
+const fromFor = { fragment1: V('frag1')?.ledge || V('loft').ledge, fragment2: V('loft').ledge, fragment3: V('ladders2').ledge };
+for (const k of ['fragment1', 'fragment2', 'fragment3']) if (P[k]) { let ok = false; for (const f of [fromFor[k], V('ladders3').ledge, V('ladders1').ledge, V('loft').ledge]) { const r = pl.plan(f, P[k]); if (r.ok) { ok = true; legs.push({ label: '-> ' + k, ok, len: r.path.length / 2, jumps: r.path.filter(p => p.kind === 'jump').length, drops: 0, ms: 0 }); break; } } if (!ok) { legs.push({ label: '-> ' + k, ok }); fails.push(k + ': unreachable from its gate'); } }
 console.table(legs);
 const walk = legs.filter(l => l.ok).reduce((s, l) => s + l.len, 0);
 console.log(`on-foot total ${walk.toFixed(0)} m across ${legs.length} legs`);

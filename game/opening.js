@@ -1,8 +1,8 @@
 // Illustrated prologue; never mutates movement, saves or campaign progression.
 export const STORY=[
- {heading:'A village built on a breath.',text:'Bellhollow grows in the arms of one colossal tree. Paired bells borrow its wind: it turns the mills, lifts the bridges and wakes the morning.'},
- {heading:'This morning, silence.',text:'The windmills have stopped. Deep in the Hollow, an old guardian has shuttered the windworks. The tree is holding its breath.'},
- {heading:'One keeper. One apprentice.',text:'Mara can hold the bypass open for a while. Her bell staff is yours now—and somewhere below, the wind is trying to say something.'}
+ {heading:'A village built on a breath.',text:'Bellhollow grows in the arms of one colossal tree and borrows its wind for mills, bridges and bells. This morning the lanterns hang slack, the pinwheels have stopped, and the morning bell will not sing.'},
+ {heading:'The Hollow is sealed.',text:'Deep inside the tree, the old guardian has swung the carved doors of the windworks shut. Nobody in the village knows why.'},
+ {heading:'One keeper. One apprentice.',text:'Mara can hold the bypass open for a while. She hands you her bell staff — and somewhere below, the wind is trying to say something.'}
 ];
 export function createOpening(){
  const $=s=>document.querySelector(s);let card=-1;

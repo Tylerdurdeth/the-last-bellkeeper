@@ -13,6 +13,7 @@ import {createWind} from './bellhollow/wind.js';
 import {createQuest} from './bellhollow/quest.js';
 import {buildBellhollow as buildStubWorld} from './bellhollow/stub-world.js';
 import {MODULES} from './bellhollow/manifest.js';
+import {createMap} from './bellhollow/map.js';
 import {adaptWorld} from './bellhollow/adapt-world.js';
 import buildMara from './assets/bh-mara.js';
 import buildPairedBells from './assets/bh-paired-bells.js';
@@ -31,13 +32,13 @@ const DEFAULT_YAW=Math.atan2(.615,.788);let cameraYaw=DEFAULT_YAW,cameraDrag=nul
 let hero,movement,animator,world,wind,quest,look=null,staff,staffHand,mara,captionEnd=0,context=null,travel=0,fps=60,start3=[0,0,0];
 let saveTimer=0,introTime=0,introActive=false,lastShot=-1,queued=null,uiTimer=0,endingAt=0,liftLead=0;
 // Game feel: hit-stop (sim frozen, render continues), camera kick, finale arrival blend; Mara acting.
-let crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
+let map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
 // Camera spring arm, subject framing and chart tucking state (see frame()).
 let armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
 const loadedSave=readSave(),legacy=!loadedSave&&hasLegacySave();
 const CARD=7,CARDS=3*CARD,ENGINE=20;// prologue cards, then the 20 s in-engine intro
-function save(){if(!state.started||introActive||!quest||quest.finaleActive||!movement)return;const c=movement.checkpoint;writeSave({quest,checkpoint:[c.x,c.y,c.z]});}
+function save(){if(!state.started||introActive||!quest||quest.finaleActive||!movement)return;const c=movement.checkpoint;writeSave({quest,checkpoint:[c.x,c.y,c.z],map});}
 const art=createArtDirection(T,renderer);
 function later(delay,text,duration=5,then){queued={at:state.t+delay,text,duration,then};}
 function caption(text,duration=4){$('#caption').textContent=text;$('#caption').style.opacity=captionsEnabled&&text?'1':'0';captionEnd=state.t+Math.max(duration,Math.min(9,text.length/19));}
@@ -62,8 +63,12 @@ function updateUI(){
 function start(skipIntro=false){if(!movement)return;unlockTitleMusic();opening.begin(skipIntro);if(skipIntro)titleMusic.fadeOut(2);state.started=true;state.paused=false;$('#title').hidden=true;$('#legacyNote').hidden=true;for(const id of ['hud','charge','controls','hint','map','mapToggle'])$('#'+id).hidden=false;introActive=!skipIntro;introTime=0;lastShot=-1;$('#skipIntro').hidden=!introActive;document.body.classList.toggle('cinematic',introActive);caption('',0);soundscape.start().then(()=>sound('start')).catch(()=>{$('#audioUnlock').hidden=false;});if(matchMedia('(any-pointer: coarse)').matches)$('#audioUnlock').hidden=false;updateUI();}
 // Skipping and finishing converge here, so both leave exactly the same game state.
 function endIntro(){if(!introActive)return;opening.end();titleMusic.fadeOut(2.8);introActive=false;$('#skipIntro').hidden=true;document.body.classList.remove('cinematic');snapCamera();movement?.update(0,{enabled:state.started&&!state.paused});if(!quest.progress.bell)caption('Mara: “Morning round, apprentice. Ring the bell by the path.”',6);save();}
-function continueGame(){const d=readSave();if(!d)return;quest.restore(d.quest);movement.reset(d.checkpoint);animator.reset();start(true);snapCamera();state.complete=quest.progress.complete;caption(quest.progress.complete?'Bellhollow is breathing. Wander as long as you like.':'Bellhollow remembers where you left it.',4);}
-function pause(on){if(!state.started)return;state.paused=on;soundscape.setPaused(on);titleMusic.setPaused(on);$('#pausePanel').hidden=!on;$('#resume').textContent='Resume';$('#reset').hidden=false;mapCanvas.hidden=on;$('#mapToggle').hidden=on;if(on){save();mapCanvas.classList.remove('expanded');$('#mapToggle').setAttribute('aria-expanded','false');chartUI();}}
+// First safe spot among the candidates, with the world brought to the current state first (so a bridge stage
+// that is not built yet counts as missing floor, and a barrier that is up counts as blocking).
+function safeSpot(first){world.update(0,state.t,{wind:wind.state(),restored:quest.restoration,gentle:state.gentle,progress:quest.progress});
+ for(const c of [first,...quest.safeAnchors()])if(c&&movement.isSafe(c))return Array.isArray(c)?c:[c.x,c.y,c.z];return start3;}
+function continueGame(){const d=readSave();if(!d)return;quest.restore(d.quest);try{map?.restore?.(d.map);}catch(e){console.warn(e);}movement.reset(safeSpot(d.checkpoint));animator.reset();start(true);snapCamera();state.complete=quest.progress.complete;caption(quest.progress.complete?'Bellhollow is breathing. Wander as long as you like.':'Bellhollow remembers where you left it.',4);}
+function pause(on){if(!state.started)return;state.paused=on;soundscape.setPaused(on);titleMusic.setPaused(on);$('#pausePanel').hidden=!on;$('#resume').textContent='Resume';$('#reset').hidden=false;$('#safeSpot').hidden=false;mapCanvas.hidden=on;$('#mapToggle').hidden=on;if(on){save();mapCanvas.classList.remove('expanded');$('#mapToggle').setAttribute('aria-expanded','false');chartUI();}}
 function beginAction(kind,target,callback){state.action=kind;state.actionTime=0;state.actionTarget=(target||movement.position).clone();state.actionCallback=callback;if(kind==='pull')sound('chime');}
 function staffTip(){if(!staff?.visible)return movement.position.clone().setY(movement.position.y+1.5);return staff.localToWorld(tmpB.set(0,1.15,0)).clone();}
 function action(){if(!state.started||state.paused||state.action||introActive||quest?.finaleActive)return;
@@ -83,7 +88,7 @@ function questEvent(_progress,e={}){
 $('#storyNext').onclick=()=>{if(introActive&&introTime<CARDS)introTime=Math.min(CARDS,(Math.floor(introTime/CARD)+1)*CARD);};
 $('#startb').onclick=()=>{if(loadedSave)clearSave();start();};$('#continueb').onclick=continueGame;$('#skipIntro').onclick=()=>{if(quest?.finaleActive)quest.skipFinale();else endIntro();};$('#action').onclick=action;$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>pause(false);$('#keepExploring').onclick=()=>$('#ending').hidden=true;
 $('#creditsb').onclick=()=>$('#creditsPanel').hidden=false;$('#closeCredits').onclick=()=>$('#creditsPanel').hidden=true;
-$('#settingsb').onclick=()=>{$('#pausePanel').hidden=false;$('#resume').textContent='Back';$('#reset').hidden=true;};
+$('#settingsb').onclick=()=>{$('#pausePanel').hidden=false;$('#resume').textContent='Back';$('#reset').hidden=true;$('#safeSpot').hidden=true;};
 $('#resume').onclick=()=>{if(state.started)pause(false);else $('#pausePanel').hidden=true;};
 $('#subtitles').onclick=()=>{captionsEnabled=!captionsEnabled;localStorage.setItem('bellkeeper-captions',captionsEnabled?'1':'0');$('#subtitles').textContent='Captions: '+(captionsEnabled?'on':'off');if(!captionsEnabled)$('#caption').style.opacity='0';};
 // Movement is also an explicit skip gesture. Preserve that first input instead
@@ -93,6 +98,7 @@ addEventListener('keydown',e=>{if(introActive&&['ArrowUp','ArrowDown','ArrowLeft
 $('#audioUnlock').onclick=()=>soundscape.resume().then(()=>{$('#audioUnlock').hidden=true;sound('start');}).catch(()=>{});
 for(const id of ['controls','world'])$('#'+id).addEventListener('pointerdown',()=>{if(state.started)soundscape.resume().then(()=>$('#audioUnlock').hidden=true).catch(()=>{});},{passive:true});
 $('#sound').onclick=()=>{state.muted=!state.muted;soundscape.setMuted(state.muted);titleMusic.setMuted(state.muted);titleSoundLabel();localStorage.setItem('bellkeeper-muted',state.muted?'1':'0');updateUI();};$('#motion').onclick=()=>{state.gentle=!state.gentle;localStorage.setItem('bellkeeper-gentle',state.gentle?'1':'0');updateUI();};
+$('#safeSpot').onclick=()=>{if(!state.started)return;const c=movement.checkpoint;movement.reset(safeSpot([c.x,c.y,c.z]));animator.reset();snapCamera();pause(false);caption('A little current carries you back to safe ground.',3);sound('capture');};
 $('#reset').onclick=()=>{bellOutT=bellRetT=null;opening.end();titleMusic.fadeOut(1);Object.assign(state,{complete:false,action:null,actionCallback:null});quest.reset();clearSave();queued=null;introActive=false;$('#skipIntro').hidden=true;document.body.classList.remove('cinematic');$('#ending').hidden=true;cameraYaw=DEFAULT_YAW;movement.reset(start3);animator.reset();travel=0;snapCamera();pause(false);updateUI();save();caption('Another morning. The bell is waiting by the path.',4);};
 addEventListener('keydown',e=>{if(e.code==='Space'&&state.started&&!introActive){e.preventDefault();if(!e.repeat)action();}if(e.code==='Escape')pause(!state.paused);});// Touch browsers can blur the window during native gestures while still visible.
 // Actual backgrounding is handled by visibilitychange on every device.
@@ -122,24 +128,15 @@ function actMara(dt,p){const set=mara.userData.setPose,to=mara.userData.headTowa
 function findContext(){const p=movement.position;context=state.action||quest.finaleActive?context:quest.context(p,movement.yaw);
  $('#action').disabled=!context||!!state.action;$('#action').innerHTML=(context?.label||'Look around')+' <span>SPACE</span>';$('#action').dataset.kind=context?.kind||'';}
 // Camera-aligned Bellhollow chart: anchors, mills, the Hollow gate and the current objective.
+// Illustrated chart (game/bellhollow/map.js): update every HUD tick (fog of war reveals even while tucked), draw when visible.
 function drawMap(){
+ if(!map)return;
+ map.update(.2,{hero:movement.position,heroYaw:movement.yaw,camYaw:cameraYaw,objective:quest.objectiveTarget(),progress:quest.progress,fragments:quest.serialize().fragments});
  if(!mapCtx||mapCanvas.hidden||document.body.classList.contains('chart-tucked')&&!mapCanvas.classList.contains('expanded'))return;
- const c=mapCtx,W=mapCanvas.width,H=mapCanvas.height,p=movement.position,pts=world.points,s=W/(mapCanvas.classList.contains('expanded')?70:52);
- const rx=Math.cos(cameraYaw),rz=-Math.sin(cameraYaw),fx=-Math.sin(cameraYaw),fz=-Math.cos(cameraYaw);
- const at=q=>{const dx=q.x-p.x,dz=q.z-p.z;return [W/2+(dx*rx+dz*rz)*s,H*.56-(dx*fx+dz*fz)*s];};
- c.setTransform(1,0,0,1,0,0);c.fillStyle='#eee0bb';c.fillRect(0,0,W,H);c.lineWidth=3;
- const dot=(q,r,fill,stroke='#243e37')=>{const [x,y]=at(q);c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=fill;c.fill();c.strokeStyle=stroke;c.stroke();return [x,y];};
- const label=(q,text,dy=-22)=>{const [x,y]=at(q);c.font='600 20px system-ui';c.textAlign='center';c.fillStyle='#243e37';c.fillText(text,x,y+dy);};
- for(const v of world.vents||[]){const [x,y]=at(v);c.beginPath();c.arc(x,y,(v.radius||1)*s,0,Math.PI*2);c.strokeStyle='#3e9c8c';c.lineWidth=4;c.stroke();}
- const pr=quest.progress;
- for(const [k,name] of [['millSails','Sails'],['millPipes','Pipes'],['millLadders','Ladders']]){const done=pr[{millSails:'sails',millPipes:'pipes',millLadders:'ladders'}[k]];dot(pts[k],13,done?'#e9b949':'#cdbb95');label(pts[k],name);}
- dot(pts.mara,11,'#d96956');label(pts.mara,'Mara');dot(pts.morningBell,10,'#b8733f');dot(pts.hollowGate,13,'#2c4a45');label(pts.hollowGate,'Hollow');
- const goal=quest.objectiveTarget();if(goal){const [x,y]=at(goal),k=.5+.5*Math.sin(state.t*4);c.beginPath();c.arc(Math.max(16,Math.min(W-16,x)),Math.max(16,Math.min(H-16,y)),16+k*6,0,Math.PI*2);c.strokeStyle='#d96956';c.lineWidth=5;c.stroke();}
- const [hx,hy]=[W/2,H*.56],a=Math.atan2(Math.sin(movement.yaw)*rx+Math.cos(movement.yaw)*rz,Math.sin(movement.yaw)*fx+Math.cos(movement.yaw)*fz);
- c.save();c.translate(hx,hy);c.rotate(a);c.beginPath();c.moveTo(0,-18);c.lineTo(12,14);c.lineTo(0,7);c.lineTo(-12,14);c.closePath();c.fillStyle='#d96956';c.fill();c.strokeStyle='#243e37';c.lineWidth=3;c.stroke();c.restore();
+ map.draw();
 }
 // While the chart would cover the scene's subject it tucks into a corner button; the player can still open it.
-function chartUI(){const expanded=mapCanvas.classList.contains('expanded'),b=$('#mapToggle');document.body.classList.toggle('chart-tucked',chartTuck&&!chartOverride&&!expanded);document.body.classList.toggle('chart-shown',chartTuck&&chartOverride);b.textContent=chartTuck&&!expanded?(chartOverride?'Tuck chart':'Show chart'):expanded?'Close chart':'Enlarge chart';b.setAttribute('aria-expanded',String(expanded||chartTuck&&chartOverride));}
+function chartUI(){const expanded=mapCanvas.classList.contains('expanded'),b=$('#mapToggle');document.body.classList.toggle('chart-tucked',chartTuck&&!chartOverride&&!expanded);document.body.classList.toggle('chart-shown',chartTuck&&chartOverride);b.textContent=chartTuck&&!expanded?(chartOverride?'Tuck chart':'Show chart'):expanded?'Close chart':'Enlarge chart';b.setAttribute('aria-expanded',String(expanded||chartTuck&&chartOverride));map?.setExpanded?.(mapCanvas.classList.contains('expanded'));}
 $('#mapToggle').onclick=()=>{if(chartTuck&&!mapCanvas.classList.contains('expanded'))chartOverride=!chartOverride;else mapCanvas.classList.toggle('expanded');chartUI();drawMap();};
 function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
 // Drag empty scenery to look around; movement remains relative to the camera.
@@ -219,7 +216,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
   if(pairedBells?.userData.phrase){const ph=pairedBells.userData.phrase,a=bellOutT===null?null:ph(state.t-bellOutT,{gentle:state.gentle}),b=bellRetT===null?null:ph(state.t-bellRetT+1.7,{gentle:state.gentle});pairedBells.userData.setSwing?.({out:a?.out??0,ret:b?.ret??0});}
   if(state.started){findContext();if((uiTimer-=dt)<=0){uiTimer=.2;updateUI();drawMap();}for(const foot of animator.footfalls)sound('step');if(wasGrounded&&!movement.grounded&&movement.verticalVelocity>0&&!movement.lifting)sound('jump');if(!wasGrounded&&movement.grounded)sound('land');}wasGrounded=movement.grounded;
   $('#skipIntro').hidden=!(introActive||quest.finaleActive);$('#skipIntro').textContent=quest.finaleActive?'Skip':'Skip · or move to begin';document.body.classList.toggle('cinematic',introActive||quest.finaleActive);
-  if(state.complete&&endingAt&&state.t>=endingAt){endingAt=0;$('#ending').hidden=false;$('#endingDetail').textContent=`${quest.telemetry().fragments}/3 bell fragments found.`;}
+  if(state.complete&&endingAt&&state.t>=endingAt){endingAt=0;$('#ending').hidden=false;{const q=quest.telemetry();$('#endingDetail').textContent=q.keepsake?'The little keeper’s bell rang the whole return phrase. 3/3 fragments.':`${q.fragments}/3 bell fragments found.`;}}
   if(state.t>captionEnd)$('#caption').style.opacity='0';
  }
  // ---- camera ----
@@ -258,10 +255,10 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  if(state.started&&(hudTimer-=dt)<=0){hudTimer=.15;safe=hudSafe();updateChart(pos);}
  wind.flush();
  const area=quest.area(pos);
- if(look){try{look.update(dt,{area:LOOK_AREAS[area]||'terrace-dawn',restored:quest.restoration.village||0,t:state.t});look.render();}catch(e){console.warn('look failed; plain renderer from now on',e);look=null;renderer.render(scene,camera);}}else renderer.render(scene,camera);
+ if(look){try{look.setFocus?.({hero:hero.position,heroObject:hero,extra:mara?[mara.position]:[]});look.update(dt,{area:LOOK_AREAS[area]||'terrace-dawn',restored:quest.restoration.village||0,t:state.t,gentle:state.gentle});look.render();}catch(e){console.warn('look failed; plain renderer from now on',e);look=null;renderer.render(scene,camera);}}else renderer.render(scene,camera);
  window.__READY__=true;
  const qt=quest.telemetry();
- window.__GAME__={pos:[pos.x,pos.z],y:pos.y,fps,speed:movement.speed,mode:movement.mode,grounded:movement.grounded,lifting:movement.lifting,knocked:movement.knocked,score:state.complete?1:0,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:wind.charged,chargeKind:wind.charge?.kind??null,paused:state.paused,started:state.started,introActive,introTime,introPhase:shot?SHOTS[shot.index].focus:null,context:context?.kind||null,contextId:context?.id||null,contextLabel:context?.label||null,objective:quest.objective(),area,quest:qt,wind:wind.telemetry(),restoration:{...quest.restoration},finaleTime:quest.finaleTime,finaleActive:quest.finaleActive,recoveredCount,travel,checkpoint:movement.checkpoint.toArray(),cameraYaw,stubWorld:!!world.stub,look:!!look,version:2};
+ window.__GAME__={pos:[pos.x,pos.z],y:pos.y,fps,speed:movement.speed,mode:movement.mode,grounded:movement.grounded,lifting:movement.lifting,knocked:movement.knocked,score:state.complete?1:0,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:wind.charged,chargeKind:wind.charge?.kind??null,paused:state.paused,started:state.started,introActive,introTime,introPhase:shot?SHOTS[shot.index].focus:null,context:context?.kind||null,contextId:context?.id||null,contextLabel:context?.label||null,objective:quest.objective(),area,quest:qt,wind:wind.telemetry(),restoration:{...quest.restoration},finaleTime:quest.finaleTime,finaleActive:quest.finaleActive,recoveredCount,freed:movement.freed,blocked:!!world.blocked(pos.x,pos.z,.23,pos.y),travel,checkpoint:movement.checkpoint.toArray(),cameraYaw,stubWorld:!!world.stub,look:!!look,version:2};
 }
 async function loadWorld(){
  if((MODULES.world||params.get('world')==='1')&&!params.has('stub')){try{const m=await import('./bellhollow/world.js');return adaptWorld(await m.buildBellhollow({THREE:T,scene,loadAsset:ASSET,art}),{THREE:T});}catch(e){console.warn('Bellhollow world failed to build; using the stub world.',e);}}
@@ -280,9 +277,9 @@ try{
  mara.name='mara';mara.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=true;});mara.position.set(P.mara.x,P.mara.y,P.mara.z);mara.rotation.y=Math.atan2(P.start.x-P.mara.x,P.start.z-P.mara.z);scene.add(mara);
  movement=createMovement(T,{start:start3,sampleGround:(x,z,y)=>world.ground(x,z,y),blocked:(x,z,r,y)=>world.blocked(x,z,r,y),stickElement:$('#stick'),jumpButton:$('#jump'),runButton:$('#run'),walkSpeed:1.65,runSpeed:5.8,acceleration:12,deceleration:16,turnResponse:12,cameraYaw:()=>cameraYaw,maxDrop:14});
  animator=createAdventureMotion(character,movement);hero.position.copy(movement.position);
- wind=createWind({THREE:T,scene,movement,sound});
+ wind=createWind({THREE:T,scene,movement,sound,fx:()=>look?.fx?.wind});
  look=await loadLook();
- quest=createQuest({THREE:T,scene,world,wind,movement,caption,sound,onChange:questEvent,...(createGuardian?{createGuardian:o=>createGuardian({...o,look})}:{})});if(look){for(const [o,role,opts] of [[hero,'character'],[mara,'character'],[quest.guardian?.object,'outline',{dynamic:true}],[pairedBells,'outline',{dynamic:true}]])try{if(o)look.applyTo(o,role,opts);}catch(e){console.warn(e);}
+ quest=createQuest({THREE:T,scene,world,wind,movement,caption,sound,onChange:questEvent,...(createGuardian?{createGuardian:o=>createGuardian({...o,look})}:{})});if(look){for(const [o,role,opts] of [[hero,'character'],[mara,'character'],[quest.guardian?.object,'outline',{dynamic:true,occluder:false}],[pairedBells,'outline',{dynamic:true}]])try{if(o)look.applyTo(o,role,opts);}catch(e){console.warn(e);}
   try{look.setAreaParams?.('hollow',{height:new T.Vector4(P.arena.y,P.hollowGate.y,.55,.62)});}catch(e){console.warn(e);}
   // Aim the valley backdrop so the far bell sits where the finale camera turns (sky azimuth: from -z toward +x).
   if(P.farBell)try{look.setBackdrop?.(new URL('./textures/v2/valley.webp',import.meta.url).href,{azimuthDeg:T.MathUtils.radToDeg(Math.atan2(P.farBell.x,-P.farBell.z))});}catch(e){console.warn(e);}}
@@ -294,6 +291,10 @@ try{
   for(const h of [1.55,1.0]){const target=new T.Vector3(p.x,p.y+h,p.z),dir=target.clone().sub(camera.position),dist=dir.length();ray.set(camera.position,dir.normalize());ray.far=dist-.3;for(const hit of ray.intersectObject(scene,true)){const o=hit.object,m=Array.isArray(o.material)?o.material[0]:o.material;if(!o.isMesh||!vis(o)||m?.transparent&&m.opacity<.5||m?.isMeshBasicMaterial&&!m.depthWrite||m?.isShaderMaterial)continue;blockers.push({name:o.name||o.parent?.name||'mesh',h,at:+hit.distance.toFixed(2),of:+dist.toFixed(2)});}}
   const head=new T.Vector3(p.x,p.y+1.55,p.z).project(camera);heroBox.min.set(p.x-.35,p.y,p.z-.35);heroBox.max.set(p.x+.35,p.y+1.75,p.z+.35);const g=quest.subject();
   return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe};};
+ // Lazy-load the prologue illustrations once the game is ready (not counted against start-up).
+ (window.requestIdleCallback||setTimeout)(()=>{for(const n of [1,2,3]){const i=new Image();i.src=new URL(`./textures/v2/card${n}.webp`,import.meta.url).href;}});
+ // Chart: bake from the live scene after the first rendered frame.
+ requestAnimationFrame(()=>{try{map=createMap({THREE:T,renderer,scene,world,canvas:mapCanvas,look,hide:[hero,mara,staff,pairedBells,quest.guardian?.object].filter(Boolean)});requestAnimationFrame(()=>{try{map.bake();}catch(e){console.warn('map bake failed',e);}});}catch(e){console.warn('map unavailable',e);map=null;}});
  $('#startb').disabled=false;$('#startb').textContent=loadedSave?'Start a new adventure':'Start adventure';$('#continueb').hidden=!loadedSave;updateUI();window.__START__=()=>start(true);
 }catch(e){console.error(e);$('#error').hidden=false;$('#error').textContent='Bellhollow could not load. '+e.message;}
 requestAnimationFrame(frame);

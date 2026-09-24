@@ -29,7 +29,8 @@ export function createToon(THREE) {
     bkFocusB: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) },
     bkFocusCount: { value: 0 },
     bkMist: { value: new THREE.Color('#E6ECE4') },       // mist colour for the painted under-canopy
-    bkTime: { value: 0 }, bkFlicker: { value: 1 }, bkDetail: { value: 1 },   // bkDetail 0 on fallback tiers: no weathering noise
+    bkTime: { value: 0 }, bkFlicker: { value: 1 }, bkDetail: { value: 1 },
+    bkSway: { value: .05 }, bkLeafTrans: { value: new THREE.Color('#F2D48A') },   // foliage wind amplitude (m), sunlit leaf translucency   // bkDetail 0 on fallback tiers: no weathering noise
     bkAerial: { value: new THREE.Vector3(18, 75, .22) }, bkAerialColor: { value: new THREE.Color('#B9CCD6') },   // mid-distance cool layer       // seconds; lantern-glass breathing (fx/fire.js)
   };
   const LUM = 'vec3(0.2126, 0.7152, 0.0722)';
@@ -112,15 +113,21 @@ vec3 bkHemi( const in HemisphereLight h, const in vec3 n ) {
 float bkFadeAmt = 0.0;
 #ifndef BK_NOFADE
 {
-  float bkIgn = fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
+  // Stable ordered dither (4×4 Bayer on 2-px cells): reads as an intentional see-through, not noise.
+  vec2 bkBp = mod( floor( gl_FragCoord.xy * 0.5 ), 4.0 );
+  vec4 bkR = bkBp.y < 0.5 ? vec4( 0.0, 8.0, 2.0, 10.0 ) : bkBp.y < 1.5 ? vec4( 12.0, 4.0, 14.0, 6.0 ) : bkBp.y < 2.5 ? vec4( 3.0, 11.0, 1.0, 9.0 ) : vec4( 15.0, 7.0, 13.0, 5.0 );
+  float bkIgn = ( ( bkBp.x < 0.5 ? bkR.x : bkBp.x < 1.5 ? bkR.y : bkBp.x < 2.5 ? bkR.z : bkR.w ) + 0.5 ) / 16.0;
+  // Floors, platforms, inlays, steps and low roofs never fade: flat surfaces fade only if > 1 m above the feet.
+  vec3 bkFN = normalize( cross( dFdx( vBkWorldPos ), dFdy( vBkWorldPos ) ) );
+  float bkFlatS = smoothstep( 0.45, 0.6, abs( bkFN.y ) );
   for ( int i = 0; i < 4; i ++ ) {
     if ( i >= bkFocusCount ) break;
     vec4 A = bkFocusA[ i ], B = bkFocusB[ i ];
     vec2 d = ( gl_FragCoord.xy - A.xy ) / vec2( A.w * B.y, A.w );
-    float inside = 1.0 - smoothstep( 0.45, 1.0, length( d ) );
-    float nearer = smoothstep( 0.4, 1.1, A.z - vViewPosition.z );
-    float above = smoothstep( B.x + 0.15, B.x + 0.6, vBkWorldPos.y );
-    float f = inside * nearer * above * B.z;
+    float inside = 1.0 - smoothstep( 0.35, 0.8, length( d ) );
+    float nearer = smoothstep( 1.0, 1.6, A.z - vViewPosition.z );
+    float allowed = max( 1.0 - bkFlatS, smoothstep( B.x + 1.0, B.x + 1.3, vBkWorldPos.y ) );
+    float f = inside * nearer * allowed * B.z;
     bkFadeAmt = max( bkFadeAmt, f );
     if ( f > bkIgn ) discard;
   }
@@ -172,6 +179,49 @@ float bkFadeAmt = 0.0;
   }
 }
 #endif`;
+  const LEAF_PARS_V = `
+attribute float aCrease; varying float vBkCrease; uniform float bkTime, bkSway;`;
+  const LEAF_SWAY = `
+    // Gentle sway: slow common gust + local flutter, stronger toward the top of a mass; stronger when restored.
+    {
+      vec4 bkSw = modelMatrix * vec4( transformed, 1.0 );
+      float bkPh = bkTime * 1.3 + bkSw.x * 0.35 + bkSw.z * 0.27;
+      vec3 bkOff = vec3( sin( bkPh ) + 0.35 * sin( bkTime * 3.1 + bkSw.y * 1.7 ), 0.0, 0.6 * cos( bkPh * 0.8 + bkSw.x * 0.2 ) ) * bkSway;
+      transformed += bkOff * ( 0.4 + 0.6 * clamp( normal.y * 0.5 + 0.5, 0.0, 1.0 ) );
+    }
+    vBkCrease = aCrease;`;
+  const LEAF_PARS_F = `
+varying float vBkCrease; uniform vec3 bkLeafTrans;
+float bkH3( vec3 p ) { return fract( sin( dot( p, vec3( 127.1, 311.7, 74.7 ) ) ) * 43758.5453 ); }
+float bkN3( vec3 p ) { vec3 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
+  return mix( mix( mix( bkH3( i ), bkH3( i + vec3( 1, 0, 0 ) ), f.x ), mix( bkH3( i + vec3( 0, 1, 0 ) ), bkH3( i + vec3( 1, 1, 0 ) ), f.x ), f.y ),
+              mix( mix( bkH3( i + vec3( 0, 0, 1 ) ), bkH3( i + vec3( 1, 0, 1 ) ), f.x ), mix( bkH3( i + vec3( 0, 1, 1 ) ), bkH3( i + vec3( 1, 1, 1 ) ), f.x ), f.y ), f.z ); }`;
+  // Ragged leafy silhouette at the MASS rim (alpha test) + painted leaf clusters/flecks + cool crease shadow.
+  const LEAF_ALBEDO = `
+{
+  vec3 bkVn = normalize( normal ); float bkRimL = 1.0 - abs( dot( bkVn, normalize( vViewPosition ) ) );
+  float bkLeaf = bkN3( vBkWorldPos * 2.6 ) * 0.6 + bkN3( vBkWorldPos * 6.0 ) * 0.4;
+  if ( bkRimL > 0.52 && bkLeaf < ( bkRimL - 0.52 ) * 2.1 ) discard;
+  // One mass, one palette ramp: albedo from the MASS normal height (sunlit tips → mid → cool underside), so the
+  // lobes' separate materials stop reading as coloured balls. The authored colour keeps 25% for variety.
+  float bkUpN = inverseTransformDirection( bkVn, viewMatrix ).y;
+  vec3 bkRamp = mix( vec3( 0.045, 0.105, 0.09 ), vec3( 0.11, 0.27, 0.08 ), smoothstep( -0.6, 0.15, bkUpN ) );   // deep blue-green → #5E8F4E
+  bkRamp = mix( bkRamp, vec3( 0.34, 0.5, 0.14 ), smoothstep( 0.45, 0.95, bkUpN ) );                               // → #A6C46A tips
+  diffuseColor.rgb = mix( bkRamp, diffuseColor.rgb, 0.25 );
+  float bkCl = bkN3( vBkWorldPos * 1.9 + 3.0 );
+  diffuseColor.rgb *= mix( 0.68, 1.14, smoothstep( 0.3, 0.72, bkCl ) ) * ( 1.0 + 0.12 * step( 0.72, bkLeaf ) );
+  float bkIn = smoothstep( 0.08, 0.5, vBkCrease );
+  diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * vec3( 0.42, 0.56, 0.62 ), bkIn * 0.8 );
+}`;
+  const LEAF_TRANS = `
+#if BK_ROLE == 4 && NUM_DIR_LIGHTS > 0
+  {
+    // Subsurface-ish translucency: looking toward the sun, the mass rim glows warm gold-green.
+    float bkBack = pow( saturate( dot( - geometryViewDir, directionalLights[ 0 ].direction ) ), 3.0 );
+    float bkEdge = 1.0 - saturate( dot( normal, geometryViewDir ) );
+    totalEmissiveRadiance += bkLeafTrans * diffuseColor.rgb * bkBack * ( 0.35 + 0.65 * bkEdge ) * 0.9;
+  }
+#endif`;
   const NOISE = `
 float bkHash( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
 float bkNoise( vec2 p ) { vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
@@ -222,6 +272,13 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
     f = f.replace('#include <fog_fragment>', FOG);
     f = f.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>' + FADE);
     if (info.role === 'mist') { f = f.replace('#include <common>', '#include <common>' + NOISE); f = f.replace('#include <color_fragment>', '#include <color_fragment>' + MIST); }
+    if (info.role === 'foliage') {
+      v = v.replace('#include <common>', '#include <common>' + LEAF_PARS_V);
+      v = v.replace('#include <begin_vertex>', '#include <begin_vertex>' + LEAF_SWAY);
+      f = f.replace('#include <common>', '#include <common>' + LEAF_PARS_F);
+      f = f.replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>' + LEAF_ALBEDO);
+      f = f.replace('#include <lights_fragment_end>', '#include <lights_fragment_end>' + LEAF_TRANS);
+    }
     if (info.surface) {
       shader.uniforms.bkSurf = { value: info.surface.v }; shader.uniforms.bkSurfTint = { value: info.surface.tint };
       f = '#define BK_SURFACE\n' + f;
@@ -311,5 +368,5 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
     });
     return n;
   }
-  return { uniforms: U, patch, patchObject, setTile, setNoFade, setSurface, isPatched: m => patched.has(m), roleOf: m => patched.get(m)?.role };
+  return { uniforms: U, patch, patchObject, setTile, setNoFade, setSurface, isPatched: m => patched.has(m), isNoFade: m => !!patched.get(m)?.noFade, roleOf: m => patched.get(m)?.role };
 }

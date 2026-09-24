@@ -11,9 +11,9 @@ export function readSave(storage = store()) {
   } catch { return null; }
 }
 export function hasLegacySave(storage = store()) { try { return !!storage?.getItem(LEGACY_KEY); } catch { return false; } }
-export function writeSave({ quest, checkpoint }, storage = store()) {
+export function writeSave({ quest, checkpoint, map = null }, storage = store()) {
   if (!Array.isArray(checkpoint) || checkpoint.length !== 3 || !checkpoint.every(Number.isFinite)) return false;
-  const data = { version: 2, quest: quest?.serialize() ?? {}, checkpoint: checkpoint.map(v => +v.toFixed(3)), savedAt: Date.now() };
+  const data = { version: 2, quest: quest?.serialize() ?? {}, map: map?.serialize?.() ?? null, checkpoint: checkpoint.map(v => +v.toFixed(3)), savedAt: Date.now() };
   try { storage.setItem(SAVE_KEY, JSON.stringify(data)); return true; } catch { return false; }
 }
 export function clearSave(storage = store()) { try { storage?.removeItem(SAVE_KEY); } catch {} }

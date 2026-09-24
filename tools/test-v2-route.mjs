@@ -9,7 +9,7 @@ import fs from 'node:fs/promises';
 import * as THREE from 'three';
 import { createPlanner } from './route-planner.mjs';
 import { adaptWorld } from '../game/bellhollow/adapt-world.js';
-const touch = process.argv.includes('--touch');
+const touch = process.argv.includes('--touch'), FRAGS = process.argv.includes('--fragments');
 const out = process.argv.find((a, i) => i > 1 && !a.startsWith('--')) || `evidence/v2/systems/route-${touch ? 'touch' : 'keyboard'}`;
 const query = (process.argv.find(a => a.startsWith('--query=')) || '--query=').slice(8);
 await fs.mkdir(out, { recursive: true });
@@ -92,7 +92,7 @@ async function travel(p, label, { tol = .6 } = {}) {
   for (let attempt = 0; attempt < 4; attempt++) {
     await waitFor(() => window.__GAME__.grounded && !window.__GAME__.knocked, 'grounded before planning', 8000);
     const g = await mirror(), from = { x: g.pos[0], y: g.y, z: g.pos[1] };
-    const planner = createPlanner(W), r = planner.plan(from, p);
+    const planner = createPlanner(W, { maxDrop: W.stub ? 9 : 5.5 }), r = planner.plan(from, p);
     if (!r.ok) throw Error(`No path for ${label}: ${r.reason} from ${JSON.stringify(from)} to ${JSON.stringify(p)}`);
     const wps = planner.waypoints(r.path);
     let fell = false;
@@ -120,16 +120,36 @@ async function press(expectId, label) {
 }
 async function waitSource(id, timeout = 15000) { await waitFor(s => window.__GAME__?.wind.sources.some(x => x.id === s), 'gust ' + id, timeout, id); return (await read()).wind.sources.find(s => s.id === id); }
 async function catchAt(id, name) { const s = await waitSource(id); await travel(s, 'catch ' + id, { tol: .5 }); await press(id); if (name) await burst(name, 3, 160); await waitFor(() => window.__GAME__.charged, 'charged ' + id, 3000); }
-async function giveAt(target, id, name) { await travel(target, 'give ' + id, { tol: .9 }); await press(id); if (name) await burst(name, 3, 200); }
+// Catch whichever live gust is nearest to where it will be used (skipping guardian breath).
+async function catchNearest(target, name) {
+  const g = await read(), list = g.wind.sources.filter(x => !/guardian/.test(x.id) && Math.abs(x.y - target.y) < 6);
+  list.sort((a, b) => Math.hypot(a.x - target.x, a.z - target.z) + Math.abs(a.y - target.y) * 3 - Math.hypot(b.x - target.x, b.z - target.z) - Math.abs(b.y - target.y) * 3);
+  console.log('  gusts near target:', list.slice(0, 3).map(s => s.id).join(','));
+  for (const s of list.slice(0, 3)) { try { return await catchAt(s.id, name); } catch (e) { console.log('  ', s.id, String(e.message).slice(0, 160)); result.steps.push({ label: 'could not use gust ' + s.id, err: String(e.message).slice(0, 80) }); } }
+  throw Error('No usable gust near ' + JSON.stringify(target));
+}
+async function giveAt(target, id, name) { await approach(target, 'give ' + id); await press(id); if (name) await burst(name, 3, 200); }
+// Walk to the target, or (if it hangs over void, like a sail) to reachable floor within `range`.
+async function approach(target, label, range = 4.5) {
+  const g = await mirror(), planner = createPlanner(W, { maxDrop: W.stub ? 9 : 5.5 }), from = { x: g.pos[0], y: g.y, z: g.pos[1] };
+  if (planner.snap(target) && planner.plan(from, target).ok) return travel(target, label, { tol: .9 });
+  let best = null;
+  for (let r = 1.2; r <= range && !best; r += .6) for (let i = 0; i < 16; i++) {
+    const a = i / 16 * Math.PI * 2, c = { x: target.x + Math.cos(a) * r, y: target.y, z: target.z + Math.sin(a) * r };
+    for (const dy of [0, -1, -2, 1]) { const q = { ...c, y: target.y + dy }; if (!planner.snap(q)) continue; const pl = planner.plan(from, q); if (pl.ok && (!best || pl.path.length < best.n)) best = { q, n: pl.path.length }; break; }
+  }
+  if (!best) throw Error('No standable spot near ' + label);
+  return travel(best.q, label, { tol: .6 });
+}
 async function ride(vent, name) {
   // Board the grille, wait for its column, rise, steer onto the ledge. Knocked off, or the column
   // ran out mid-steer (timed guardian columns)? Go back and ride the next one.
-  const deadline = Date.now() + 70000;
+  const deadline = Date.now() + 90000;
   for (let attempt = 0; ; attempt++) {
-    if (Date.now() > deadline) throw Error('never rode ' + vent.id + ' ' + JSON.stringify(await read()).slice(0, 400));
+    if (Date.now() > deadline) { const g = await read(); throw Error('never rode ' + vent.id + ' ' + JSON.stringify({ pos: g.pos, y: g.y, guardian: g.quest.guardian && { ph: g.quest.guardian.phase, beat: g.quest.guardian.beat, clock: g.quest.guardian.clock, rage: g.quest.guardian.rage, hold: g.quest.guardian.hold, spared: g.quest.guardian.spared }, vents: g.wind.vents })); }
     const r = await go(vent.x, vent.z, 'onto grille ' + vent.id, { tol: .3, walk: true });
     if (r.recovered) { await waitFor(() => !window.__GAME__.knocked && window.__GAME__.grounded, 'settle', 6000).catch(() => {}); continue; }
-    await page.waitForFunction((y, x, z, rr) => { const g = window.__GAME__; return g.lifting && g.y > y || Math.hypot(g.pos[0] - x, g.pos[1] - z) > rr; }, { timeout: 12000, polling: 50 }, vent.ledge.y + .3, vent.x, vent.z, (vent.radius || .8) + .3).catch(() => {});
+    await page.waitForFunction((y, x, z, rr) => { const g = window.__GAME__; return g.lifting && g.y > y || Math.hypot(g.pos[0] - x, g.pos[1] - z) > rr; }, { timeout: 20000, polling: 50 }, vent.ledge.y + .3, vent.x, vent.z, (vent.radius || .8) + .3).catch(() => {});
     let g = await read();
     if (!(g.lifting && g.y > vent.ledge.y + .3)) { await waitFor(() => !window.__GAME__.knocked && window.__GAME__.grounded, 'settle', 6000).catch(() => {}); continue; }
     if (name && attempt === 0) await burst(name, 2, 220);
@@ -140,6 +160,7 @@ async function ride(vent, name) {
     result.steps.push({ label: `fell short of ${vent.id} ledge (y ${g.y.toFixed(1)}), riding again` });
   }
 }
+async function maybePick(k) { if (!FRAGS || !P[k]) return; const g = await read(); if (Math.abs(g.y - P[k].y) > .6 || g.quest.fragments === undefined) return; try { await approach(P[k], k); await press(k); await burst(k, 1); } catch (e) { result.steps.push({ label: 'skipped ' + k, err: String(e.message).slice(0, 100) }); } }
 async function releaseInto(vent, name) { await travel(vent, 'grille ' + vent.id, { tol: .5 }); await press(vent.id, 'release into ' + vent.id); if (name) await burst(name, 2, 180); await ride(vent, name && name.replace('release', 'rise')); }
 
 // ---- boot ----
@@ -169,26 +190,64 @@ await releaseInto(vent('loft'), 'release-loft'); await sleep(300); await shot('l
 await catchAt(W.points.sailsSource ? 'sailsSource' : 'loftGust');
 await travel(P.sails?.bridgePush || { x: sail('sailsBridge').x + 3, y: P.loft.y, z: sail('sailsBridge').z }, 'bridge push spot', { tol: .8 }); await press('sailsBridge', 'push bridge'); await burst('push-bridge', 4, 220);
 await sleep(1500); await shot('bridge-placed');
+const cap = W.sails.find(x => x.id === 'sailsCap') || (P.sails?.capSail && { ...P.sails.capSail });
+if (cap) {
+  await catchAt('sailsGust'); await approach(W.points.millSails, 'mill (wrong order)'); await burst('mill-facing-away', 1);
+  await giveAt(cap, 'sailsCap', 'push-cap'); await sleep(1600); await shot('cap-turned');
+}
 await catchAt('sailsGust'); await giveAt(W.points.millSails, 'millSails', 'give-mill-sails'); await sleep(1200); await shot('mill-sails-restored'); beat('mill of sails');
+if (FRAGS) { // fragment 2 lives on this branch, behind a little push-sail
+  const fs2 = W.sails.find(x => x.id === 'frag2');
+  if (fs2) { await catchNearest(fs2); await giveAt(fs2, 'frag2', 'push-frag2'); await sleep(1500); }
+  await approach(P.fragment2, 'fragment 2'); await press('fragment2'); await burst('fragment-2', 1);
+}
 // ---- Mill of Pipes ----
-await catchAt(W.points.pipesSource ? 'pipesSource' : 'loftGust');
-await giveAt(wheel('pipesA'), 'pipesA', 'chain-pipes-a');
-await catchAt('chain:pipesA', 'catch-chain-a'); await shot('gap-crossed');
-await giveAt(wheel('pipesB'), 'pipesB', 'chain-pipes-b');
+// The valve gates the chain wheel it stands beside: one honest wrong attempt, then turn it.
+const valve = P.pipes?.valve || P.pipesValve;
+const valveWheel = valve ? ['pipesA', 'pipesB'].sort((a, b) => Math.hypot(valve.x - wheel(a).x, valve.z - wheel(a).z) - Math.hypot(valve.x - wheel(b).x, valve.z - wheel(b).z))[0] : null;
+const pipesSrc = W.points.pipesSource ? 'pipesSource' : 'loftGust';
+async function powerPipe(id, src, name) {
+  await catchAt(src);
+  if (id === valveWheel) {
+    await giveAt(wheel(id), id, 'wrong-outlet'); await sleep(1800); await shot('wrong-outlet-returns');
+    await travel(valve, 'valve', { tol: .9 }); await press('pipesValve', 'turn valve'); await burst('valve-turned', 1);
+    await catchAt(src);
+  }
+  await giveAt(wheel(id), id, name);
+}
+await powerPipe('pipesA', pipesSrc, 'chain-pipes-a');
+await catchAt('chain:pipesA', 'catch-chain-a'); await shot('gap-crossed'); await hold([]);
+await giveAtChain();
+async function giveAtChain() {
+  if (valveWheel === 'pipesB') { await giveAt(wheel('pipesB'), 'pipesB', 'wrong-outlet'); await sleep(1800); await shot('wrong-outlet-returns'); await travel(valve, 'valve', { tol: .9 }); await press('pipesValve', 'turn valve'); await catchAt('chain:pipesA'); }
+  await giveAt(wheel('pipesB'), 'pipesB', 'chain-pipes-b');
+}
 await catchAt('chain:pipesB'); await giveAt(W.points.millPipes, 'millPipes'); await sleep(1400); await shot('mill-pipes-restored'); beat('mill of pipes');
 // ---- Mill of Ladders ----
-await catchAt('laddersGust1'); await releaseInto(vent('ladders1'), 'release-ladders1');
-await catchAt('laddersGust2'); await releaseInto(vent('ladders2'), 'release-ladders2');
+await catchAt('laddersGust1'); await releaseInto(vent('ladders1'), 'release-ladders1'); await maybePick('fragment3');
+await catchAt('laddersGust2'); await releaseInto(vent('ladders2'), 'release-ladders2'); await maybePick('fragment3');
 await catchAt('laddersGust3'); await giveAt(sail('laddersShutter'), 'laddersShutter', 'push-shutter'); await sleep(800); await shot('shutter-countdown');
-await catchAt('laddersGust3'); await releaseInto(vent('ladders3'), 'release-ladders3');
+await catchAt('laddersGust3'); await releaseInto(vent('ladders3'), 'release-ladders3'); await maybePick('fragment3');
 await catchAt('laddersTop'); await giveAt(W.points.millLadders, 'millLadders'); await sleep(1400); await shot('mill-ladders-restored'); beat('mill of ladders');
+// ---- Optional fragments (--fragments) ----
+if (process.argv.includes('--fragments')) {
+  const fv = W.vents.find(v => v.id === 'frag1');
+  if (fv) { await catchNearest(fv); await releaseInto(fv, 'release-frag1'); }
+  await approach(P.fragment1, 'fragment 1'); await press('fragment1'); await burst('fragment-1', 1);
+  beat('fragments');
+}
 // ---- Sky bridge, Hollow gallery ----
 await travel(P.skyBridge, 'sky bridge start'); await shot('sky-bridge');
 await travel(P.hollowGate, 'hollow gate', { tol: 1.2 }); beat('hollow');
-await travel(P.carvingOut, 'carving out', { tol: 1 }); await press('carvingOut'); await shot('carving-out');
-await travel(P.carvingReturn, 'carving return', { tol: 1 }); await press('carvingReturn'); await shot('carving-return');
+const gsrc = P.gallery?.source || P.gallerySource, gc = P.gallery?.carvings || [];
+if (gsrc) {
+  await catchAt('gallerySource', 'catch-gallery'); await giveAt(gc[0]?.intake || gc[0]?.panel || P.carvingOut, 'carvingOut', 'carving-out-lights'); await sleep(1200); await shot('carving-out');
+  await catchAt('gallerySource'); await giveAt(gc[1]?.intake || gc[1]?.panel || P.carvingReturn, 'carvingReturn', 'carving-return-lights'); await sleep(1200); await shot('carving-return');
+} else { await travel(P.carvingOut, 'carving out', { tol: 1 }); await press('carvingOut'); await shot('carving-out'); await travel(P.carvingReturn, 'carving return', { tol: 1 }); await press('carvingReturn'); await shot('carving-return'); }
 await travel(P.ring1, 'down into the well', { tol: 1 }); beat('guardian');
 // ---- Guardian: dodge, catch its spent breath, turn the vanes ----
+// Vane per phase; the last one is on the top perch (the guardian's rings.top.vane when present).
+const vaneFor = k => { const r = P.guardianWell?.rings, top = r && !Array.isArray(r) && r.top?.vane; return k === 2 && top ? { x: top.x, y: top.y, z: top.z } : P['vane' + (k + 1)]; };
 for (let phase = 0; phase < 3; phase++) {
   if (phase === 1) await ride(vent('ring1'), 'ride-ring1');
   if (phase === 2) { await travel(vent('ring2'), 'pulse grille', { tol: .4 }); await ride(vent('ring2'), 'ride-pulse'); }
@@ -196,14 +255,19 @@ for (let phase = 0; phase < 3; phase++) {
   await waitFor(() => window.__GAME__.quest.guardian?.stage === 'exhale', 'exhale', 8000); await sleep(200); await shot(`guardian-exhale-${phase + 1}`);
   if ((await read()).knocked) { result.steps.push({ label: 'knocked back by the breath (safe, no progress lost)' }); await shot(`guardian-knock-${phase + 1}`); }
   await waitFor(() => !window.__GAME__.knocked, 'knock settled', 6000);
-  for (let tries = 0; tries < 4; tries++) {
-    const s = await waitSource('guardianBreath', 30000);
-    try { await travel(s, 'breath', { tol: .5 }); await press('guardianBreath'); await waitFor(() => window.__GAME__.charged, 'caught breath', 2500); break; }
-    catch (e) { if (tries === 3) throw e; result.steps.push({ label: 'missed the breath window, waiting for the next', err: String(e.message).slice(0, 120) }); await waitFor(() => !window.__GAME__.wind.sources.some(x => x.id === 'guardianBreath'), 'breath gone', 15000).catch(() => {}); }
+  for (let feed = 0; feed < 3 && (await read()).quest.guardian.phase < phase + 1; feed++) {
+    if (phase === 2 && feed === 0 && vent('ring3')) { await travel(vent('ring3'), 'perch grille', { tol: .4 }); await ride(vent('ring3'), 'ride-perch'); }
+    for (let tries = 0; tries < 4; tries++) {
+      const s = await waitSource('guardianBreath', 30000);
+      try { await travel(s, 'breath', { tol: .5 }); await press('guardianBreath'); await waitFor(() => window.__GAME__.charged, 'caught breath', 2500); break; }
+      catch (e) { if (tries === 3) throw e; result.steps.push({ label: 'missed the breath window, waiting for the next', err: String(e.message).slice(0, 120) }); await waitFor(() => !window.__GAME__.wind.sources.some(x => x.id === 'guardianBreath'), 'breath gone', 15000).catch(() => {}); }
+    }
+    if (!(await read()).charged) throw Error('never caught the guardian breath in phase ' + phase);
+    await burst(`guardian-catch-${phase + 1}-${feed + 1}`, 1);
+    const before = (await read()).quest.guardian;
+    await giveAt(vaneFor(phase), 'vane', `vane-${phase + 1}-${feed + 1}`);
+    await waitFor(({ n, f }) => { const g = window.__GAME__.quest.guardian; return g.phase >= n || g.fed > f; }, 'vane fed', 5000, { n: phase + 1, f: before.fed ?? -1 });
   }
-  if (!(await read()).charged) throw Error('never caught the guardian breath in phase ' + phase);
-  await burst(`guardian-catch-${phase + 1}`, 1);
-  await giveAt(P['vane' + (phase + 1)], 'vane', `vane-${phase + 1}`);
   await waitFor(n => window.__GAME__.quest.guardian?.phase >= n, 'vane turned', 5000, phase + 1);
 }
 beat('guardian calmed');

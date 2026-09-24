@@ -117,3 +117,23 @@ for(const [drop,expectRecover] of [[4,true],[12,false]]){const f=fixture({start:
 // reset() cancels a hop; columns are world physics and persist until they expire.
 const clear=fixture();clear.m.lift({x:5,z:5,top:4,duration:1});clear.m.knockback({to:[1,0,1]});clear.m.reset();assert(!clear.m.knocked);assert.equal(clear.m.columns.length,1);clear.tick(.5);assert(clear.m.grounded&&clear.m.position.y===0&&clear.m.position.x===0);clear.tick(.6);assert.equal(clear.m.columns.length,0);clear.m.dispose();
 console.log('PASS: v2 layered ground (walk under ledges, y passed to blocked), updraft rise/hover/steer-out landing, jump lift, expiry, frame-rate lift, knock-back arc and ballistic void recovery, maxDrop');
+// ---- stuck regressions (owner playtest: hero trapped inside a sky-bridge chain barrier) ----
+// A thin barrier segment appears through the hero's body: arrows free him within 1 s, whichever way he presses.
+for (const key of ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight']) {
+  const bar = (x, z, r) => Math.abs(z - .0) < .07 + r && Math.abs(x) < 3; // a 6 m chain barrier along x through the start
+  const f = fixture({ blocked: bar }); f.key(key); let freeAt = null;
+  for (let i = 0; i < 60; i++) { f.m.update(1 / 60); if (!bar(f.m.position.x, f.m.position.z, .23) && freeAt === null) freeAt = i / 60; }
+  assert(freeAt !== null && freeAt <= 1, `freed from an overlapping barrier pressing ${key} (t=${freeAt})`);
+  const p0 = f.m.position.clone(); f.tick(.5); assert(f.m.position.distanceTo(p0) > .3 || key === 'ArrowRight' || key === 'ArrowLeft', 'keeps moving after being freed'); f.m.dispose();
+}
+// Boxed in on every side (no free spot within 1.2 m): holding input for 2 s returns him to the last safe spot.
+{
+  let trap = false; const f = fixture({ blocked: (x, z, r) => trap && Math.hypot(x - 2, z) < 1.6 });
+  f.m.reset([2, 0, 0]); f.tick(.5); f.m.setCheckpoint([-1, 0, 0]); trap = true; f.key('ArrowUp'); let rec = false, t = 0;
+  for (; t < 3 && !rec; t += 1 / 60) { f.m.update(1 / 60); rec ||= f.m.recovered; }
+  assert(rec && t >= 1.9 && t < 2.6, 'held-input failsafe after ~2 s, t=' + t.toFixed(2)); assert(f.m.position.x === -1 && !f.m.isSafe([2, 0, 0]));
+  f.m.dispose();
+}
+// Walking into an ordinary wall (sideways steps exist) never triggers the failsafe.
+{ const f = fixture({ blocked: (x, z, r) => x + r > .5 }); f.key('ArrowRight'); let rec = false; for (let i = 0; i < 240; i++) { f.m.update(1 / 60); rec ||= f.m.recovered; } assert(!rec, 'no failsafe against a plain wall'); f.m.dispose(); }
+console.log('PASS: stuck regressions — depenetration out of an overlapping barrier (4 directions, <1 s), held-input failsafe at ~2 s, no false trigger against walls');

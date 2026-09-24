@@ -117,6 +117,7 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     else if(kind==='bell-clear'){modal(t,196,.11,4.2,-.05,[1,2.0,2.4,3.0,4.2]);modal(t+.02,392,.04,3.2,.1,[1,1.5,2]);}
     else if(kind==='bell-out'){modal(t,262,.1,3.4,-.2,[1,2.0,2.4,3.0,4.2]);modal(t+.4,392,.05,2.8,-.2);}
     else if(kind==='bell-return'){modal(t,392,.09,3.6,.2,[1,2.0,2.4,3.0,4.2]);modal(t+.45,262,.07,4.2,.2);modal(t+.9,196,.06,5,0);}
+    else if(kind==='bell-return-full'){[392,330,294,262,196].forEach((f,i)=>modal(t+i*.42,f,.08-i*.008,4.2+i*.4,.2-i*.1,[1,2.0,2.4,3.0,4.2]));modal(t+.2,784,.03,3,.3);}
     else if(kind==='far-bell'){for(let i=0;i<3;i++)modal(t+i*.9,[196,247,294][i],.03*(1-i*.2),5.5,.55,[1,2.0,2.4,3.0]);hiss(t,2.5,.012,600,.5,'lowpass',1.2);}
     else if(kind==='hazard')hiss(t,.5,.13,600,-.1,'bandpass',.09);
   }

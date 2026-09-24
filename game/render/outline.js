@@ -24,10 +24,10 @@ export function createOutlines(THREE, focus = {}) {
       vertexShader: `#include <common>
 #include <fog_pars_vertex>
 uniform float uWidth, uPush; uniform vec2 uRes;
-varying float vDepth; varying float vWorldY;
+varying float vDepth; varying vec3 vWorld;
 void main() {
   vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-  vDepth = - mvPosition.z; vWorldY = ( modelMatrix * vec4( position, 1.0 ) ).y;
+  vDepth = - mvPosition.z; vWorld = ( modelMatrix * vec4( position, 1.0 ) ).xyz;
   // Push the hull slightly away from the eye: it survives at silhouettes but loses the depth test inside concavities
   // (eye sockets, door recesses), which is where inverted hulls otherwise leak ink over detail.
   mvPosition.xyz += normalize( mvPosition.xyz ) * uPush;
@@ -42,18 +42,21 @@ void main() {
 }`,
       fragmentShader: `#include <common>
 #include <fog_pars_fragment>
-uniform vec3 uInk; varying float vDepth; varying float vWorldY;
+uniform vec3 uInk; varying float vDepth; varying vec3 vWorld;
 uniform vec4 bkFocusA[ 4 ]; uniform vec4 bkFocusB[ 4 ]; uniform int bkFocusCount;
 void main() {
   #ifdef BK_FADE
   {
-    float ign = fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
+    vec2 bp = mod( floor( gl_FragCoord.xy * 0.5 ), 4.0 );
+    vec4 R = bp.y < 0.5 ? vec4( 0.0, 8.0, 2.0, 10.0 ) : bp.y < 1.5 ? vec4( 12.0, 4.0, 14.0, 6.0 ) : bp.y < 2.5 ? vec4( 3.0, 11.0, 1.0, 9.0 ) : vec4( 15.0, 7.0, 13.0, 5.0 );
+    float ign = ( ( bp.x < 0.5 ? R.x : bp.x < 1.5 ? R.y : bp.x < 2.5 ? R.z : R.w ) + 0.5 ) / 16.0;
+    vec3 fn = normalize( cross( dFdx( vWorld ), dFdy( vWorld ) ) ); float flatS = smoothstep( 0.45, 0.6, abs( fn.y ) );
     for ( int i = 0; i < 4; i ++ ) {
       if ( i >= bkFocusCount ) break;
       vec4 A = bkFocusA[ i ], B = bkFocusB[ i ];
       vec2 d = ( gl_FragCoord.xy - A.xy ) / vec2( A.w * B.y, A.w );
-      float f = ( 1.0 - smoothstep( 0.45, 1.0, length( d ) ) ) * smoothstep( 0.4, 1.1, A.z - vDepth ) * smoothstep( B.x + 0.15, B.x + 0.6, vWorldY ) * B.z;
-      if ( f > ign ) discard;
+      float f = ( 1.0 - smoothstep( 0.35, 0.8, length( d ) ) ) * smoothstep( 1.0, 1.6, A.z - vDepth ) * max( 1.0 - flatS, smoothstep( B.x + 1.0, B.x + 1.3, vWorld.y ) ) * B.z;
+      if ( f > 0.02 ) discard;   // a fading object loses its ink shell entirely (no dark dots through the dither holes)
     }
   }
   #endif
