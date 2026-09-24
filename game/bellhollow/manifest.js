@@ -5,4 +5,4 @@
 //   guardian game/bellhollow/guardian.js createGuardian({THREE, scene, world, wind, movement, sound, caption, onEvent})
 //   look     game/render/look.js         createLook({THREE, renderer, scene, camera})
 // URL overrides for testing: ?stub (stub world), ?look=0 (plain renderer), ?guardian=stub.
-export const MODULES = { world: false, guardian: false, look: true };
+export const MODULES = { world: true, guardian: true, look: true };
