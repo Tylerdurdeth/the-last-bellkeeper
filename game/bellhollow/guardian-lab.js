@@ -26,7 +26,8 @@ Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, n
 scene.add(sun, sun.target);
 
 // ---------------- placeholder three-ring well ----------------
-const RINGS = [{ y: 0, inner: 0, outer: 7.5 }, { y: 4, inner: 6.3, outer: 10 }, { y: 8, inner: 9.4, outer: 13 }];
+const RINGS = [{ y: 0, inner: 0, outer: 7.5 }, { y: 4, inner: 6.3, outer: 10 }, { y: 8, inner: 9.4, outer: 13 }, { y: 12, inner: 9.5, outer: 12.5, sector: [2.05, 3.3] }];
+const inSector = (R, x, z) => { if (!R.sector) return true; const a = Math.atan2(z, x); return a >= R.sector[0] && a <= R.sector[1]; };
 const polar = (a, r, y) => ({ x: Math.cos(a) * r, y, z: Math.sin(a) * r });
 const std = (color, name, o = {}) => Object.assign(new THREE.MeshStandardMaterial({ color, roughness: .9, ...o }), { name });
 const add = (geo, m, x = 0, y = 0, z = 0, parent = scene) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; parent.add(o); return o; };
@@ -37,6 +38,7 @@ function annulus(inner, outer, y, thick, m) { const pts = [[inner, y - thick], [
 add(new THREE.CylinderGeometry(RINGS[0].outer, RINGS[0].outer, .6, 64), ivory, 0, -.3, 0);
 add(new THREE.RingGeometry(2.2, 2.45, 48).rotateX(-Math.PI / 2), ivorySh, 0, .01, 0);
 annulus(RINGS[1].inner, RINGS[1].outer, 4, .5, ivory); annulus(RINGS[2].inner, RINGS[2].outer, 8, .5, ivory);
+{ const pts = [[9.5, 11.5], [12.5, 11.5], [12.5, 12], [9.5, 12], [9.5, 11.5]].map(([r, h]) => new THREE.Vector2(r, h)); add(new THREE.LatheGeometry(pts, 20, Math.PI / 2 - 3.3, 1.25), ivory); } // top perch
 // Walls only on the far half (the Hollow is open toward the camera, south-east).
 for (const [r, y0, y1] of [[7.55, 0, 4], [10.05, 4, 8], [13.05, 8, 14]]) add(new THREE.CylinderGeometry(r, r, y1 - y0, 48, 1, true, Math.PI * .75 + .2, Math.PI * 1.1), bark, 0, (y0 + y1) / 2, 0);
 for (let i = 0; i < 9; i++) { // roots crawling down the far wall
@@ -46,20 +48,21 @@ for (let i = 0; i < 9; i++) { // roots crawling down the far wall
 const vents = [
   { id: 'ring1', ...polar(-3.0, 5.0, 0), top: 4.9, radius: 1.0, ledge: polar(-3.0, 7.9, 4) },
   { id: 'ring2', ...polar(2.2, 8.3, 4), top: 8.9, radius: 1.05, ledge: polar(2.2, 10.6, 8) },
+  { id: 'ring3', ...polar(1.85, 11.2, 8), top: 12.9, radius: 1.0, ledge: polar(2.25, 11, 12) },
 ];
 for (const v of vents) { add(new THREE.CylinderGeometry(v.radius, v.radius, .08, 24), copperV, v.x, v.y + .04, v.z); add(new THREE.TorusGeometry(v.radius + .05, .06, 5, 24).rotateX(Math.PI / 2), copper, v.x, v.y + .08, v.z); }
-const vanePts = [polar(-2.2, 6.4, 0), polar(-1.2, 8.7, 4), polar(3.1, 11.6, 8)];
+const vanePts = [polar(-2.2, 6.4, 0), polar(-1.2, 8.7, 4), polar(3.1, 11, 12), polar(3.1, 11, 12)];
 const vaneMeshes = vanePts.map(p => { const g = new THREE.Group(); g.position.set(p.x, p.y, p.z); scene.add(g); add(new THREE.CylinderGeometry(.12, .16, 1.6, 8), timber, 0, .8, 0, g); const head = new THREE.Group(); head.position.y = 1.7; g.add(head); for (let i = 0; i < 4; i++) { const b = add(new THREE.BoxGeometry(.18, .9, .05), copperV, 0, .45, 0, new THREE.Group()); b.parent.rotation.z = i * Math.PI / 2; head.add(b.parent); } add(new THREE.SphereGeometry(.16, 12, 8), copper, 0, 0, 0, head); return head; });
 const restored = {};
 const well = {
   center: { x: 0, y: 0, z: 0 }, vents: { toMid: 'ring1', pulse: 'ring2' }, roots: polar(Math.PI * 1.25, 6.8, 0),
-  rings: RINGS.map((r, k) => ({ ...r, vane: vanePts[k], safe: [polar(.95, 5.2, 0), polar(-3.0, 8.3, 4), polar(2.2, 11.2, 8)][k] })),
+  rings: RINGS.map((r, k) => ({ ...r, vane: vanePts[k], safe: [polar(.95, 5.2, 0), polar(-3.0, 8.3, 4), polar(2.2, 11.2, 8), polar(2.3, 11, 12)][k], ...(k === 3 ? { catchPoint: polar(2.45, 11, 12) } : {}) })).filter((r, k) => q.get('climb') !== '0' || k < 3),
 };
 const world = {
   points: { guardianWell: well, bellOut: polar(Math.PI * 1.25, 11.5, 8), bellReturn: polar(Math.PI * 1.25 + .2, 11.5, 8) }, vents,
-  ground(x, z, y = Infinity) { const r = Math.hypot(x, z); let best = null; for (const R of RINGS) if (r >= R.inner && r <= R.outer && (R.y === 0 || !inGap(x, z)) && R.y <= y + .35 && (best === null || R.y > best)) best = R.y; return best; },
+  ground(x, z, y = Infinity) { const r = Math.hypot(x, z); let best = null; for (const R of RINGS) if (r >= R.inner && r <= R.outer && (R.y === 0 || !inGap(x, z)) && inSector(R, x, z) && R.y <= y + .35 && (best === null || R.y > best)) best = R.y; return best; },
   blocked(x, z, rad, y = 0) { const r = Math.hypot(x, z); for (const [wr, y0, y1] of [[7.5, -1, 4], [10, 4, 8], [13, 8, 20]]) if (y >= y0 - .3 && y < y1 - .3 && r + rad > wr) return true;
-    for (const R of RINGS.slice(1)) if (!inGap(x, z) && R.y - .45 > y + .35 && R.y - .45 < y + 1.6 && r + rad > R.inner && r - rad < R.outer) return true; return false; },
+    for (const R of RINGS.slice(1)) if (!inGap(x, z) && inSector(R, x, z) && R.y - .45 > y + .35 && R.y - .45 < y + 1.6 && r + rad > R.inner && r - rad < R.outer) return true; return false; },
   setRestored(k, v) { restored[k] = v; },
 };
 // Finale props for budget/look: paired bells on the high ring, Mara on the mid ring (preview only).
@@ -126,11 +129,13 @@ let botRing = 0;
 function botStep() {
   const p = movement.position, tel = guardian.telemetry(), ph = guardian.phase;
   if (ph >= 3) return setKeys(0, 0);
-  if (movement.grounded) botRing = p.y > 7.4 ? 2 : p.y > 3.4 ? 1 : 0; const ringNow = botRing, need = ph === 2 && (wind.charged || tel.breath) ? 2 : ph >= 1 ? 1 : 0;
+  if (movement.grounded) botRing = p.y > 11.4 ? 3 : p.y > 7.4 ? 2 : p.y > 3.4 ? 1 : 0; const ringNow = botRing, need = ph === 2 ? (tel.climb ? 3 : 2) : ph >= 1 ? 1 : 0;
+  // Rage shockwave: jump when the front is about to reach us.
+  if (tel.rage?.front != null && Math.abs(p.y - RINGS[tel.rage.ring].y) < 1 && movement.grounded) { const d = Math.hypot(p.x, p.z) - tel.rage.front; if (d > 0 && d < 1.1) movement.jump(); }
   let goal = null;
   const breath = wind.sources.get('guardianBreath');
   if (ringNow < need) { // go ride the right vent, then steer onto its ledge
-    const v = ringNow === 0 ? vents[0] : vents[1];
+    const v = vents[Math.min(ringNow, vents.length - 1)];
     goal = (movement.lifting || !movement.grounded) && p.y > v.ledge.y + .2 ? v.ledge : v;
     if (ringNow === 1 && !movement.lifting && tel.beat !== 'exhale:up' && !movement.columns.some(c => c.id === 'vent:' + v.id)) goal = { x: v.x + (v.x) * .12, z: v.z + v.z * .12 };
   } else if (!wind.charged) goal = breath && Math.abs(breath.y - p.y) < 1 ? breath : well.rings[ringNow].safe;
@@ -144,9 +149,9 @@ function botStep() {
   if (!goal) return setKeys(0, 0);
   const dx = goal.x - p.x, dz = goal.z - p.z; setKeys(Math.hypot(dx, dz) > .35 ? dx : 0, Math.hypot(dx, dz) > .35 ? dz : 0, true);
 }
-function inLane(l, p, pad = .3) { const r = Math.hypot(p.x, p.z), a = Math.atan2(p.z, p.x); if (Math.abs(p.y - RINGS[l.ring].y) > 1.2 || r < l.lo - .5 || r > l.hi + .6) return false;
+function inLane(l, p, pad = .3) { if (l.kind === 'pillar') return Math.abs(p.y - l.y) < 1.2 && Math.hypot(p.x - l.x, p.z - l.z) < l.r + .7; const r = Math.hypot(p.x, p.z), a = Math.atan2(p.z, p.x); if (Math.abs(p.y - RINGS[l.ring].y) > 1.2 || r < l.lo - .5 || r > l.hi + .6) return false;
   const m = (l.a0 + l.a1) / 2, half = Math.abs(l.a1 - l.a0) / 2 + pad / Math.max(1, r), d = Math.atan2(Math.sin(a - m), Math.cos(a - m)); return Math.abs(d) < half; }
-function dodgeGoal(l, p) { const r = Math.hypot(p.x, p.z), a = Math.atan2(p.z, p.x), m = (l.a0 + l.a1) / 2, d = Math.atan2(Math.sin(a - m), Math.cos(a - m)), half = Math.abs(l.a1 - l.a0) / 2 + 1.4 / Math.max(1, r), t = m + (d >= 0 ? half : -half); return { x: Math.cos(t) * r, z: Math.sin(t) * r }; }
+function dodgeGoal(l, p) { if (l.kind === 'pillar') { const dx = p.x - l.x, dz = p.z - l.z, n = Math.hypot(dx, dz) || 1; return { x: l.x + dx / n * (l.r + 1.6), z: l.z + dz / n * (l.r + 1.6) }; } const r = Math.hypot(p.x, p.z), a = Math.atan2(p.z, p.x), m = (l.a0 + l.a1) / 2, d = Math.atan2(Math.sin(a - m), Math.cos(a - m)), half = Math.abs(l.a1 - l.a0) / 2 + 1.4 / Math.max(1, r), t = m + (d >= 0 ? half : -half); return { x: Math.cos(t) * r, z: Math.sin(t) * r }; }
 function pathCrosses(l, p, g) { for (let i = 1; i <= 6; i++) { const f = i / 6; if (inLane(l, { x: p.x + (g.x - p.x) * f, y: p.y, z: p.z + (g.z - p.z) * f })) return true; } return false; }
 
 // ---------------- camera ----------------
@@ -236,7 +241,7 @@ window.__lab = {
       ramp.push({ f: +f.toFixed(1), ...silhouetteChange(P.calm, { crouch: e, bloom: c(f * 1.5), spread: c(f * 1.25), lean: -.12 * e, swell: e, rotorGlow: f, look: { x: -.45 * e, y: 0 } }) }); }
     guardian.actor.userData.setPose(P.calm); return { ...r, ramp }; },
   contrast() { // lane band vs floor beside it (drawn frame), WCAG ratio
-    const l = guardian.lane; if (!l || l.kind === 'up') return null; const R = RINGS[l.ring], mid = (l.lo + l.hi) / 2 + (l.kind === 'sweep' ? .8 : 0);
+    const l = guardian.lane; if (!l || l.kind === 'up' || l.kind === 'pillar') return null; const R = RINGS[l.ring], mid = (l.lo + l.hi) / 2 + (l.kind === 'sweep' ? .8 : 0);
     const a = (l.a0 + l.a1) / 2, off = Math.abs(l.a1 - l.a0) / 2 + 1.5 / mid;
     // Band fill: darkest of 7 points along the lane (between chevrons, clear of the hero); floor: beyond both lane ends.
     const ins = []; for (let i = 1; i <= 7; i++) { const f = .1 + .8 * i / 8, aa = l.a0 + (l.a1 - l.a0) * f, p = polar(aa, mid, R.y); if (Math.hypot(p.x - movement.position.x, p.z - movement.position.z) > 1) ins.push(sample(p, 2)); }
