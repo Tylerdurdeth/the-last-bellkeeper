@@ -22,7 +22,7 @@ const MAT_DEFS = {
   cloth: [PAL.coral, 'fabric', .95, 0], clothIvory: [PAL.ivory, 'fabric', .95, 0],
   leaf: [PAL.leaf, 'foliage', .95, 0], leafLight: [PAL.leafLight, 'foliage', .95, 0], leafShade: [PAL.shade, 'foliage', .97, 0],
   bark: [0x6B5A45, 'bark', .97, 0], barkShade: [PAL.shade, 'bark', .98, 0],
-  deck: [0xB39A7C, 'timber', .9, 0], deckOld: [0x9C8F7D, 'timber', .92, 0], deckDark: [0x6E5E4E, 'timber', .95, 0], stoneCool: [0xA9A898, 'stone', .94, 0], stoneDeep: [0x7E8A82, 'stone', .96, 0], metalWorn: [0x8C7560, 'metal', .7, .25], paving: [PAL.ivory, 'stone', .92, 0], ink: [PAL.ink, 'metal', .7, .1],
+  deck: [0xB39A7C, 'timber', .9, 0], deckOld: [0x9C8F7D, 'timber', .92, 0], deckDark: [0x6E5E4E, 'timber', .95, 0], stoneCool: [0xA9A898, 'stone', .94, 0], heartwood: [0x4A3020, 'timber', .95, 0], heartwoodLight: [0x6B4428, 'timber', .9, 0], pavingDeep: [0x9D968A, 'stone', .95, 0], stoneDeep: [0x7E8A82, 'stone', .96, 0], metalWorn: [0x8C7560, 'metal', .7, .25], paving: [PAL.ivory, 'stone', .92, 0], ink: [PAL.ink, 'metal', .7, .1],
   glass: [PAL.dawn, 'glass', .3, 0], far: [0x6F8F86, 'foliage', 1, 0], farLight: [0x9DB7A6, 'foliage', 1, 0],
   mist: [0xE8EEE6, 'fabric', 1, 0],
 };
@@ -37,7 +37,10 @@ export function materials(THREE) {
     const mat = new THREE.MeshStandardMaterial({color, roughness, metalness});
     mat.name = name; mat.userData.bhKey = key; m[key] = mat;
   }
-  m.shaft = Object.assign(new THREE.MeshBasicMaterial({color: 0xFFE9C2, transparent: true, opacity: .06, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false}), {name: 'shaft'}); m.shaft.userData.bhKey = 'shaft';
+  // the ancient channels: dark inlays that glow faintly (cyan = wind, gold = the old bells)
+  m.inlayCyan = Object.assign(new THREE.MeshStandardMaterial({color: 0x2C4A45, roughness: .6, emissive: PAL.wind, emissiveIntensity: .3}), {name: 'glass'}); m.inlayCyan.userData.bhKey = 'inlayCyan';
+  m.inlayGold = Object.assign(new THREE.MeshStandardMaterial({color: 0x5A4020, roughness: .6, emissive: PAL.gold, emissiveIntensity: .35}), {name: 'glass'}); m.inlayGold.userData.bhKey = 'inlayGold';
+  m.shaft = Object.assign(new THREE.MeshBasicMaterial({color: 0xFFD68A, transparent: true, opacity: .085, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false}), {name: 'shaft'}); m.shaft.userData.bhKey = 'shaft';
   m.lanternOff = Object.assign(new THREE.MeshStandardMaterial({color: 0xD9C9A0, roughness: .6, emissive: PAL.gold, emissiveIntensity: 0}), {name: 'glass'});
   matCache.set(THREE, m);
   return m;
