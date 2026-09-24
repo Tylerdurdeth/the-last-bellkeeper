@@ -23,7 +23,7 @@ export default function (THREE, opts = {}) {
   for (let y = 1.6; y < H - 2.2; y += 1.6) add(new THREE.CylinderGeometry(2.1 - y * .075 + .06, 2.1 - y * .075 + .08, .12, 8), shade, 0, .5 + y, 0, Math.PI / 8);
   if (variant === 'ladders') for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + Math.PI / 8; const b = add(new THREE.BoxGeometry(.16, H - 2.2, .16), dark, Math.sin(a) * 1.82, .5 + (H - 2.2) / 2, Math.cos(a) * 1.82, a); b.rotation.x = .07 * Math.cos(0); b.rotation.set(0, a, 0); b.rotateX(-.075); }
   // door, windows
-  box(1, 1.9, .1, timber, 0, 1.45, 2.02); add(new THREE.CylinderGeometry(.5, .5, .1, 10, 1, false, -Math.PI / 2, Math.PI), timber, 0, 2.4, 2.02, 0, Math.PI / 2);
+  box(1, 1.9, .1, timber, 0, 1.45, 2.02); for (const x of [-.25, 0, .25]) box(.03, 1.85, .04, dark, x, 1.45, 2.07); for (const y of [.85, 1.95]) { box(1.04, .09, .05, dark, 0, y, 2.08); for (const x of [-.4, -.15, .15, .4]) box(.05, .05, .03, copper, x, y, 2.11); } for (const x of [-.58, .58]) box(.14, 1.95, .16, shade, x, 1.45, 2.02); add(new THREE.TorusGeometry(.08, .018, 4, 10), copper, .3, 1.4, 2.1); add(new THREE.CylinderGeometry(.5, .5, .1, 10, 1, false, -Math.PI / 2, Math.PI), timber, 0, 2.4, 2.02, 0, Math.PI / 2);
   for (const [a, y] of [[Math.PI / 2, 3.2], [-Math.PI / 2, 4], [Math.PI, 3.5], [Math.PI * .25, 4.8]]) { const r = 2.1 - y * .075; const w = add(new THREE.BoxGeometry(.5, .8, .12), dark, Math.sin(a) * r, y, Math.cos(a) * r, a); void w; add(new THREE.BoxGeometry(.36, .64, .1), M(0xF6D9B0, 'glass', .35), Math.sin(a) * (r + .03), y, Math.cos(a) * (r + .03), a); }
   // gallery ring under the cap
   const gy = H - 1.7;
