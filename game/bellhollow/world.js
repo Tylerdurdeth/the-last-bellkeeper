@@ -634,8 +634,17 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const galY = (a) => 4 - 8 * galEase((a - GAL.a0) / (GAL.a1 - GAL.a0));
   B.railArc('gallery-inner', {r: H.gallery.r0 + .15, a0: GAL.a0 + .5, a1: 311, yfn: (f) => galY(GAL.a0 + .5 + f * (311 - GAL.a0 - .5)), style: 'parapet', step: 4});
   // Rings.
-  B.deckAnnulus('ring-high', {r0: H.high.r0, r1: H.high.r1, a0: 100, a1: 350, y0: H.high.y, bottom: H.mid.y - .6, mat: 'paving', side: 'stoneShade', capMat: 'barkShade', step: 3});
-  B.deckAnnulus('ring-mid', {r0: H.mid.r0, r1: H.mid.r1, a0: 100, a1: 350, y0: H.mid.y, bottom: H.low.y - .6, mat: 'paving', side: 'stoneCool', capMat: 'barkShade', step: 3});
+  // The rings' open-side ends (az 100..116) are thin cantilevered tips, not tall walls: the
+  // gameplay camera looks in past them. Low parapets guard the new edges; a few corbels carry them.
+  const TIP = 136;
+  B.deckAnnulus('ring-high', {r0: H.high.r0, r1: H.high.r1, a0: TIP, a1: 350, y0: H.high.y, bottom: H.mid.y - .6, mat: 'paving', side: 'stoneShade', capStart: true, capMat: 'stoneShade', step: 3});
+  B.deckAnnulus('ring-high-tip', {r0: H.high.r0, r1: H.high.r1, a0: 100, a1: TIP + .5, y0: H.high.y, th: .55, mat: 'paving', side: 'stoneShade', capEnd: false, step: 3});
+  B.deckAnnulus('ring-mid', {r0: H.mid.r0, r1: H.mid.r1, a0: TIP, a1: 350, y0: H.mid.y, bottom: H.low.y - .6, mat: 'paving', side: 'stoneCool', capStart: true, capMat: 'stoneCool', step: 3});
+  B.deckAnnulus('ring-mid-tip', {r0: H.mid.r0, r1: H.mid.r1, a0: 100, a1: TIP + .5, y0: H.mid.y, th: .55, mat: 'paving', side: 'stoneCool', capEnd: false, step: 3});
+  B.railArc('ring-mid-tip-out', {r: H.mid.r1 - .15, a0: 100.5, a1: TIP, y: H.mid.y, style: 'parapet', step: 3});
+  B.rail('well-front-tip-side', [at(99.6, H.low.r + .05, H.low.y), at(99.6, H.mid.r1 + .15, H.low.y)], {style: 'parapet'});
+  B.railArc('ring-low-tip-edge', {r: H.low.r - .15, a0: 100.5, a1: TIP, y: H.low.y, style: 'parapet', step: 3});
+  for (const [ring, k] of [[H.high, 0], [H.mid, 1]]) for (const a of [106, 122]) { B.add(taperTube(T, [at(a - 1, ring.r1 - .3, ring.y - .5), at(a, ring.r0 + 1, ring.y - 1.4), at(a + 1, ring.r0 + .5, ring.y - 2.6)], .22, .06, 6, 5, .2, a + k), 'bark'); }
   B.deckDisc('ring-low', {r: H.low.r, y: H.low.y, th: 1.4, mat: 'paving', side: 'stoneShade', seg: 36});
   B.deckAnnulus('well-front', {r0: H.low.r - .05, r1: H.floorFront, a0: -10, a1: 100, y0: H.low.y, th: 1.4, mat: 'paving', side: 'stoneShade', step: 3});
   for (const [id, ring] of [['high', H.high], ['mid', H.mid]]) {
@@ -703,7 +712,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     B.add(new T.TubeGeometry(new T.CatmullRomCurve3(pts.map((p) => V(p))), 60, .24, 8), 'verdigris');
     for (let a = 118; a <= 340; a += 24) { const c = at(a, H.gallery.r1 - .25, galY(a) + 3.2); B.add(new T.TorusGeometry(.3, .06, 5, 12).rotateY(a * DEG).translate(...c), 'copper'); }
     // the great root arch: one strong silhouette spanning the dome
-    B.add(taperTube(T, [at(135, H.gallery.r1 - .3, 6.5), at(170, 8.5, 11.5), at(225, 2, 13.2), at(280, 8.5, 11.5), at(318, H.gallery.r1 - .3, 5.5)], 1.15, .8, 24, 10, .14, 42), 'bark');
+    B.add(taperTube(T, [at(178, H.gallery.r1 - .3, 7.5), at(200, 8.5, 11.8), at(225, 2, 13.2), at(280, 8.5, 11.5), at(318, H.gallery.r1 - .3, 5.5)], 1.15, .8, 24, 10, .14, 42), 'bark');
     B.add(taperTube(T, [at(225, 2.5, 13), at(210, 5, 12.6), at(195, 9, 11), at(185, H.gallery.r1 - .3, 9.5)], .45, .2, 10, 7, .2, 43), 'bark');
   }
   // Hollow lanterns (dim until the hollow is restored) — along the gallery rail.
@@ -745,7 +754,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     riser(H.high.r0, H.high.y, H.mid.y, 100.5, 349.5, 1);
     riser(H.mid.r0, H.mid.y, H.low.y, 100.5, MIDW.a0, 1, 'stoneCool'); riser(H.mid.r0, H.mid.y, H.low.y, MIDW.a1, 349.5, 1, 'stoneCool'); riser(MIDW.r0, H.mid.y, H.low.y, MIDW.a0, MIDW.a1, 1, 'stoneCool');
     // root masses descending the ring faces between the niches (hugging the wall; visible, solid)
-    for (const [a, ring, k] of [[160, H.high, 1], [238, H.high, 2], [330, H.high, 3], [150, H.mid, 4], [262, H.mid, 5], [336, H.mid, 6]]) {
+    for (const [a, ring, k] of [[160, H.high, 1], [238, H.high, 2], [330, H.high, 3], [164, H.mid, 4], [262, H.mid, 5], [336, H.mid, 6]]) {
       const yTop = ring.y, yBot = ring === H.high ? H.mid.y : H.low.y, r = ring.r0;
       const pts = [at(a, r + .15, yTop + .35), at(a + 1.5, r - .2, yTop - 1.2), at(a - 1, r - .25, (yTop + yBot) / 2), at(a + 2, r - .3, yBot + .6), at(a + 4, r - .75, yBot + .05)];
       B.add(taperTube(T, pts, .55, .22, 14, 8, .18, k * 3), 'bark');
@@ -758,12 +767,11 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     // carved bell arches in the bark wall above the gallery (R-trunk-gallery)
     for (let a = 124; a < 335; a += 52) {
       const y0 = galY(a) + 4.2, c = at(a, H.gallery.r1 - .25, y0);
-      B.add(new T.BoxGeometry(2.6, .28, .7).rotateY(a * DEG).translate(...at(a, H.gallery.r1 - .4, y0 - .2)), 'timber');
       for (const side of [-1, 1]) { const q = at(a + side * 1.05 / H.gallery.r1 / DEG, H.gallery.r1 - .35, y0 + .75); B.add(new T.CylinderGeometry(.12, .14, 1.6, 6).translate(q[0], q[1], q[2]), 'stone'); }
       B.add(new T.TorusGeometry(1.05, .16, 5, 12, Math.PI).rotateY(a * DEG + Math.PI / 2).translate(c[0], y0 + 1.55, c[2]), 'stone');
       B.add(new T.PlaneGeometry(2, 1.9).rotateY(a * DEG + Math.PI).translate(...at(a, H.gallery.r1 - .1, y0 + .9)), 'barkShade');
       B.add(new T.LatheGeometry([[0, 0], [.16, -.03], [.2, -.2], [.24, -.45], [.33, -.62], [0, -.6]].reverse().map(([u, v]) => new T.Vector2(u, v)), 8).translate(...at(a, H.gallery.r1 - .5, y0 + 1.5)), 'verdigris');
-      if ((a - 118) % 52 === 0) B.add(new T.PlaneGeometry(.55, .9).rotateY(a * DEG + Math.PI).translate(...at(a, H.gallery.r1 - .72, y0 - .75)), 'cloth');
+      if (false) B.add(new T.PlaneGeometry(.55, .9).rotateY(a * DEG + Math.PI).translate(...at(a, H.gallery.r1 - .72, y0 - .75)), 'cloth');
     }
     // root masses breaking through the upper wall and pouring over the ring risers (visual)
     for (const [a, k] of [[177, 0], [217, 1], [256, 2], [300, 3], [335, 4]]) {
@@ -824,12 +832,12 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   {
     const st = []; for (let a = 104; a <= 346; a += 3) { const y = galY(a) + 1.1, i = polar(a, H.gallery.r1 - .2), o = polar(a, H.gallery.r1 + .05); st.push({l: [i[0], y + 1.3, i[1]], r: [o[0], y + 1.3, o[1]], b: y}); }
     const g = B.stripGeo(st); B.add(g.top, 'stoneShade'); B.add(g.sides, 'stoneShade');
-    for (let a = 108; a <= 342; a += 7) {
+    for (let a = 108; a <= 342; a += 14) {
       const y = galY(a) + 1.75, p = at(a, H.gallery.r1 - .24, y);
       if (Math.round(a) % 14 === 10) B.add(new T.LatheGeometry([[0, 0], [.1, -.02], [.12, -.12], [.14, -.26], [.2, -.36], [0, -.35]].reverse().map(([u, v]) => new T.Vector2(u, v)), 7).translate(p[0], y + .2, p[2]), 'verdigris');
       else B.add(new T.TorusGeometry(.22, .05, 4, 10, Math.PI * 1.5).rotateY(a * DEG + Math.PI / 2).translate(p[0], y, p[2]), 'copper');
     }
-    for (let a = 131; a < 335; a += 26) { const y0 = galY(a), p = at(a, H.gallery.r1 - .25, y0 + 2.1); B.add(bevelBox(T, .5, 4.2, .34, .05).rotateY(a * DEG).translate(p[0], p[1], p[2]), 'stone'); }
+    for (let a = 131; a < 335; a += 52) { const y0 = galY(a), p = at(a, H.gallery.r1 - .25, y0 + 2.1); B.add(bevelBox(T, .5, 4.2, .34, .05).rotateY(a * DEG).translate(p[0], p[1], p[2]), 'stone'); }
   }
 
   // ---- The finale arena: floor mosaic, guardian grille, ring lips, hanging lantern chains ----

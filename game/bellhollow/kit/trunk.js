@@ -92,7 +92,7 @@ export function buildTrunk(T, B, seed = 11) {
     for (let y = -4.6; y < HOLLOW.ceilBase; y += 1.35) {
       const y1 = Math.min(HOLLOW.ceilBase, y + 1.35), a1 = a + AS;
       const r00 = wob(a, y), r01 = wob(a, y1), r11 = wob(a1, y1), r10 = wob(a1, y);
-      const gy = 4 - 8 * Math.min(1, Math.max(0, (a - 100) / 250) / .9), barky = y >= gy + 3.4;
+      const gy = 4 - 8 * Math.min(1, Math.max(0, (a - 100) / 250) / .9), barky = y >= gy + 2.7;
       if (barky) quad(bark, barkUV, [s0 * r00, y, c0 * r00], [s0 * r01, y1, c0 * r01], [s1 * r11, y1, c1 * r11], [s1 * r10, y, c1 * r10], a * DEG * Rg / 3, y / 3, a1 * DEG * Rg / 3, y1 / 3);
       else quad(stone, stoneUV, [s0 * r00, y, c0 * r00], [s0 * r01, y1, c0 * r01], [s1 * r11, y1, c1 * r11], [s1 * r10, y, c1 * r10], a * DEG * Rg / 3, y / 3, a1 * DEG * Rg / 3, y1 / 3);
     }
