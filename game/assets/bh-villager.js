@@ -15,9 +15,10 @@ export default function (THREE, opts = {}) {
   const SKIN = pick([0xE3AC86, 0xC98D66, 0x9C6A4A, 0xEDC29E]);
   const HAIR = elder ? pick([0xD9DAD5, 0xB9BDB8]) : pick([0x3B2A22, 0x5A3A26, 0x8A5A32, 0x2A2222, 0xB07A3E]);
   const PAL = [0xC8894A, 0x7A4E33, 0x3E9C8C, 0x2C4A45, 0x5E8F4E, 0xA6C46A, 0xF2E6C9, 0xCDBB95, 0xB8733F];
-  const TOP = pick([0xF2E6C9, 0xC8894A, 0x3E9C8C, 0x5E8F4E, 0xCDBB95, 0xA6C46A]), BOTTOM = pick([0x7A4E33, 0x2C4A45, 0x5E8F4E, 0x3E9C8C, 0xB8733F]);
+  const TOP = role === 'keeper' ? pick([0x3E9C8C, 0x5E8F4E, 0xF2E6C9]) : pick([0xF2E6C9, 0xC8894A, 0x3E9C8C, 0x5E8F4E, 0xCDBB95, 0xA6C46A]), BOTTOM = pick([0x7A4E33, 0x2C4A45, 0x5E8F4E, 0x3E9C8C, 0xB8733F]);
   const ACC = pick(PAL.filter(c => c !== TOP && c !== BOTTOM)), dress = fem && !child ? rnd() < .7 : false;
   const accessory = role === 'keeper' || role === 'sweeper' ? 'apron' : pick(['hat', 'scarf', 'none', 'cap', fem ? 'kerchief' : 'hat']);
+  const headwear = role === 'keeper' ? 'cap' : null;
   const hairStyle = elder && !fem ? pick(['bald', 'short']) : fem ? pick(['bun', 'long', 'braid']) : pick(['short', 'tuft']);
   const beard = !fem && !child && rnd() < (elder ? .7 : .25);
   const root = new T.Group(); root.name = 'bh-villager'; const rig = new T.Group(); root.add(rig);
@@ -32,7 +33,7 @@ export default function (THREE, opts = {}) {
   const tube = (pv, pts, r0, hex, r1 = r0, radial = 7) => { const c = new T.CatmullRomCurve3(pts.map(v => new T.Vector3(...v))), n = Math.max(3, pts.length * 2), g = new T.TubeGeometry(c, n, 1, radial, false), a = g.attributes.position, v = new T.Vector3(), q = new T.Vector3();
     for (let i = 0; i <= n; i++) { c.getPointAt(i / n, q); const r = r0 + (r1 - r0) * i / n; for (let j = 0; j <= radial; j++) { const k = i * (radial + 1) + j; v.fromBufferAttribute(a, k).sub(q).normalize().multiplyScalar(r).add(q); a.setXYZ(k, v.x, v.y, v.z); } } g.computeVertexNormals(); put(pv, g, hex); };
   // proportions in metres for a 1.6 m adult, scaled at the end
-  const W = .9 + .25 * (stout - .85), hipY = child ? .5 : .82, shoulderY = child ? .82 : 1.3, headY = child ? 1.0 : 1.47, sit = role === 'sitter';
+  const W = .9 + .25 * (stout - .85), hipY = child ? .5 : .82, shoulderY = child ? .82 : 1.3, headY = child ? 1.02 : 1.49, sit = role === 'sitter';
   const body = group('body', 0, 0, 0);
   // ---- legs & shoes (baked into the body; sitters bend at hip and knee) ----
   for (const s of [-1, 1]) {
@@ -50,7 +51,7 @@ export default function (THREE, opts = {}) {
   }
   const beltY = (dress && !sit ? hipY + .1 : y0 + .06);
   lathe(body, [[.19 * W, beltY - .025], [.197 * W, beltY], [.19 * W, beltY + .025]], 0x7A4E33, 0, 0, 0, .78, 16);
-  if (accessory === 'apron') { const g = new T.CylinderGeometry(1, 1, 1, 10, 2, true, -.8, 1.6), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const t = p.getY(i) + .5, a = Math.atan2(p.getX(i), p.getZ(i)), r = .215 * W - .03 * t; p.setXYZ(i, Math.sin(a) * r, beltY - .45 + t * .45 + (sit ? .3 : 0), Math.cos(a) * r * .82 + .01); } g.computeVertexNormals(); put(body, g, ACC === 0x2C4A45 ? 0xCDBB95 : ACC); }
+  if (accessory === 'apron') { const g = new T.CylinderGeometry(1, 1, 1, 10, 2, true, -.8, 1.6), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const t = p.getY(i) + .5, a = Math.atan2(p.getX(i), p.getZ(i)), r = .215 * W - .03 * t; p.setXYZ(i, Math.sin(a) * r, beltY - .45 + t * .45 + (sit ? .3 : 0), Math.cos(a) * r * .82 + .01); } g.computeVertexNormals(); put(body, g, TOP === 0xF2E6C9 ? 0x2C4A45 : 0xF2E6C9); }
   if (accessory === 'scarf' || accessory === 'kerchief') tube(body, [[-.08, top + .02, -.02], [0, top - .01, .1], [.08, top + .02, -.02], [0, top + .03, -.07], [-.08, top + .02, -.02]], .025, ACC);
   ell(body, SKIN, 0, top + .05, 0, .05, .06, .05, 8, 6);                                                         // neck
   put(body, new T.TorusGeometry(.07, .018, 6, 16), accessory === 'scarf' ? ACC : 0xF2E6C9, 0, top + .02, 0, Math.PI / 2, 0, 0, 1, .8, 1);   // collar
@@ -62,7 +63,7 @@ export default function (THREE, opts = {}) {
     tube(arm, [[0, 0, 0], [s * .02, -len * .45, .01], [s * .015, -len * .82, .03]], .058 * W, TOP, .045);
     put(arm, new T.TorusGeometry(.046, .014, 5, 12), 0xF2E6C9, s * .015, -len * .82, .03, Math.PI / 2, 0, 0);   // cuff
     tube(arm, [[s * .015, -len * .82, .03], [s * .013, -len * .9, .035]], .036, SKIN, .034, 6);
-    ell(arm, SKIN, s * .012, -len * .96, .035, .042, .052, .034, 8, 6);
+    ell(arm, SKIN, s * .012, -len * .97, .035, .05, .062, .04, 8, 6);   // hands a touch large for readability
     ell(arm, SKIN, s * -.026, -len * .93, .055, .016, .024, .016, 6, 4);                                          // thumb
     // props held in the right hand
     if (s > 0) {
@@ -75,7 +76,7 @@ export default function (THREE, opts = {}) {
   }
   // ---- head: sculpted sphere with painted face (eyes, catchlights, brows, smile, blush) ----
   const head = group('head', 0, headY - (sit ? hipY - .45 : 0), 0);
-  const hr = child ? .14 : .122;
+  const hr = child ? .155 : .138;   // slightly large heads read at the gameplay camera
   {
     const g = new T.SphereGeometry(1, 20, 16), p = g.attributes.position, col = new Float32Array(p.count * 3), c = new T.Color();
     const G = (dx, dy, sx, sy) => Math.exp(-((dx / sx) ** 2) - ((dy / sy) ** 2));
@@ -102,7 +103,7 @@ export default function (THREE, opts = {}) {
   if (beard) lathe(head, [[hr * .7, -hr * .15], [hr * .75, -hr * .55], [hr * .4, -hr * 1.05], [.001, -hr * 1.12]], HAIR, 0, 0, hr * .15, .75, 12);
   // hats & headwear
   if (accessory === 'hat') { lathe(head, [[hr * 2.1, 0], [hr * 2.05, hr * .08], [hr * 1.05, hr * .12], [hr * .95, hr * .7], [.001, hr * .8]], pick([0xE9C98F, 0xC8894A, 0xCDBB95]), 0, hr * .72, 0, 1, 18); lathe(head, [[hr * 1.0, hr * .12], [hr * 1.0, hr * .3]], ACC, 0, hr * .72, 0, 1, 16); }
-  if (accessory === 'cap') { ell(head, ACC, 0, hr * .78, -hr * .02, hr * 1.05, hr * .45, hr * 1.05, 12, 6); ell(head, ACC, 0, hr * .62, hr * .9, hr * .6, hr * .07, hr * .45, 8, 4); }
+  if (accessory === 'cap' || headwear === 'cap') { const CAPC = headwear ? 0x7A4E33 : ACC; ell(head, CAPC, 0, hr * .78, -hr * .02, hr * 1.05, hr * .45, hr * 1.05, 12, 6); ell(head, CAPC, 0, hr * .62, hr * .9, hr * .6, hr * .07, hr * .45, 8, 4); }
   if (accessory === 'kerchief') { const g = new T.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI * .55); put(head, g, ACC, 0, hr * .12, -hr * .05, 0, 0, 0, hr * 1.1, hr * 1.12, hr * 1.1); ell(head, ACC, 0, -hr * .3, -hr * 1.05, hr * .25, hr * .3, hr * .15, 6, 5); }
   // ---- merge per pivot: one mesh per pivot, vertex coloured ----
   for (const [pivot, list] of parts) {
