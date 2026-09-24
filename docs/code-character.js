@@ -5,7 +5,7 @@ import {createBootFlex} from './boot-flex.js';
 let motionPromise,faceTexturePromise;
 export async function loadCodeCharacter(build){
  const data=await(motionPromise??=fetch(new URL('./assets/quaternius/motion.json',import.meta.url)).then(r=>{if(!r.ok)throw Error('Motion load '+r.status);return r.json();}));
- const model=build(T),root=new T.Group();root.add(model);const faceTexture=await(faceTexturePromise??=new T.TextureLoader().loadAsync(new URL('./textures/face-r07.png',import.meta.url).href));faceTexture.colorSpace=T.SRGBColorSpace;
+ const model=build(T),root=new T.Group();root.add(model);const faceTexture=await(faceTexturePromise??=new T.TextureLoader().loadAsync(new URL('./textures/face-r08.webp',import.meta.url).href));faceTexture.colorSpace=T.SRGBColorSpace;
  const source=new T.Group(),nodes=new Map();
  for(const n of data.nodes){const o=new T.Object3D();o.name=n.name;o.position.fromArray(n.position);o.quaternion.fromArray(n.quaternion);o.scale.fromArray(n.scale);nodes.set(n.name,o);}
  for(const n of data.nodes)(nodes.get(n.parent)||source).add(nodes.get(n.name));
@@ -22,17 +22,17 @@ export async function loadCodeCharacter(build){
  const ramp=new T.DataTexture(new Uint8Array([140,185,245]),3,1,T.RedFormat);ramp.needsUpdate=true;ramp.minFilter=ramp.magFilter=T.NearestFilter;
  model.traverse(n=>{if(n.isMesh){if(n.userData.faceDetail)n.visible=false;const convert=m=>{const mat=new T.MeshToonMaterial({color:m.color,gradientMap:ramp,side:m.side,vertexColors:m.vertexColors});if(m.name==='irisSurface'){mat.color.set('#ffffff');mat.onBeforeCompile=shader=>{shader.uniforms.eyeGaze=eyeGaze;shader.uniforms.eyeSide={value:n.userData.eyeSide||1};shader.vertexShader='varying vec2 eyeUv;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <uv_vertex>','#include <uv_vertex>\neyeUv=uv;');shader.fragmentShader='varying vec2 eyeUv; uniform vec2 eyeGaze; uniform float eyeSide;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
  float arch=pow(max(0.0,sin(eyeUv.x*3.14159265)),0.8);
- float top=.012*arch-.001+eyeUv.x*.004;
- float bottom=-.009*arch-.001+eyeUv.x*.004;
- vec2 eyePoint=vec2((eyeUv.x-.5)*.050,mix(bottom,top,eyeUv.y)-.002)-vec2(eyeGaze.x*eyeSide,eyeGaze.y);
- float r=length(eyePoint/vec2(.0128,.015));
+ float top=.017*arch-.001+eyeUv.x*.004;
+ float bottom=-.013*arch-.001+eyeUv.x*.004;
+ vec2 eyePoint=vec2((eyeUv.x-.5)*.058,mix(bottom,top,eyeUv.y)-.002)-vec2(eyeGaze.x*eyeSide,eyeGaze.y);
+ float r=length(eyePoint/vec2(.0158,.0182));
  float angle=atan(eyePoint.y,eyePoint.x);
- vec3 iris=mix(vec3(.025,.13,.12),vec3(.10,.43,.34),smoothstep(.28,.7,r));
+ vec3 iris=mix(vec3(.04,.20,.18),vec3(.17,.60,.52),smoothstep(.28,.7,r));
  iris*=.96+.04*sin(angle*15.0+r*8.0);
  iris=mix(iris,vec3(.014,.065,.060),smoothstep(.84,1.0,r));
- iris=mix(vec3(.008,.025,.025),iris,smoothstep(.35,.43,r));
+ iris=mix(vec3(.008,.025,.025),iris,smoothstep(.30,.37,r));
  diffuseColor.rgb=mix(iris,vec3(.92,.89,.79),smoothstep(.97,1.02,r));
- float sparkle=1.0-smoothstep(.0016,.0024,length(eyePoint-vec2(-.004,.005)));
+ float sparkle=max(1.0-smoothstep(.0022,.0031,length(eyePoint-vec2(-.005,.006))),1.0-smoothstep(.0009,.0014,length(eyePoint-vec2(.004,-.004))));
  diffuseColor.rgb=mix(diffuseColor.rgb,vec3(1.0),sparkle);
  `);};} if(m.name==='faceSkin'){
  const g=n.geometry,p=g.attributes.position,uv=[],mask=[];const anchors=[[.027,.762],[.038,.75],[.069,.696],[.091,.629],[.124,.563],[.174,.432],[.203,.371],[.251,.265],[.3,.15]];
@@ -40,7 +40,7 @@ export async function loadCodeCharacter(build){
  // Keep the cel light plane coherent across the painted sockets and cheeks.
  const normals=g.attributes.normal,normal=new T.Vector3(),plane=new T.Vector3();for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);normal.fromBufferAttribute(normals,i);plane.set(x/.102*.65-.25,(y-.17)/.14*.18,1).normalize();normal.lerp(plane,T.MathUtils.smoothstep(z,.018,.045)).normalize();normals.setXYZ(i,normal.x,normal.y,normal.z);}
  g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setAttribute('paintMask',new T.Float32BufferAttribute(mask,1));const skin=new T.MeshToonMaterial({color:'#ffffff',map:faceTexture,gradientMap:faceRamp});skin.onBeforeCompile=shader=>{shader.vertexShader='attribute float paintMask; varying float faceMask; varying vec3 facePoint;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nfaceMask=paintMask;facePoint=position;');shader.fragmentShader='varying float faceMask; varying vec3 facePoint;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
- float eyeHole=1.0-smoothstep(.80,1.05,pow((abs(facePoint.x)-.055)/.027,2.0)+pow((facePoint.y-.176)/.019,2.0));
+ float eyeHole=1.0-smoothstep(.80,1.05,pow((abs(facePoint.x)-.055)/.031,2.0)+pow((facePoint.y-.176)/.024,2.0));
  vec3 baseSkin=texture2D(map,vec2(.50,.69)).rgb;
  diffuseColor.rgb=mix(baseSkin,diffuseColor.rgb,faceMask*(1.0-eyeHole)*(1.0-(1.0-smoothstep(.075,.105,facePoint.y))*smoothstep(.035,.066,abs(facePoint.x))));
  float noseSoft=exp(-pow(facePoint.x/.024,4.0)-pow((facePoint.y-.129)/.022,4.0));

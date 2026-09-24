@@ -10,6 +10,21 @@ export default function(THREE) {
  const profile=(p,m,points,x,y,z,depth=.04)=>{const s=new THREE.Shape();points.forEach(([a,b],i)=>i?s.lineTo(a,b):s.moveTo(a,b));s.closePath();return mesh(p,new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:.008,bevelThickness:.007}),m,x,y,z-depth/2);};
  const stroke=(p,m,points,r=.006)=>mesh(p,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),10,r,5,false),m);
  const lathe=(p,m,points,x,y,z,sx=1,sz=1)=>mesh(p,new THREE.LatheGeometry(points.map(v=>new THREE.Vector2(...v)),12),m,x,y,z,sx,1,sz);
+ // Outfit details (R-hero pass): many small parts baked into ONE vertex-coloured mesh per pivot, so trims,
+ // buttons, tails, patches and wraps cost one draw each pivot. put(geo,hex,x,y,z,rx,ry,rz,sx,sy,sz); rope(points,r0,hex,r1).
+ const detailMat=Object.assign(new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.82,side:THREE.DoubleSide}),{name:'fabric'});
+ function details(parent,build){
+  const parts=[],E=new THREE.Euler(),Q=new THREE.Quaternion();
+  const put=(geo,hex,x=0,y=0,z=0,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1)=>parts.push([geo,hex,new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),Q.clone().setFromEuler(E.set(rx,ry,rz)),new THREE.Vector3(sx,sy,sz))]);
+  const rope=(pts,r0,hex,r1=r0,radial=5)=>{const c=new THREE.CatmullRomCurve3(pts.map(v=>new THREE.Vector3(...v))),n=Math.max(4,pts.length*2),g=new THREE.TubeGeometry(c,n,1,radial,false),a=g.attributes.position,v=new THREE.Vector3(),q=new THREE.Vector3();
+   for(let i=0;i<=n;i++){c.getPointAt(i/n,q);const r=r0+(r1-r0)*i/n;for(let j=0;j<=radial;j++){const k=i*(radial+1)+j;v.fromBufferAttribute(a,k).sub(q).normalize().multiplyScalar(r).add(q);a.setXYZ(k,v.x,v.y,v.z);}}g.computeVertexNormals();put(g,hex);};
+  build(put,rope);
+  const pos=[],nor=[],col=[],c=new THREE.Color();
+  for(const [geo,hex,m] of parts){const g=geo.index?geo.toNonIndexed():geo.clone();g.applyMatrix4(m);if(!g.attributes.normal)g.computeVertexNormals();pos.push(...g.attributes.position.array);nor.push(...g.attributes.normal.array);c.set(hex);for(let i=0;i<g.attributes.position.count;i++)col.push(c.r,c.g,c.b);g.dispose();}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  return mesh(parent,g,detailMat);
+ }
+ const TRIM=0x2f6f6a,BRASS=0xd9a441,CORALC=0xc95845,CREAMC=0xebe0c5,LEATHER_L=0x8f6d4f,LEATHER_D=0x4f3d34,PATCH=0x1f4749,STITCH=0x5f8a82;
 
  // Curved cloth sections retain a soft silhouette and a few broad folds under cel light.
  function garment(parent,material,sections,fold=.003,open=false){const g=new THREE.CylinderGeometry(1,1,1,20,sections.length>3?9:4,open),p=g.attributes.position,low=sections[0][0],high=sections.at(-1)[0];for(let i=0;i<p.count;i++){const t=p.getY(i)+.5,y=low+(high-low)*t,x=p.getX(i),z=p.getZ(i),a=Math.atan2(z,x),r=Math.hypot(x,z);let rx=sections[0][1],rz=sections[0][2];for(let j=1;j<sections.length;j++)if(y>=sections[j-1][0]&&y<=sections[j][0]){const A=sections[j-1],B=sections[j],u=(y-A[0])/(B[0]-A[0]);rx=THREE.MathUtils.lerp(A[1],B[1],u);rz=THREE.MathUtils.lerp(A[2],B[2],u);}const f=fold*.35*Math.sin(t*Math.PI)*Math.sin(a*6+.3);p.setXYZ(i,Math.cos(a)*(rx+f)*r,y,Math.sin(a)*(rz+f)*r);}g.computeVertexNormals();const result=mesh(parent,g,material);result.receiveShadow=false;return result;}
@@ -29,7 +44,7 @@ export default function(THREE) {
  const faceProfile=[[.012,0,0],[.027,.017,.044],[.038,.033,.065],[.069,.073,.083],[.100,.089,.086],[.139,.107,.092],[.170,.102,.093],[.207,.099,.094],[.251,.094,.084],[.285,.060,.058],[.300,0,0]];
  function radius(y,k){for(let i=1;i<faceProfile.length;i++)if(y<=faceProfile[i][0]){const a=faceProfile[i-1],b=faceProfile[i],prev=faceProfile[Math.max(0,i-2)],next=faceProfile[Math.min(faceProfile.length-1,i+1)],h=b[0]-a[0],u=THREE.MathUtils.clamp((y-a[0])/h,0,1),m0=(b[k]-prev[k])/(b[0]-prev[0]),m1=(next[k]-a[k])/(next[0]-a[0]);return Math.max(0,(2*u*u*u-3*u*u+1)*a[k]+(u*u*u-2*u*u+u)*h*m0+(-2*u*u*u+3*u*u)*b[k]+(u*u*u-u*u)*h*m1);}return 0;}
  function noseForm(x,y){const knots=[[.110,0,.018],[.120,.023,.017],[.128,.026,.013],[.148,.015,.010],[.174,.003,.010],[.191,0,.012]];for(let i=1;i<knots.length;i++)if(y>=knots[i-1][0]&&y<=knots[i][0]){const a=knots[i-1],b=knots[i],u=(y-a[0])/(b[0]-a[0]),h=THREE.MathUtils.lerp(a[1],b[1],u),w=THREE.MathUtils.lerp(a[2],b[2],u);return h*Math.pow(Math.max(0,1-(x/w)**2),1.7);}return 0;}
- const features=(x,y)=>noseForm(x,y)-.005*Math.exp(-(((Math.abs(x)-.055)/.026)**2)-(((y-.173)/.019)**2))+.004*Math.exp(-(((Math.abs(x)-.070)/.025)**2)-(((y-.137)/.024)**2))+.002*Math.exp(-(((Math.abs(x)-.055)/.030)**2)-(((y-.20)/.010)**2));
+ const features=(x,y)=>noseForm(x,y)-.005*Math.exp(-(((Math.abs(x)-.055)/.030)**2)-(((y-.173)/.024)**2))+.004*Math.exp(-(((Math.abs(x)-.070)/.025)**2)-(((y-.137)/.024)**2))+.002*Math.exp(-(((Math.abs(x)-.055)/.030)**2)-(((y-.20)/.010)**2));
  const surface=(x,y)=>radius(y,2)*Math.pow(Math.max(.001,1-(x/Math.max(.001,radius(y,1)))**2),.30)+features(x,y);
  const faceGeo=new THREE.SphereGeometry(1,96,80),fp=faceGeo.attributes.position;
  for(let i=0;i<fp.count;i++){const ny=fp.getY(i),y=.156+ny*.144,s=Math.sqrt(Math.max(.000001,1-ny*ny)),x=fp.getX(i)/s*radius(y,1),front=fp.getZ(i)>0;const z=front?surface(x,y):fp.getZ(i)/s*radius(y,2),rearLift=front?0:.060*(1-THREE.MathUtils.smoothstep(y,.012,.150))*THREE.MathUtils.smoothstep(-z,0,.04);fp.setXYZ(i,x,y+rearLift,z);}faceGeo.computeVertexNormals();const colors=[];for(let i=0;i<fp.count;i++){const x=fp.getX(i),y=fp.getY(i),z=fp.getZ(i),warm=Math.exp(-(((Math.abs(x)-.060)/.033)**2)-(((y-.137)/.025)**2))*(z>0?1:0),shadow=.10*Math.exp(-((x/.017)**2)-(((y-.114)/.008)**2))*(z>0?1:0);colors.push(1-shadow,.99-.07*warm-shadow,.98-.08*warm-shadow);}faceGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));const faceMaterial=skin.clone();faceMaterial.vertexColors=true;faceMaterial.name='faceSkin';const face=mesh(head,faceGeo,faceMaterial);face.receiveShadow=false;
@@ -42,10 +57,10 @@ export default function(THREE) {
   ell(head,mat(0xb97558),side*.112,.150,.006,.008,.017,.003);
   const ex=side*.055,ey=.174,eyeGroup=new THREE.Group();head.add(eyeGroup);
   const g=new THREE.PlaneGeometry(1,1,32,16),p=g.attributes.position;
-  for(let row=0;row<=16;row++)for(let col=0;col<=32;col++){const u=col/32,t=row/16,lx=-.025+u*.050,arch=Math.pow(Math.sin(u*Math.PI),.8),top=.012*arch-.001+u*.004,bottom=-.009*arch-.001+u*.004,x=ex+side*lx,y=ey+THREE.MathUtils.lerp(top,bottom,t);p.setXYZ(row*33+col,x,y,surface(x,y)+.0015);}g.computeVertexNormals();const eyeWhite=white.clone();eyeWhite.side=THREE.DoubleSide;eyeWhite.name='irisSurface';mesh(eyeGroup,g,eyeWhite).userData.eyeSide=side;
-  const lid=[];for(let i=0;i<=16;i++){const t=i/16,x=ex+side*(-.025+t*.050),y=ey+Math.sin(t*Math.PI)*.012-.001+t*.004;lid.push([x,y,surface(x,y)+.002]);}stroke(eyeGroup,mat(0x603e32),lid,.0017);
+  for(let row=0;row<=16;row++)for(let col=0;col<=32;col++){const u=col/32,t=row/16,lx=-.029+u*.058,arch=Math.pow(Math.sin(u*Math.PI),.8),top=.017*arch-.001+u*.004,bottom=-.013*arch-.001+u*.004,x=ex+side*lx,y=ey+THREE.MathUtils.lerp(top,bottom,t);p.setXYZ(row*33+col,x,y,surface(x,y)+.0015);}g.computeVertexNormals();const eyeWhite=white.clone();eyeWhite.side=THREE.DoubleSide;eyeWhite.name='irisSurface';mesh(eyeGroup,g,eyeWhite).userData.eyeSide=side;
+  const lid=[];for(let i=0;i<=16;i++){const t=i/16,x=ex+side*(-.029+t*.058),y=ey+Math.sin(t*Math.PI)*.017-.001+t*.004;lid.push([x,y,surface(x,y)+.002]);}stroke(eyeGroup,mat(0x603e32),lid,.0017);
   const bg=new THREE.PlaneGeometry(1,1,28,4),bp=bg.attributes.position;for(let row=0;row<=4;row++)for(let col=0;col<=28;col++){const u=col/28,x=ex+side*(-.027+u*.058),center=.203+.006*Math.sin(Math.PI*u)-.003*u,width=.007*Math.pow(1-u,.45)*(.7+.3*Math.sin(Math.PI*u)),y=center+(row/4-.5)*width;bp.setXYZ(row*29+col,x,y,surface(x,y)+.0015);}bg.computeVertexNormals();const bm=hair.clone();bm.side=THREE.DoubleSide;mesh(head,bg,bm).userData.faceDetail=true;
-  const lower=[];for(let i=0;i<=16;i++){const u=i/16,x=ex+side*(-.025+u*.050),y=ey-.009*Math.pow(Math.sin(u*Math.PI),.8)-.001+u*.004;lower.push([x,y,surface(x,y)+.0018]);}stroke(eyeGroup,mat(0xb98568),lower,.0007);
+  const lower=[];for(let i=0;i<=16;i++){const u=i/16,x=ex+side*(-.029+u*.058),y=ey-.013*Math.pow(Math.sin(u*Math.PI),.8)-.001+u*.004;lower.push([x,y,surface(x,y)+.0018]);}stroke(eyeGroup,mat(0xb98568),lower,.0007);
   eyeGroup.position.y=ey;for(const part of eyeGroup.children)part.position.y-=ey;(root.userData.eyeGroups??=[]).push(eyeGroup);
  }
  // Restrained lip planes and a slight asymmetric expression, not an outlined grin.
@@ -53,39 +68,36 @@ export default function(THREE) {
  const mouth=[];for(let i=0;i<=24;i++){const x=-.025+i*.05/24,y=seam(x);mouth.push([x,y,surface(x,y)+.0012]);}stroke(head,mat(0x925b49),mouth,.0008).userData.faceDetail=true;
  function lipPlane(upper){const g=new THREE.PlaneGeometry(.05,1,32,4),p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),u=p.getY(i)+.5,w=Math.pow(Math.max(0,1-(x/.025)**2),.8),height=upper?.0035:.0045,y=seam(x)+(upper?1:-1)*height*w*u;const bulge=.0015*Math.sin(u*Math.PI)*w;p.setXYZ(i,x,y,surface(x,y)+.0007+bulge);}g.computeVertexNormals();mesh(head,g,mat(upper?0xc28b70:0xdba786)).userData.faceDetail=true;}lipPlane(true);lipPlane(false);
 
- // A medium-length swept cut: broad closed locks, airy crown and a loose nape.
- const hairShadow=mat(0x503326),hairMid=mat(0x63412d),hairSun=mat(0x735039);
- const scalp=new THREE.SphereGeometry(1,40,24,0,Math.PI*2,0,Math.PI*.70),sp=scalp.attributes.position;
- for(let j=0;j<=24;j++)for(let i=0;i<=40;i++){const a=i/40*Math.PI*2,t=j/24*Math.PI*(.65-.26*Math.max(0,Math.sin(a))+.018*Math.sin(a*7)),sn=Math.sin(t);sp.setXYZ(j*41+i,-Math.cos(a)*sn*.116,.179+Math.cos(t)*.145,Math.sin(a)*sn*.109-.020);}
- scalp.computeVertexNormals();mesh(head,scalp,hairShadow).receiveShadow=false;
- function hairLock(points,width,depth,material){
-  const path=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),profile=[[-1,0],[-.60,.68],[0,1],[.60,.68],[1,0],[.55,-.30],[0,-.40],[-.55,-.30]],verts=[],indices=[];let lastAcross=null;
-  for(let row=0;row<=16;row++){const t=row/16,c=path.getPoint(t),tangent=path.getTangent(t).normalize(),out=new THREE.Vector3(c.x*.65,(c.y-.17)*.55,c.z+.015).normalize(),across=new THREE.Vector3().crossVectors(tangent,out).normalize();if(lastAcross&&across.dot(lastAcross)<0)across.negate();lastAcross=across.clone();
-   const taper=(.70+.40*Math.sin(t*Math.PI))*Math.pow(1-t,.65);
-   for(const [a,b]of profile){const p=c.clone().addScaledVector(across,a*width*taper).addScaledVector(out,b*depth*taper);verts.push(p.x,p.y,p.z);}
-  }
-  for(let row=0;row<16;row++)for(let col=0;col<8;col++){const a=row*8+col,b=row*8+(col+1)%8,c=a+8,d=b+8;indices.push(a,c,b,b,c,d);}
-  for(let i=1;i<7;i++)indices.push(0,i,i+1);
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setIndex(indices);g.computeVertexNormals();const m=material.clone();m.side=THREE.DoubleSide;mesh(head,g,m).receiveShadow=false;
- }
- // Crown follows an off-centre sweep rather than radial spaghetti strands.
- for(let i=0;i<9;i++){const a=-Math.PI*.85+i/8*Math.PI*1.7,s=Math.sin(a),c=-Math.cos(a);
-  hairLock([[-.025,.304,-.020],[s*.064-.015,.328,c*.052-.020],[s*.112,.275,c*.103-.024],[s*.134,.174+(i%3)*.008,c*.120-.028]],.039,.018,i%3===0?hairSun:hairMid);
- }
- // Longer rear layers flare softly away from the neck instead of ending in a hard rim.
- for(let i=0;i<7;i++){const a=-1.1+i/6*2.2,s=Math.sin(a),c=-Math.cos(a);
-  hairLock([[s*.082,.260,c*.084-.020],[s*.117,.211,c*.125-.022],[s*.132,.139,c*.130-.025],[s*.142,.070+(i%3)*.009,c*.143-.022]],.033,.015,i%3===1?hairSun:hairMid);
- }
- // Three broad bangs leave a clear eye line, with unequal ends and space underneath.
- hairLock([[.043,.308,.025],[.010,.325,.080],[-.040,.275,.125],[-.081,.197,.104]],.036,.017,hairMid);
- hairLock([[.004,.309,.035],[-.054,.292,.103],[-.091,.223,.106],[-.112,.139,.085]],.035,.015,hairMid);
- hairLock([[.059,.303,.022],[.079,.282,.102],[.078,.236,.126],[.046,.191,.109]],.029,.016,hairSun);
- // Cheek-framing side pieces: wider at the temple, light and tapered below the ear.
- for(const side of [-1,1]){
-  hairLock([[side*.090,.281,.015],[side*.126,.227,.049],[side*.139,.159,.038],[side*.125,.074,.046]],.031,.016,side<0?hairShadow:hairMid);
-  hairLock([[side*.091,.271,-.042],[side*.134,.222,-.041],[side*.143,.154,-.054],[side*.156,.095,-.080]],.026,.013,hairMid);
- }
- hairLock([[-.031,.309,-.020],[-.071,.337,-.010],[-.109,.322,.004],[-.126,.298,.010]],.024,.011,hairMid);
+ // Short boyish cut from R-hero: a close sculpted cap above the ears, chunky pointed clumps swept back on top, a side-swept fringe clear of the eyes.
+ const hairShadow=mat(0x241a24),hairMid=mat(0x352733),hairSun=mat(0x4b3747);
+ const scalp=new THREE.SphereGeometry(1,48,28,0,Math.PI*2,0,Math.PI*.70),sp=scalp.attributes.position;
+ // Coverage by direction: low at the nape, above the ears at the sides, a clean hairline over the brow at the front.
+ for(let j=0;j<=28;j++)for(let i=0;i<=48;i++){const a=i/48*Math.PI*2,f=Math.max(0,Math.sin(a)),b=Math.max(0,-Math.sin(a)),cover=Math.PI*(.40*f+.56*b+.50*(1-f-b)),t=j/28*cover,sn=Math.sin(t);sp.setXYZ(j*49+i,-Math.cos(a)*sn*.124,.185+Math.cos(t)*.160*(1+.10*Math.max(0,Math.cos(t))*(1-f)),Math.sin(a)*sn*.119-.022);}
+ scalp.computeVertexNormals();mesh(head,scalp,hairMid).receiveShadow=false;
+ // One clump: a rounded-base, pointed, flattened lathe laid along base→tip, flat face turned away from the skull, tip curling back toward it.
+ function clump(base,tip,width,thick,curl,material){
+  const B=new THREE.Vector3(...base),T=new THREE.Vector3(...tip),dir=T.clone().sub(B),len=dir.length();dir.normalize();
+  const g=new THREE.LatheGeometry([[0,0],[.60,.05],[.95,.18],[1,.32],[.80,.55],[.45,.78],[.15,.93],[0,1]].map(([r,y])=>new THREE.Vector2(r,y*len)),14),q=g.attributes.position;
+  for(let i=0;i<q.count;i++){const v=q.getY(i)/len;q.setXYZ(i,q.getX(i)*width,q.getY(i),q.getZ(i)*thick-curl*v*v);}
+  const out=B.clone().add(T).multiplyScalar(.5).sub(new THREE.Vector3(0,.19,-.02));out.addScaledVector(dir,-out.dot(dir)).normalize();
+  g.applyMatrix4(new THREE.Matrix4().makeBasis(new THREE.Vector3().crossVectors(dir,out).normalize(),dir,out));g.translate(B.x,B.y,B.z);g.computeVertexNormals();
+  mesh(head,g,material).receiveShadow=false;}
+ // Crown volume sweeping back low and wide, so the silhouette stays rounded rather than spiky.
+ clump([-.040,.315,.040],[-.050,.350,-.090],.060,.022,.018,hairMid);
+ clump([.030,.315,.030],[.045,.350,-.100],.058,.022,.018,hairSun);
+ clump([.000,.280,-.070],[.000,.290,-.170],.056,.020,.012,hairMid);
+ // Heavier side-swept fringe, tips resting above the brow line.
+ clump([-.070,.300,.070],[.020,.245,.125],.042,.022,.010,hairSun);
+ clump([-.020,.310,.060],[.070,.240,.118],.040,.022,.010,hairMid);
+ clump([.040,.300,.050],[.110,.235,.085],.032,.020,.010,hairMid);
+ // Short sides hugging the head above the ears, and a neat nape.
+ for(const side of [-1,1]){clump([side*.098,.270,.020],[side*.118,.210,-.020],.028,.010,.006,side<0?hairMid:hairShadow);clump([side*.085,.230,-.070],[side*.095,.150,-.100],.028,.010,.006,hairShadow);}
+ clump([.000,.210,-.110],[.000,.105,-.118],.050,.016,.010,hairShadow);
+ // Back of the head, the view the game camera sees most: layered locks falling from the crown to the nape so it reads as hair, not a cap.
+ for(let i=0;i<5;i++){const u=(i-2)/2,x=u*.085;clump([x*.5,.312,-.100],[x*1.10,.150+Math.abs(u)*.024,-.170+Math.abs(u)*.022],.054,.020,.020,i===2?hairMid:i%2?hairShadow:hairMid);}
+ for(let i=0;i<4;i++){const u=(i-1.5)/1.5,x=u*.075;clump([x*.6,.250,-.132],[x*1.15,.108,-.160],.044,.016,.014,hairShadow);}
+ // Tufts that break the cap's rim: sideburns in front of the ears and short flicks behind them.
+ for(const side of [-1,1]){clump([side*.108,.215,.030],[side*.118,.168,.042],.020,.009,.004,hairMid);clump([side*.110,.225,-.040],[side*.126,.170,-.062],.024,.010,.006,hairShadow);clump([side*.096,.205,-.090],[side*.108,.150,-.112],.024,.010,.006,hairShadow);}
  root.userData.faceStudy=true;
 
 
@@ -93,6 +105,17 @@ export default function(THREE) {
   const pre=side<0?'left':'right';const leg=pivot(pre+'UpperLeg',hips,side*.075,-.025,0);
   garment(leg,teal,[[-.33,.054,.049],[-.27,.062,.052],[-.15,.077,.061],[-.04,.078,.061],[.005,.070,.058]],.0025);
   const knee=pivot(pre+'LowerLeg',leg,0,-.335,0);ell(knee,teal,0,0,.007,.055,.052,.05);
+  details(knee,(put,rope)=>{
+   { // subtle irregular patch shaped to the knee: a jittered, slightly darker teal pad with dashed stitches
+    const g=new THREE.SphereGeometry(1,10,6),q=g.attributes.position;for(let i=0;i<q.count;i++){const x=q.getX(i),y=q.getY(i),z=q.getZ(i),a=Math.atan2(y,x),k=1+.16*Math.sin(a*3+side)+.08*Math.sin(a*5);q.setXYZ(i,x*k,y*k,z);}g.computeVertexNormals();
+    put(g,PATCH,side*.006,-.024,.049,-.2,0,side*.3,.027,.031,.006);
+    for(let i=0;i<9;i++){const a=i/9*Math.PI*2,k=1+.16*Math.sin(a*3+side)+.08*Math.sin(a*5),x=side*.006+Math.cos(a+side*.3)*.025*k,y=-.024+Math.sin(a+side*.3)*.029*k;
+     rope([[x,y,.056],[x+Math.cos(a+1.6)*.004,y+Math.sin(a+1.6)*.004,.056]],.0011,STITCH);}
+   }
+   put(new THREE.LatheGeometry([[.05,-.258],[.056,-.215],[.059,-.17],[.058,-.13],[.061,-.115]].map(v=>new THREE.Vector2(...v)),14),LEATHER_L,0,0,.002,0,0,0,1,1,.86);   // boot shaft
+   put(new THREE.TorusGeometry(.06,.008,6,16),LEATHER_D,0,-.117,.002,Math.PI/2,0,0,1,.86,1);                                // folded boot top
+   for(let k=0;k<4;k++){const pts=[];for(let i=0;i<=8;i++){const a=i/8*Math.PI*2+k*.9,y=-.245+k*.032+i/8*.028;pts.push([Math.sin(a)*.061,y,Math.cos(a)*.061*.86+.002]);}rope(pts,.0045,LEATHER_D);}   // leather bindings
+  });
   garment(knee,teal,[[-.215,.033,.031],[-.19,.043,.038],[-.12,.057,.047],[-.035,.056,.050],[.015,.053,.048]],.003);
   // Inner boot tongue bridges ankle flexion without exposing a gap under the trousers.
   taper(knee,leather,0,-.240,0,.029,.027,.14,.9,12);
@@ -119,12 +142,16 @@ export default function(THREE) {
   hand.add(handShape);
   ell(handShape,skin,0,.004,0,.021,.024,.018).receiveShadow=false;
   // Human relaxed hands: continuous palm, four graduated fingers and an opposed thumb.
-  const palmGeo=new THREE.SphereGeometry(1,20,14),palmPos=palmGeo.attributes.position;
+  const palmGeo=new THREE.SphereGeometry(1,14,10),palmPos=palmGeo.attributes.position;
   for(let i=0;i<palmPos.count;i++){const x=palmPos.getX(i),y=palmPos.getY(i),z=palmPos.getZ(i),width=.029*(.88+.12*(1-y));palmPos.setXYZ(i,x*width,-.026+y*.031,z*.015);}
   palmGeo.computeVertexNormals();mesh(handShape,palmGeo,skin).receiveShadow=false;
-  ell(handShape,leather,0,-.022,-.012,.028,.028,.005).receiveShadow=false;
-  function digit(points,radius){const curve=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),g=new THREE.TubeGeometry(curve,12,1,8,false),p=g.attributes.position;
-   for(let row=0;row<=12;row++){const t=row/12,c=curve.getPoint(t),r=radius*(1-.30*t);for(let col=0;col<=8;col++){const i=row*9+col;p.setXYZ(i,c.x+(p.getX(i)-c.x)*r,c.y+(p.getY(i)-c.y)*r,c.z+(p.getZ(i)-c.z)*r);}}
+  details(handShape,(put,rope)=>{ // fingerless glove: back plate, knuckle band, wrist cuff
+   put(new THREE.SphereGeometry(1,12,8),LEATHER_D,0,-.02,-.011,0,0,0,.03,.03,.008);
+   rope([[-.03,-.043,-.006],[0,-.047,-.012],[.03,-.043,-.006]],.0055,LEATHER_D);
+   put(new THREE.TorusGeometry(.025,.0065,6,14),LEATHER_L,0,.004,0,Math.PI/2,0,0,1,.8,1);
+  }).receiveShadow=false;
+  function digit(points,radius){const curve=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),g=new THREE.TubeGeometry(curve,8,1,6,false),p=g.attributes.position;
+   for(let row=0;row<=8;row++){const t=row/8,c=curve.getPoint(t),r=radius*(1-.30*t);for(let col=0;col<=6;col++){const i=row*7+col;p.setXYZ(i,c.x+(p.getX(i)-c.x)*r,c.y+(p.getY(i)-c.y)*r,c.z+(p.getZ(i)-c.z)*r);}}
    g.computeVertexNormals();mesh(handShape,g,skin).receiveShadow=false;const tip=points.at(-1);ell(handShape,skin,...tip,radius*.70,radius*.70,radius*.70).receiveShadow=false;
   }
   const lengths=[.042,.048,.045,.035];
@@ -145,7 +172,7 @@ export default function(THREE) {
  const cape=pivot('cape',hips,0,.325,-.007);cape.scale.set(.89,.64,.94);
  // A closed shoulder drape: shared curved surface from neckline over both
  // shoulders to its diagonal hem; inner shell gives the cloth a real edge.
- const segments=64,rings=12,verts=[],indices=[];
+ const segments=44,rings=10,verts=[],indices=[];
  function drape(u,a,inside=false){
   const sn=Math.sin(a),cs=Math.cos(a),ease=Math.sin(u*Math.PI/2);
   const rx=.069+.155*ease+.025*ease**4,rz=.061+.076*ease;
@@ -160,7 +187,7 @@ export default function(THREE) {
  for(let shell=0;shell<2;shell++)for(let j=0;j<rings;j++)for(let i=0;i<segments;i++){const a=shell*layer+j*(segments+1)+i,b=a+1,c=a+segments+1,d=c+1;if(!shell)indices.push(a,c,b,b,c,d);else indices.push(a,b,c,b,d,c);}
  for(const row of [0,rings])for(let i=0;i<segments;i++){const a=row*(segments+1)+i,b=a+1;indices.push(a,b,a+layer,b,b+layer,a+layer);}
  const clothGeo=new THREE.BufferGeometry();clothGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));clothGeo.setIndex(indices);clothGeo.computeVertexNormals();mesh(cape,clothGeo,cream);
- const hem=[];for(let i=0;i<=64;i++)hem.push(drape(1,i/64*Math.PI*2));mesh(cape,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hem.map(v=>new THREE.Vector3(...v))),64,.0038,5,false),cream);
+ const hem=[];for(let i=0;i<=44;i++)hem.push(drape(1,i/44*Math.PI*2));mesh(cape,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hem.map(v=>new THREE.Vector3(...v))),44,.0038,4,false),cream);
  // Raised fold ridges converge at the copper fastening, not arbitrary plates.
  stroke(cape,cream,[[-.185,-.066,.070],[-.121,-.021,.117],[-.045,.006,.125],[.067,.010,.104]],.0045);
  stroke(cape,cream,[[-.165,-.094,.083],[-.108,-.061,.131],[-.026,-.037,.143],[.077,-.011,.112]],.0038);
@@ -172,6 +199,27 @@ export default function(THREE) {
  for(let i=0;i<3;i++)ell(hips,copper,.052,.102+i*.059,.106,.009,.009,.005);
 
  lathe(hips,copper,[[.019,0],[.017,.007],[.011,.027],[0,.034]],.028,.185,.132);stroke(hips,leather,[[.028,.225,.131],[.028,.245,.126]],.0025);
+ // ---- R-hero outfit details ----
+ details(hips,(put,rope)=>{ // upper coat: standing collar with teal edge, cream undershirt, placket trim, brass buttons
+  put(new THREE.TorusGeometry(.066,.017,8,24),CORALC,0,.338,-.004,Math.PI/2-.12,0,0,1,.86,1);
+  put(new THREE.TorusGeometry(.068,.006,6,24),TRIM,0,.353,-.002,Math.PI/2-.12,0,0,1,.86,1);
+  put(new THREE.SphereGeometry(1,12,8),CREAMC,0,.318,.068,.3,0,0,.03,.03,.01);
+  rope([[.026,.33,.074],[.042,.27,.093],[.049,.18,.097],[.05,.085,.092]],.0058,TRIM);
+  for(let i=0;i<4;i++)put(new THREE.SphereGeometry(1,10,8),BRASS,.07,.1+i*.058,.101,0,0,0,.011,.011,.0065);
+ }).userData.chestPiece=true;
+ details(hips,(put,rope)=>{ // lower coat: long split tails at the back, teal-trimmed hems, a small tool on the belt
+  for(const s of [-1,1]){
+   const cols=12,rows=9,v=[],idx=[],edge=[],inner=[];
+   for(let j=0;j<=rows;j++)for(let i=0;i<=cols;i++){const u=i/cols,t=j/rows,a=Math.PI+s*(.11+u*1.13),r=.146+.05*t+.006*Math.sin(u*9)*t,y=.052-.37*t+.03*t*Math.sin(u*Math.PI);v.push(Math.sin(a)*r,y,Math.cos(a)*r*.74-.004);}
+   for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){const a=j*(cols+1)+i,b=a+1,c=a+cols+1,d=c+1;idx.push(a,c,b,b,c,d);}
+   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setIndex(idx);g.computeVertexNormals();put(g,CORALC);
+   const at=(u,t)=>{const a=Math.PI+s*(.11+u*1.13),r=.146+.05*t+.006*Math.sin(u*9)*t,y=.052-.37*t+.03*t*Math.sin(u*Math.PI);return [Math.sin(a)*r,y,Math.cos(a)*r*.74-.004];};
+   for(let i=0;i<=12;i++)edge.push(at(i/12,1));for(let j=0;j<=9;j++)inner.push(at(0,j/9));
+   rope(edge,.0055,TRIM);rope(inner,.0055,TRIM);
+  }
+  const hem=[];for(let i=0;i<=14;i++){const a=-1.15+i/14*2.3;hem.push([Math.sin(a)*.114,.024,Math.cos(a)*.075]);}rope(hem,.0055,TRIM);
+  rope([[-.075,.025,.086],[-.08,-.03,.088]],.0045,0xb88754);put(new THREE.TorusGeometry(.011,.0038,6,12,Math.PI*1.5),0xb88754,-.08,-.04,.089,0,0,Math.PI*.75);   // wrench on the belt
+ });
  // Separate chest articulation gives purposeful upper-body effort without tilting planted legs.
  const upperChildren=hips.children.filter(o=>['head','cape','leftUpperArm','rightUpperArm'].includes(o.name)||(o.isMesh&&(o.position.y>=.075||o.userData.chestPiece)));
  const chest=pivot('chest',hips,0,.065,0);

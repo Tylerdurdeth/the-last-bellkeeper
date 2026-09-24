@@ -29,6 +29,13 @@ export function createSoundscape({context: suppliedContext, random = Math.random
       o.type='sine';o.frequency.value=base*ratio*(1+(random()-.5)*.006);g.gain.setValueAtTime(.00001,at);g.gain.exponentialRampToValueAtTime(level/[1,3.2,6,12,20][i],at+.004);g.gain.exponentialRampToValueAtTime(.00001,at+decay/(1+i*.56));o.connect(g);g.connect(route.input);track(o,[g],route);o.start(at);o.stop(at+decay+.03);
     });hiss(at,.045,level*.35,2300,pan);
   }
+  // Filtered-noise gust whose band sweeps (rising roar for vents, falling rush for pushes).
+  function sweep(at,duration,level,from,to,pan=0,q=.9){
+    const source=context.createBufferSource(),filter=context.createBiquadFilter(),envelope=gain(0),route=voicePan(pan,1,.2);
+    source.buffer=noise(2,'pink');filter.type='bandpass';filter.Q.value=q;filter.frequency.setValueAtTime(from,at);filter.frequency.exponentialRampToValueAtTime(to,at+duration);
+    envelope.gain.setValueAtTime(.00001,at);envelope.gain.exponentialRampToValueAtTime(level,at+duration*.3);envelope.gain.exponentialRampToValueAtTime(.00001,at+duration);
+    source.connect(filter);filter.connect(envelope);envelope.connect(route.input);track(source,[filter,envelope],route);source.start(at,random()*.4);source.stop(at+duration+.02);
+  }
   function bird(at){
     const pan=(random()-.5)*1.65,count=random()<.5?2:3;
     for(let i=0;i<count;i++){const start=at+i*(.115+random()*.045),length=.06+random()*.065;
@@ -99,6 +106,19 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     // Mara's bypass: lever clunk, then air rushing into the copper channel.
     else if(kind==='bypass'){modal(t,96,.06,.3,-.3,[1,2.7,4.1]);hiss(t+.18,1.6,.07,950,-.2,'bandpass',.7);hiss(t+.5,1.4,.05,2100,.3,'bandpass',.5);}
     else if(kind==='bird')bird(t);
+    // v2 wind verbs: each has its own shape so the ear learns them.
+    else if(kind==='vent'){sweep(t,1.5,.12,260,1900,-.1,.7);sweep(t+.2,1.2,.06,900,3600,.2);modal(t+.05,262,.03,1.2,0,[1,2,3,4.2]);}
+    else if(kind==='push'){sweep(t,.7,.14,2600,500,.1,.8);modal(t+.32,118,.05,.45,-.1,[1,2.4,3.9]);hiss(t+.35,.25,.05,700,-.1,'lowpass');}
+    else if(kind==='chain'){for(let i=0;i<7;i++)modal(t+i*.075,420+i*18,.02,.12,(i%2-.5)*.3,[1,2.7]);sweep(t+.3,1.1,.08,700,2400,.3);}
+    else if(kind==='vane'){modal(t,174,.08,1.1,0,[1,2.4,3.9,5.6]);modal(t+.18,523,.05,2.2,.2);modal(t+.36,784,.035,2.6,-.2);}
+    else if(kind==='knock'){hiss(t,.2,.16,240,0,'lowpass',.01);sweep(t,.55,.12,2200,400,0);}
+    else if(kind==='mill'){for(let i=0;i<3;i++)modal(t+i*.22,[392,494,659][i],.05,2.4,(i-1)*.3,[1,2.01,3.02,4.1]);sweep(t+.1,2.2,.07,500,1400,0,.6);}
+    // The morning bell rung clear, the paired bells (outward rises, return falls) and the far answer.
+    else if(kind==='bell-clear'){modal(t,196,.11,4.2,-.05,[1,2.0,2.4,3.0,4.2]);modal(t+.02,392,.04,3.2,.1,[1,1.5,2]);}
+    else if(kind==='bell-out'){modal(t,262,.1,3.4,-.2,[1,2.0,2.4,3.0,4.2]);modal(t+.4,392,.05,2.8,-.2);}
+    else if(kind==='bell-return'){modal(t,392,.09,3.6,.2,[1,2.0,2.4,3.0,4.2]);modal(t+.45,262,.07,4.2,.2);modal(t+.9,196,.06,5,0);}
+    else if(kind==='bell-return-full'){[392,330,294,262,196].forEach((f,i)=>modal(t+i*.42,f,.08-i*.008,4.2+i*.4,.2-i*.1,[1,2.0,2.4,3.0,4.2]));modal(t+.2,784,.03,3,.3);}
+    else if(kind==='far-bell'){for(let i=0;i<3;i++)modal(t+i*.9,[196,247,294][i],.03*(1-i*.2),5.5,.55,[1,2.0,2.4,3.0]);hiss(t,2.5,.012,600,.5,'lowpass',1.2);}
     else if(kind==='hazard')hiss(t,.5,.13,600,-.1,'bandpass',.09);
   }
   function dispose(){if(disposed)return;disposed=true;for(const source of voices){try{source.stop();}catch{}}voices.clear();for(const node of continuous){try{node.stop?.();}catch{}node.disconnect();}continuous.length=0;buffers.clear();if(context&&!suppliedContext)context.close().catch(()=>{});}

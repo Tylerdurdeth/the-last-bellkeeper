@@ -1,4 +1,7 @@
 /** Shared painted light treatment. Keeps scene lights, real shadows and emissive state. */
+// v2: game/render/look.js owns banding/shadow tint; it turns this module's cel ramp off so the two never stack.
+let paintedCel = true;
+export function setPaintedCel(on) { paintedCel = !!on; }
 export function createArtDirection(T, renderer) {
   const cache = new WeakMap();
   const owned = new WeakSet();
@@ -130,7 +133,7 @@ export function createArtDirection(T, renderer) {
           #endif
         `);
       }
-      shader.fragmentShader = shader.fragmentShader.replace(
+      if (paintedCel) shader.fragmentShader = shader.fragmentShader.replace(
         'vec3 totalDiffuse = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse;',
         `vec3 totalDiffuse = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse;
         // Measure light, not paint colour: dark hair must not become a light shadow band.
@@ -150,7 +153,7 @@ export function createArtDirection(T, renderer) {
       );
     };
     const priorKey = source.customProgramCacheKey();
-    m.customProgramCacheKey = () => `bellkeeper-painted-v7:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
+    m.customProgramCacheKey = () => `bellkeeper-painted-v7:${paintedCel ? 1 : 0}:${key}:${metal ? 1 : 0}:${foliage ? 1 : 0}:${priorKey}`;
     return m;
   }
 

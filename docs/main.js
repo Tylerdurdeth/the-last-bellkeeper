@@ -1,53 +1,44 @@
 import * as T from 'three';
 import {ASSET} from './assetlib.js';
-import {createWaterfall} from './waterfall.js';
 import {createSoundscape} from './audio.js';
 import {createMovement} from './movement.js';
 import {loadCodeCharacter} from './code-character.js';
 import buildApprovedHero from './assets/hero-study-a.js';
 import {createAdventureMotion} from './adventure-motion.js';
-import {createWoodlandDiscoveries,storyZone} from './woodland-discoveries.js';
-import {createArtDirection} from './art-direction.js';
-import {buildWorld} from './world.js';
-import {createGarden} from './garden.js';
-import {START,height,POINTS,PATH,isLand,shoreDistance} from './world-layout.js';
-import {drawWoodlandMap} from './woodland-map.js';
-import {buildCampaignWorld} from './campaign-world.js';
-import {createCampaign} from './campaign.js';
-import {createCampaignActors} from './campaign-actors.js';
-import {readSave,writeSave,SAVE_KEY} from './adventure-save.js';
-import {drawCampaignMap} from './campaign-map.js';
+import {readSave,writeSave,hasLegacySave,clearSave} from './adventure-save.js';
 import {createOpening} from './opening.js';
 import {createTitleMusic} from './title-music.js';
+import {createWind} from './bellhollow/wind.js';
+import {createQuest} from './bellhollow/quest.js';
+import {MODULES} from './bellhollow/manifest.js';
+import {createMap} from './bellhollow/map.js';
+import {adaptWorld} from './bellhollow/adapt-world.js';
+import buildMara from './assets/bh-mara.js';
+import buildPairedBells from './assets/bh-paired-bells.js';
+// v2 host: renderer, camera spring arm + framing, HUD, opening, audio, saves. Bellhollow's world,
+// wind verbs and progression live in game/bellhollow/*; the look in game/render/look.js.
+const params=new URLSearchParams(location.search);
 const opening=createOpening(),titleMusic=createTitleMusic();let musicUnlocked=false;
 const $=s=>document.querySelector(s),canvas=$('#world');
 const mapCanvas=$('#map'),mapCtx=mapCanvas?.getContext('2d');
 const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
-const scene=new T.Scene();scene.background=new T.Color('#94b4ae');scene.fog=new T.FogExp2('#94b4ae',.030);
-const camera=new T.PerspectiveCamera(42,1,.1,100);const hemi=new T.HemisphereLight(0xffefcd,0x274d54,1.8);scene.add(hemi);
-const sun=new T.DirectionalLight(0xffe1ae,2.4);sun.position.set(-9,20,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,near:.5,far:65});sun.shadow.bias=-.0003;sun.shadow.normalBias=.025;scene.add(sun,sun.target);
-// Woodland flags keep their version-1 save names: awakened = morning bell rung and Mara's bypass
-// open; porchRead = bell staff taken at the porch; charged/restored as before.
-const state={started:false,paused:false,t:0,charged:false,awakened:false,restored:false,complete:false,porchRead:false,recoveryUntil:0,keepsakes:new Set(),action:null,actionTime:0,muted:localStorage.getItem('bellkeeper-muted')==='1',gentle:localStorage.getItem('bellkeeper-gentle')==='1'};
-let cameraYaw=Math.atan2(.615,.788),cameraDrag=null;
-let hero,movement,animator,world,garden,discoveries,staff,staffHand,captionEnd=0,context=null,travel=0,visited=new Set(),fps=60,audio;
-let campaignWorld,campaign,campaignActors,mara,checkpoint=[...START],saveTimer=0,introTime=0,introActive=false,lastIntroBeat=-1,restoring=false,bypassAt=0,queued=null;
+const scene=new T.Scene();scene.background=new T.Color('#bfe1ea');scene.fog=new T.FogExp2('#d9dccb',.016);
+const camera=new T.PerspectiveCamera(42,1,.1,400);const hemi=new T.HemisphereLight(0xffefcd,0x2c4a45,1.8);scene.add(hemi);
+const sun=new T.DirectionalLight(0xffe1ae,2.4);sun.position.set(-9,20,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,near:.5,far:70});sun.shadow.bias=-.0003;sun.shadow.normalBias=.025;scene.add(sun,sun.target);
+const state={started:false,paused:false,t:0,complete:false,action:null,actionTime:0,actionTarget:null,actionCallback:null,muted:localStorage.getItem('bellkeeper-muted')==='1',gentle:localStorage.getItem('bellkeeper-gentle')==='1'};
+const DEFAULT_YAW=Math.atan2(.615,.788);let cameraYaw=DEFAULT_YAW,cameraDrag=null;
+let hero,movement,animator,world,wind,quest,look=null,staff,staffHand,mara,captionEnd=0,context=null,travel=0,fps=60,start3=[0,0,0];
+let saveTimer=0,introTime=0,introActive=false,lastShot=-1,queued=null,uiTimer=0,endingAt=0,liftLead=0;
+// Game feel: hit-stop (sim frozen, render continues), camera kick, finale arrival blend; Mara acting.
+let villagers=null,map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
 // Camera spring arm, subject framing and chart tucking state (see frame()).
-let armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,tuckUntil=0,hudTimer=0,safe=null;const subjects={},frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
-const loadedSave=readSave();
-function save(){if(!state.started||introActive||restoring)return;writeSave(state,campaign,discoveries,checkpoint);}
-function setCheckpoint(p){if(p?.isVector3)checkpoint=p.toArray();else if(Array.isArray(p))checkpoint=[...p];save();}
-function campaignEvent(event={}){if(event.buffet)movement?.impulse(event.buffet.x,event.buffet.z);if(event.checkpoint)setCheckpoint(event.checkpoint);if(event.home){movement.reset([POINTS.porch[0],height(...POINTS.porch),POINTS.porch[1]]);setCheckpoint(movement.position);caption('The return lift carries you to the bough. Mara is still holding the bypass. Let her hear the answer.',7);}updateUI();save();}
-const art=createArtDirection(T,renderer);const waterfall=createWaterfall(T,scene);
-const point=([x,z],offset=0)=>new T.Vector3(x,height(x,z)+offset,z);
-const valvePoint=point(POINTS.bypass,-.1),source=point(POINTS.outlet,.55),gardenPoint=point(POINTS.garden),bellPoint=point(POINTS.morningBell),wheelPoint=point(POINTS.wheel),chimePoint=point(POINTS.chime),finish=point(POINTS.overlook),porchPoint=point(POINTS.porch),quietPoint=point(POINTS.quietGarden);
-const memories=[{p:point([-19,-5]),text:'Mara’s copper feather. She whistled to the birds before every lesson.'},{p:point([-4,-20]),text:'Mara scratched this bell: “You’ll answer the far bank without me one day.”'},{p:point([11,-11]),text:'Mara’s knot, tied toward home. I still turn mine the wrong way.'},{p:point([-12.6,-17.9]),text:'Mara’s old tuning fork, wrapped in seed-bell ribbon: “Listen first. Then call.”'}];
-// The bypass opens a beat after the bell; saves and Continue open it at once. Later captions queue behind the current one.
-const bypassOpen=()=>state.awakened&&state.t>=bypassAt,gardenSolved=()=>!!discoveries?.telemetry().echoSolved;
+let armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
+const loadedSave=readSave(),legacy=!loadedSave&&hasLegacySave();
+const CARD=7,CARDS=3*CARD,ENGINE=20;// prologue cards, then the 20 s in-engine intro
+function save(){if(!state.started||introActive||!quest||quest.finaleActive||!movement)return;const c=movement.checkpoint;writeSave({quest,checkpoint:[c.x,c.y,c.z],map});}
 function later(delay,text,duration=5,then){queued={at:state.t+delay,text,duration,then};}
-function caption(text,duration=4){$('#caption').textContent=text;$('#caption').style.opacity=captionsEnabled?'1':'0';captionEnd=state.t+Math.max(duration,Math.min(9,text.length/19));}
-const waterDistance=p=>isLand(p.x,p.z)?shoreDistance(p.x,p.z):0;
+function caption(text,duration=4){$('#caption').textContent=text;$('#caption').style.opacity=captionsEnabled&&text?'1':'0';captionEnd=state.t+Math.max(duration,Math.min(9,text.length/19));}
 const soundscape=createSoundscape();soundscape.setMuted(state.muted);titleMusic.setMuted(state.muted);
 function titleSoundLabel(){$('#titleSound').setAttribute('aria-pressed',String(musicUnlocked&&!state.muted));$('#titleSound span').textContent=musicUnlocked?(state.muted?'Music off · enable':'Music on · mute'):'Enable title music';}
 async function unlockTitleMusic(){if(state.muted||musicUnlocked||state.started&&!introActive)return;try{await titleMusic.start();musicUnlocked=true;titleSoundLabel();}catch{titleSoundLabel();}}
@@ -57,41 +48,44 @@ document.addEventListener('keydown',e=>{if(!$('#title').hidden&&['Enter','Space'
 document.addEventListener('visibilitychange',()=>titleMusic.setPaused(document.hidden||state.paused));
 $('#sound').after($('#volumeTemplate').content.cloneNode(true));$('#volume').value=localStorage.getItem('bellkeeper-volume')??'65';soundscape.setVolume(Number($('#volume').value)/100);titleMusic.setVolume(Number($('#volume').value)/100);$('#volume').oninput=()=>{soundscape.setVolume(Number($('#volume').value)/100);titleMusic.setVolume(Number($('#volume').value)/100);localStorage.setItem('bellkeeper-volume',$('#volume').value);};
 function sound(kind){soundscape.cue(kind);}
+const AREA_NAMES={terrace:'THE CANOPY TERRACE',branches:'THE WINDMILL BRANCHES',hollow:'THE HOLLOW'},LOOK_AREAS={terrace:'terrace-dawn',branches:'branches-day',hollow:'hollow'};
 function updateUI(){
  document.body.classList.toggle('gentle-opening',state.gentle);
- $('#objective').textContent=state.complete?'The morning has a voice again':state.restored?'Cross the new bridge to the far bell':state.charged?'Give the gust to the seed wheel':!state.awakened?'Pull the morning bell rope':!state.porchRead?'Take the bell staff from Mara’s porch':'Catch the gust under Mara’s copper outlet';
- if(campaign?.progress.entered&&!state.complete)$('#objective').textContent=campaign.progress.restored?'Return to Mara at the cottage':campaign.objective();
- $('#zoneName').textContent=campaign?.progress.entered&&movement?.position.z<-44?'THE HEARTWOOD WINDWORKS':campaign?.progress.entered&&movement?.position.z<-16?'THE ROOTWAY':'THE WAKING BOUGH';
- $('#chargeText').textContent=(state.charged?'Wind held in the bell':'Bell empty')+(state.keepsakes.size?' · '+state.keepsakes.size+'/'+memories.length+' keepsakes':'');$('#chargeIcon').textContent=state.charged?'✧':'◌';
+ if(quest){$('#objective').textContent=quest.objective();$('#zoneName').textContent=AREA_NAMES[quest.area(movement.position)]||'BELLHOLLOW';}
+ const held=wind?.charge,frags=quest?.telemetry().fragments||0;
+ $('#chargeText').textContent=(held?(held.kind==='guardian'?'Guardian’s breath held':'Gust held in the bell'):'Bell empty')+(frags?` · ${frags}/3 fragments`:'');$('#chargeIcon').textContent=held?'✧':'◌';document.body.classList.toggle('wind-held',!!held);
  $('#sound').textContent='Sound: '+(state.muted?'off':'on');$('#motion').textContent='Gentle motion: '+(state.gentle?'on':'off');
  $('#subtitles').textContent='Captions: '+(captionsEnabled?'on':'off');
 }
-function start(skipIntro=false){if(!movement)return;unlockTitleMusic();opening.begin(skipIntro);if(skipIntro)titleMusic.fadeOut(2);state.started=true;state.paused=false;$('#title').hidden=true;for(const id of ['hud','charge','controls','hint','map','mapToggle'])$('#'+id).hidden=false;introActive=!skipIntro;introTime=0;lastIntroBeat=-1;$('#skipIntro').hidden=!introActive;document.body.classList.toggle('cinematic',introActive);caption('',0);soundscape.start().then(()=>sound('start')).catch(()=>{$('#audioUnlock').hidden=false;});if(matchMedia('(any-pointer: coarse)').matches)$('#audioUnlock').hidden=false;updateUI();}
-function endIntro(){opening.end();titleMusic.fadeOut(2.8);introActive=false;$('#skipIntro').hidden=true;document.body.classList.remove('cinematic');movement?.update(0,{enabled:state.started&&!state.paused});caption('Mara: “Morning round, apprentice. Pull the bell rope by the path.”',6);save();}
-function continueGame(){const d=readSave();if(!d)return;restoring=true;Object.assign(state,d.state);state.keepsakes=new Set(d.keepsakes?.filter(i=>Number.isInteger(i)&&i>=0&&i<memories.length));
- // Older saves (note/chime/garden route) carry the same flag names: anyone already holding or past the
- // first gust has rung the bell and holds the staff. The bypass is open at once on Continue.
- if(state.charged||state.restored||state.complete||d.campaign?.progress?.entered)state.awakened=state.porchRead=true;bypassAt=0;queued=null;discoveries.restore(d.discoveries);campaign.restore(d.campaign);checkpoint=d.checkpoint;movement.reset(checkpoint);animator.reset();restoring=false;start(true);caption('The woods remember where you left them.',4);}
-function pause(on){if(!state.started)return;state.paused=on;soundscape.setPaused(on);titleMusic.setPaused(on);$('#pausePanel').hidden=!on;$('#resume').textContent='Resume';$('#reset').hidden=false;mapCanvas.hidden=on;$('#mapToggle').hidden=on;if(on){save();mapCanvas.classList.remove('expanded');$('#mapToggle').setAttribute('aria-expanded','false');chartUI();}}
-function beginAction(kind,callback){state.action=kind;state.actionTime=0;state.actionTarget=(context?.target|| (context?.kind==='wheel'?wheelPoint:context?.kind==='capture'?source:chimePoint)).clone();state.actionCallback=callback;sound(kind);}
-function action(){if(!state.started||state.paused||state.action||introActive)return;if(!context){caption('Listen. Watch the leaves. There is still a little wind here.',3);return;}
- if(context.kind==='campaign'){const selected={...context};beginAction(/source|Source|Gust/.test(context.id)?'capture':'release',()=>{campaign.interact(selected,state);updateUI();save();});return;}
- if(context.kind==='bell'){const first=!state.awakened;beginAction('pull',()=>{world.ringMorningBell();sound('dull-bell');if(!first){caption('Still only half a note.',3);return;}state.awakened=true;bypassAt=state.t+2.2;caption('A dull, broken note. Mara: “That bell below us hasn’t rung in years.”',5);
-  const hadStaff=state.porchRead;later(2.3,()=>hadStaff?'Mara throws her bypass lever. “Catch the gust in the bell. Give it to the wheel.”':state.porchRead?'Mara throws her bypass lever. A gust stirs at the copper outlet.':'Mara throws her bypass lever. A gust stirs at the copper outlet. “Take my staff from the porch.”',6,()=>sound('bypass'));});return;}
- if(context.kind==='mara-end'){state.complete=true;caption('Mara: “I taught you how to call it. I forgot to teach you how to listen.”',9);sound('restore');$('#ending').hidden=false;$('#endingDetail').textContent=`The village borrows. The forest receives. You restored both voices. ${state.keepsakes.size}/${memories.length} memories found${campaign.progress.secret?' · The old listening rite remembered.':'.'}`;setCheckpoint(porchPoint);updateUI();return;}
- if(context.kind==='discovery'){discoveries.interact(context.id,state);updateUI();save();return;}
- if(context.kind==='nostaff'){caption('The gust slips through your fingers. Mara’s bell staff hangs on the porch peg.',4);return;}
- if(context.kind==='porch'){state.porchRead=true;setCheckpoint(porchPoint);caption(state.awakened?'Mara hands you the bell staff. “Catch the gust in the bell. Give it to the wheel.”':'Mara hands you the bell staff. “First, the morning bell by the path.”',6);sound('chime');}
- if(context.kind==='chime'){beginAction('pull',()=>{sound('chime');caption(gardenSolved()?'The root chime hums with the listening garden.':'The root chime hums. Beside it, a gong, seed bells and a harp wait for a rising song.',5);});return;}
- if(context.kind==='capture')beginAction('capture',()=>{state.charged=true;caption('The gust curls into your bell. Give it to the seed wheel.',4);});
- if(context.kind==='wheel'){if(state.charged)beginAction('release',()=>{state.charged=false;state.restored=true;sound('restore');caption('The seed wheel spins. Lanterns wake and the bridge swings out to the far bell.',5);later(5.2,'Mara: “I’ll keep this passage open.”',4);});else caption(state.awakened?'The seed wheel is still. Catch Mara’s gust under the copper outlet.':'The seed wheel is still. Pull the morning bell rope first.',4);}
- if(context.kind==='memory'){state.keepsakes.add(context.index);caption(memories[context.index].text,5);sound('chime');}
- if(context.kind==='finish'){campaign.progress.entered=true;setCheckpoint(finish);caption('Only half a note. Below the bough, the return channel has gone quiet. Follow the roots into the windworks.',7);sound('chime');}
- updateUI();save();}
-$('#storyNext').onclick=()=>{if(introActive)introTime=Math.min(27,(Math.floor(introTime/9)+1)*9);};
-$('#startb').onclick=()=>start();$('#continueb').onclick=continueGame;$('#skipIntro').onclick=endIntro;$('#action').onclick=action;$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>pause(false);$('#keepExploring').onclick=()=>$('#ending').hidden=true;
+function start(skipIntro=false){if(!movement)return;unlockTitleMusic();opening.begin(skipIntro);if(skipIntro)titleMusic.fadeOut(2);state.started=true;state.paused=false;$('#title').hidden=true;$('#legacyNote').hidden=true;for(const id of ['hud','charge','controls','hint','map','mapToggle'])$('#'+id).hidden=false;introActive=!skipIntro;introTime=0;lastShot=-1;$('#skipIntro').hidden=!introActive;document.body.classList.toggle('cinematic',introActive);caption('',0);soundscape.start().then(()=>sound('start')).catch(()=>{$('#audioUnlock').hidden=false;});if(matchMedia('(any-pointer: coarse)').matches)$('#audioUnlock').hidden=false;updateUI();}
+// Skipping and finishing converge here, so both leave exactly the same game state.
+function endIntro(){if(!introActive)return;opening.end();titleMusic.fadeOut(2.8);introActive=false;$('#skipIntro').hidden=true;document.body.classList.remove('cinematic');snapCamera();movement?.update(0,{enabled:state.started&&!state.paused});if(!quest.progress.bell)caption('Mara: “Morning round, apprentice. Ring the bell by the path.”',6);save();}
+// First safe spot among the candidates, with the world brought to the current state first (so a bridge stage
+// that is not built yet counts as missing floor, and a barrier that is up counts as blocking).
+function safeSpot(first){world.update(0,state.t,{wind:wind.state(),restored:quest.restoration,gentle:state.gentle,progress:quest.progress});
+ for(const c of [first,...quest.safeAnchors()])if(c&&movement.isSafe(c))return Array.isArray(c)?c:[c.x,c.y,c.z];return start3;}
+function continueGame(){const d=readSave();if(!d)return;quest.restore(d.quest);try{map?.restore?.(d.map);}catch(e){console.warn(e);}movement.reset(safeSpot(d.checkpoint));animator.reset();start(true);snapCamera();state.complete=quest.progress.complete;caption(quest.progress.complete?'Bellhollow is breathing. Wander as long as you like.':'Bellhollow remembers where you left it.',4);}
+function pause(on){if(!state.started)return;state.paused=on;soundscape.setPaused(on);titleMusic.setPaused(on);$('#pausePanel').hidden=!on;$('#resume').textContent='Resume';$('#reset').hidden=false;$('#safeSpot').hidden=false;mapCanvas.hidden=on;$('#mapToggle').hidden=on;if(on){save();mapCanvas.classList.remove('expanded');$('#mapToggle').setAttribute('aria-expanded','false');chartUI();}}
+function beginAction(kind,target,callback){state.action=kind;state.actionTime=0;state.actionTarget=(target||movement.position).clone();state.actionCallback=callback;if(kind==='pull')sound('chime');}
+function staffTip(){if(!staff?.visible)return movement.position.clone().setY(movement.position.y+1.5);return staff.localToWorld(tmpB.set(0,1.15,0)).clone();}
+function action(){if(!state.started||state.paused||state.action||introActive||quest?.finaleActive)return;
+ if(!context){caption(quest.hint(),4);return;}
+ const c={...context};
+ if(!c.anim){quest.interact(c,{position:movement.position,yaw:movement.yaw,staffTip:staffTip()});updateUI();save();return;}
+ beginAction(c.anim,c.target,()=>{quest.interact(c,{position:movement.position,yaw:movement.yaw,staffTip:staffTip()});updateUI();save();});}
+// Quest events: checkpoints, knock-backs, finale, teleport and completion.
+function questEvent(_progress,e={}){
+ if(e.knock){movement.knockback(e.knock);sound('knock');if(!state.gentle){hitStop=.11;kick=1;kickDir.set(Math.random()-.5,.6,Math.random()-.5).normalize();}}
+ if(e.bells==='out')bellOutT=state.t;if(e.bells==='return'){bellRetT=state.t;bellOutT??=state.t-1.7;}
+ if(e.mara==='lever')maraAct.leverT=0;if(e.mara==='gesture')maraAct.gesture=1.6;if(e.mara==='wave')maraAct.waveUntil=state.t+(state.complete||e.complete?9:5);
+ if(e.teleport){movement.reset(e.teleport);animator?.reset();snapCamera();if(world.points.terraceView)arrival=2.6;const ms=world.points.terraceView?.maraStand;if(ms&&mara){mara.position.set(ms.x,ms.y,ms.z);}}
+ if(e.complete){state.complete=true;endingAt=state.t+7;later(1.6,'',0,()=>sound('chime'));}
+ if(e.restored)sound('restore');
+ updateUI();if(e.checkpoint||e.restored||e.complete)save();}
+$('#storyNext').onclick=()=>{if(introActive&&introTime<CARDS)introTime=Math.min(CARDS,(Math.floor(introTime/CARD)+1)*CARD);};
+$('#startb').onclick=()=>{if(loadedSave)clearSave();start();};$('#continueb').onclick=continueGame;$('#skipIntro').onclick=()=>{if(quest?.finaleActive)quest.skipFinale();else endIntro();};$('#action').onclick=action;$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>pause(false);$('#keepExploring').onclick=()=>$('#ending').hidden=true;
 $('#creditsb').onclick=()=>$('#creditsPanel').hidden=false;$('#closeCredits').onclick=()=>$('#creditsPanel').hidden=true;
-$('#settingsb').onclick=()=>{$('#pausePanel').hidden=false;$('#resume').textContent='Back';$('#reset').hidden=true;};
+$('#settingsb').onclick=()=>{$('#pausePanel').hidden=false;$('#resume').textContent='Back';$('#reset').hidden=true;$('#safeSpot').hidden=true;};
 $('#resume').onclick=()=>{if(state.started)pause(false);else $('#pausePanel').hidden=true;};
 $('#subtitles').onclick=()=>{captionsEnabled=!captionsEnabled;localStorage.setItem('bellkeeper-captions',captionsEnabled?'1':'0');$('#subtitles').textContent='Captions: '+(captionsEnabled?'on':'off');if(!captionsEnabled)$('#caption').style.opacity='0';};
 // Movement is also an explicit skip gesture. Preserve that first input instead
@@ -101,19 +95,13 @@ addEventListener('keydown',e=>{if(introActive&&['ArrowUp','ArrowDown','ArrowLeft
 $('#audioUnlock').onclick=()=>soundscape.resume().then(()=>{$('#audioUnlock').hidden=true;sound('start');}).catch(()=>{});
 for(const id of ['controls','world'])$('#'+id).addEventListener('pointerdown',()=>{if(state.started)soundscape.resume().then(()=>$('#audioUnlock').hidden=true).catch(()=>{});},{passive:true});
 $('#sound').onclick=()=>{state.muted=!state.muted;soundscape.setMuted(state.muted);titleMusic.setMuted(state.muted);titleSoundLabel();localStorage.setItem('bellkeeper-muted',state.muted?'1':'0');updateUI();};$('#motion').onclick=()=>{state.gentle=!state.gentle;localStorage.setItem('bellkeeper-gentle',state.gentle?'1':'0');updateUI();};
-$('#reset').onclick=()=>{opening.end();titleMusic.fadeOut(1);Object.assign(state,{charged:false,awakened:false,restored:false,complete:false,porchRead:false,recoveryUntil:0,action:null,actionCallback:null});state.keepsakes.clear();visited.clear();discoveries?.reset();campaign?.reset();checkpoint=[...START];bypassAt=0;queued=null;introActive=false;$('#skipIntro').hidden=true;document.body.classList.remove('cinematic');$('#ending').hidden=true;cameraYaw=Math.atan2(.615,.788);movement.reset(START);animator.reset();travel=0;pause(false);updateUI();save();caption('Another morning. The woods are listening.',4);};
+$('#safeSpot').onclick=()=>{if(!state.started)return;const c=movement.checkpoint;movement.reset(safeSpot([c.x,c.y,c.z]));animator.reset();snapCamera();pause(false);caption('A little current carries you back to safe ground.',3);sound('capture');};
+$('#reset').onclick=()=>{bellOutT=bellRetT=null;opening.end();titleMusic.fadeOut(1);Object.assign(state,{complete:false,action:null,actionCallback:null});quest.reset();clearSave();queued=null;introActive=false;$('#skipIntro').hidden=true;document.body.classList.remove('cinematic');$('#ending').hidden=true;cameraYaw=DEFAULT_YAW;movement.reset(start3);animator.reset();travel=0;snapCamera();pause(false);updateUI();save();caption('Another morning. The bell is waiting by the path.',4);};
 addEventListener('keydown',e=>{if(e.code==='Space'&&state.started&&!introActive){e.preventDefault();if(!e.repeat)action();}if(e.code==='Escape')pause(!state.paused);});// Touch browsers can blur the window during native gestures while still visible.
 // Actual backgrounding is handled by visibilitychange on every device.
 addEventListener('blur',()=>{if(!matchMedia('(any-pointer: coarse)').matches&&state.started)pause(true);});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.started)pause(true);});
 for(const id of ['world','controls'])$('#'+id).addEventListener('contextmenu',e=>e.preventDefault());
-// Wind ribbons and motes are original procedural effects rather than substitute scenery.
-function ribbon(color){const g=new T.BufferGeometry(),p=new Float32Array(48*6),idx=[];for(let i=0;i<47;i++){const n=i*2;idx.push(n,n+1,n+2,n+1,n+3,n+2);}g.setAttribute('position',new T.BufferAttribute(p,3));g.setIndex(idx);const o=new T.Mesh(g,new T.MeshBasicMaterial({color,transparent:true,opacity:.8,side:T.DoubleSide,depthWrite:false}));o.frustumCulled=false;scene.add(o);return o;}
-const winds=[ribbon(0xffedb0),ribbon(0x84ebcf),ribbon(0xdae4a6)],held=ribbon(0x92e4cd),transfer=ribbon(0xffefb5),gardenWind=ribbon(0xbff5dc),valveWind=ribbon(0xfff0c2);
-function swirl(o,c,r,t){const p=o.geometry.attributes.position;for(let i=0;i<48;i++){const a=i/47*5+t,w=.035*Math.sin(i/47*Math.PI),x=c.x+Math.cos(a)*r,y=c.y+.6+Math.sin(a*1.5+t)*.2,z=c.z+Math.sin(a)*r;p.setXYZ(i*2,x,y-w,z);p.setXYZ(i*2+1,x,y+w,z);}p.needsUpdate=true;}
-const particleGeo=new T.BufferGeometry(),particles=new Float32Array(170*3);for(let i=0;i<170;i++){particles[i*3]=Math.sin(i*98.7)*25;particles[i*3+1]=1+(i%17)*.27;particles[i*3+2]=Math.cos(i*52.4)*25;}particleGeo.setAttribute('position',new T.BufferAttribute(particles,3));const motes=new T.Points(particleGeo,new T.PointsMaterial({color:0xffe5a7,size:.055,transparent:true,opacity:.65,depthWrite:false}));scene.add(motes);
-const insectGeo=new T.BufferGeometry(),insectPositions=new Float32Array(54*3),insectHomes=[[-3,12,1.1],[-11,-14.5,.8],[8,-9,.9]];for(let i=0;i<54;i++){const h=insectHomes[i%insectHomes.length],a=i*2.39996,r=.35+(i%9)*.08;insectPositions[i*3]=h[0]+Math.cos(a)*r;insectPositions[i*3+1]=height(h[0],h[1])+.5+(i%6)*.11;insectPositions[i*3+2]=h[1]+Math.sin(a)*r;}insectGeo.setAttribute('position',new T.BufferAttribute(insectPositions,3));const insects=new T.Points(insectGeo,new T.PointsMaterial({color:0xffd98a,size:.075,transparent:true,opacity:.78,blending:T.AdditiveBlending,depthWrite:false}));scene.add(insects);
-const memoryGlows=memories.map(m=>{const o=new T.Mesh(new T.OctahedronGeometry(.10),new T.MeshBasicMaterial({color:0xffd78d}));o.position.copy(m.p).y+=.35;scene.add(o);return o;});
 function poseStaff(){
  if(!staffHand)return;
  hero.updateMatrixWorld(true);
@@ -126,27 +114,26 @@ function poseStaff(){
  const grip=new T.Vector3(0,.39,-.012).multiply(staff.scale).applyQuaternion(staff.quaternion);
  staff.position.set(0,-.054,.026).sub(grip);
 }
-function findContext(){const p=movement.position;context=discoveries?.context(p,state)||null;
- if(storyZone('bell',p))context={kind:'bell',label:state.awakened?'Pull the bell rope again':'Pull the morning bell rope',target:bellPoint};
- if(!state.porchRead&&storyZone('porch',p))context={kind:'porch',label:'Take the bell staff',target:porchPoint};
- for(let i=0;i<memories.length;i++)if(!state.keepsakes.has(i)&&(i!==3||gardenSolved())&&p.distanceTo(memories[i].p)<(i===0?.72:1.4)&&Math.abs(p.y-memories[i].p.y)<(i<2?.25:2))context={kind:'memory',index:i,label:'Keep the memory'};
- if(storyZone('chime',p))context={kind:'chime',label:'Ring the root chime',target:chimePoint};
- if(bypassOpen()&&!state.charged&&!state.restored&&storyZone('bypass',p))context=state.porchRead?{kind:'capture',label:'Catch the gust',target:source}:{kind:'nostaff',label:'Reach for Mara’s gust',target:source};
- if(!state.restored&&storyZone('wheel',p))context={kind:'wheel',label:state.charged?'Give the gust to the wheel':'Listen to the seed wheel',target:wheelPoint};
- if(state.restored&&!campaign?.progress.entered&&storyZone('finish',p))context={kind:'finish',label:'Listen beyond the bough'};
- if(campaign?.progress.entered){const next=campaign.context(p,state.charged);if(next)context=next;}
- if(campaign?.progress.restored&&!state.complete&&p.distanceTo(porchPoint)<2)context={kind:'mara-end',label:'Let Mara hear the answer',target:porchPoint};
- $('#action').disabled=!context||!!state.action;$('#action').innerHTML=(context?.label||'Listen & explore')+' <span>SPACE</span>';
- if(!gardenSolved()&&p.distanceTo(quietPoint)<1.7&&!visited.has('quiet-pocket')){visited.add('quiet-pocket');caption('The roots shelter this pocket. The song lives in the bed beside it.',3);}
- const areas=[['cottage',point(POINTS.cottage),5,'Mara’s cottage. She left fresh ribbons by our tool pegs.'],['crossing',wheelPoint,4,state.restored?'The crossing sings again.':state.charged?'The wheel answers the current in your bell.':'The far bank is out of reach. A path curls back into the roots.'],['garden',gardenPoint,6,'You hear a faint chime beneath the leaves.'],['fork',point([-10,5]),3.2,'The root path winds down to the listening garden. The seed wheel waits the other way.']];for(const [id,pnt,d,text] of areas)if(!visited.has(id)&&p.distanceTo(pnt)<d){visited.add(id);caption(text,4);}
-}
+// Mara acts through bh-mara.js hooks: throws the bypass lever, keeps a hand on it, looks at the
+// apprentice when near, opens her hands as she gives the staff, waves at the finale and ending.
+function actMara(dt,p){const set=mara.userData.setPose,to=mara.userData.headToward;if(!set)return;
+ if(maraAct.leverT>=0){maraAct.leverT+=dt;}const lever=maraAct.leverT<0?(quest.progress.bypass?.55:0):maraAct.leverT<1.1?Math.sin(Math.min(1,maraAct.leverT/1.1)*Math.PI/2):.55+.45*Math.max(0,1-(maraAct.leverT-1.1)/.8);
+ maraAct.lever+=(lever-maraAct.lever)*(1-Math.exp(-dt*8));maraAct.gesture=Math.max(0,maraAct.gesture-dt);const waving=state.t<maraAct.waveUntil;maraAct.wave+=((waving?1:0)-maraAct.wave)*(1-Math.exp(-dt*4));
+ let yaw=0,pitch=0;const d=Math.hypot(p.x-mara.position.x,p.z-mara.position.z);if(d<4.5&&to){const l=mara.worldToLocal(tmpA.set(p.x,p.y+1.5,p.z));const h=to(l);yaw=h.yaw;pitch=h.pitch;}
+ maraAct.yaw=T.MathUtils.damp(maraAct.yaw||0,yaw,4,dt);maraAct.pitch=T.MathUtils.damp(maraAct.pitch||0,pitch,4,dt);
+ set({yaw:maraAct.yaw,pitch:maraAct.pitch,lever:maraAct.wave>.1?0:maraAct.lever,wave:maraAct.wave,gesture:Math.min(1,maraAct.gesture),lean:.04*Math.sin(state.t*.9),t:state.t});}
+function findContext(){const p=movement.position;context=state.action||quest.finaleActive?context:quest.context(p,movement.yaw);
+ $('#action').disabled=!context||!!state.action;$('#action').innerHTML=(context?.label||'Look around')+' <span>SPACE</span>';$('#action').dataset.kind=context?.kind||'';}
+// Camera-aligned Bellhollow chart: anchors, mills, the Hollow gate and the current objective.
+// Illustrated chart (game/bellhollow/map.js): update every HUD tick (fog of war reveals even while tucked), draw when visible.
 function drawMap(){
- document.body.classList.toggle('deep-chart',!!campaign?.progress.entered&&movement.position.z<-16);
- if(campaign?.progress.entered&&movement.position.z<-16){drawCampaignMap(mapCtx,mapCanvas,movement.position,cameraYaw,campaignWorld.points,campaign.progress,movement.yaw);return;}
- drawWoodlandMap(mapCtx,mapCanvas,{...state,gardenSolved:gardenSolved()},movement,cameraYaw);
+ if(!map)return;
+ map.update(.2,{hero:movement.position,heroYaw:movement.yaw,camYaw:cameraYaw,objective:quest.objectiveTarget(),progress:quest.progress,fragments:quest.serialize().fragments});
+ if(!mapCtx||mapCanvas.hidden||document.body.classList.contains('chart-tucked')&&!mapCanvas.classList.contains('expanded'))return;
+ map.draw();
 }
 // While the chart would cover the scene's subject it tucks into a corner button; the player can still open it.
-function chartUI(){const expanded=mapCanvas.classList.contains('expanded'),b=$('#mapToggle');document.body.classList.toggle('chart-tucked',chartTuck&&!chartOverride&&!expanded);document.body.classList.toggle('chart-shown',chartTuck&&chartOverride);b.textContent=chartTuck&&!expanded?(chartOverride?'Tuck chart':'Show chart'):expanded?'Close chart':'Enlarge chart';b.setAttribute('aria-expanded',String(expanded||chartTuck&&chartOverride));}
+function chartUI(){const expanded=mapCanvas.classList.contains('expanded'),b=$('#mapToggle');document.body.classList.toggle('chart-tucked',chartTuck&&!chartOverride&&!expanded);document.body.classList.toggle('chart-shown',chartTuck&&chartOverride);b.textContent=chartTuck&&!expanded?(chartOverride?'Tuck chart':'Show chart'):expanded?'Close chart':'Enlarge chart';b.setAttribute('aria-expanded',String(expanded||chartTuck&&chartOverride));map?.setExpanded?.(mapCanvas.classList.contains('expanded'));}
 $('#mapToggle').onclick=()=>{if(chartTuck&&!mapCanvas.classList.contains('expanded'))chartOverride=!chartOverride;else mapCanvas.classList.toggle('expanded');chartUI();drawMap();};
 function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
 // Drag empty scenery to look around; movement remains relative to the camera.
@@ -156,20 +143,27 @@ for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.add
 addEventListener('keydown',e=>{if(state.started&&!state.paused&&['KeyQ','KeyE'].includes(e.code)){cameraYaw+=(e.code==='KeyQ'?-1:1)*.13;lastCameraInput=performance.now()/1000;e.preventDefault();}});
 // Spring arm: keep the fixed elevated view, but first raise then shorten the arm so no terrain,
 // ridge or deck lies between the look target and the lens. Height queries only, no raycasts.
-function viewGround(x,z,solids=true){const g=campaignWorld?.ground(x,z);if(g!==undefined)return g===null?-Infinity:g;let y=Math.max(height(x,z),-.6);if(solids)for(const c of world?.cameraSolids||[])if(Math.hypot(x-c.x,z-c.z)<c.r)y=Math.max(y,c.top);return y;}
-function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch);for(let i=1;i<=10;i++){const d=length*i/10;if(o.y+s*d<viewGround(o.x+sx*c*d,o.z+sz*c*d,d>2)+.35+.055*i)return d;}return 0;}
+// viewGround = the top of anything at (x,z) (camera clearance); floorUnder = the layered floor below y.
+function viewGround(x,z){const g=world?.cameraGround?world.cameraGround(x,z):world?.ground(x,z,1e4);return typeof g==='number'&&Number.isFinite(g)?g:-Infinity;}
+function floorUnder(x,z,y){const g=world?.ground(x,z,y);return typeof g==='number'&&Number.isFinite(g)?g:-Infinity;}
+// Layered worlds (world.layers): a sample is blocked when it sits just above a surface or up to a
+// metre below one (inside its slab). Otherwise the single top-most height is used.
+function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch),layered=!!world?.layers;for(let i=1;i<=20;i++){const d=length*i/20;if(d<=2)continue;const x=o.x+sx*c*d,z=o.z+sz*c*d,h=o.y+s*d,pad=.35+.03*i;
+ if(layered){for(const L of world.layers(x,z))if(L.h>h-pad&&L.h<h+1.1)return d;}else if(h<viewGround(x,z)+pad)return d;}return 0;}
 function placeCamera(dt,sx,sz,pitch,length){// Test the arm from a point kept above the floor: framing may pan the look target below a descending deck.
- armOrigin.copy(cameraTarget);armOrigin.y=Math.max(armOrigin.y,viewGround(armOrigin.x,armOrigin.z,false)+.9);let p=pitch,l=length;while(p<1.05&&armHit(armOrigin,sx,sz,p,l))p+=.05;if(p>=1.05){p=1.05;const hit=armHit(armOrigin,sx,sz,p,l);if(hit)l=Math.max(5,hit-.8);}
+ armOrigin.copy(cameraTarget);armOrigin.y=Math.max(armOrigin.y,floorUnder(armOrigin.x,armOrigin.z,armOrigin.y)+.9);let p=pitch,l=length;
+ // Raise first (the usual fix); under an overhang, also try lowering the arm beneath it.
+ if(armHit(armOrigin,sx,sz,p,l)){let found=false;for(let k=1;k<=18&&!found;k++){for(const q of [pitch+k*.05,pitch-k*.05]){if(q>1.05||q<.1)continue;if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;break;}}}
+  if(!found){p=Math.min(1.05,pitch+.3);const hit=armHit(armOrigin,sx,sz,p,l);if(hit)l=Math.max(3.2,hit-.8);}}
  armPitch??=p;armLength??=l;armPitch=T.MathUtils.damp(armPitch,p,p>armPitch?12:2.4,dt);armLength=T.MathUtils.damp(armLength,l,l<armLength?12:2,dt);
  const c=Math.cos(armPitch)*armLength;camera.position.set(cameraTarget.x+sx*c,cameraTarget.y+Math.sin(armPitch)*armLength,cameraTarget.z+sz*c);
- let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,viewGround(camera.position.x+a,camera.position.z+b));camera.position.y=Math.max(camera.position.y,floor+1.1);}
+ let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));camera.position.y=Math.max(camera.position.y,floor+1.1);}
 function screenBox(box){let l=1e9,t=1e9,r=-1e9,b=-1e9;for(let i=0;i<8;i++){ndc.set(i&1?box.max.x:box.min.x,i&2?box.max.y:box.min.y,i&4?box.max.z:box.min.z).project(camera);if(ndc.z>1)return null;const x=(ndc.x+1)/2*innerWidth,y=(1-ndc.y)/2*innerHeight;l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}return {l,t,r,b};}
 // Play area left by the HUD: below the objective panel, above caption/buttons, left of an open chart.
 function hudSafe(){const s={l:12,t:12,r:innerWidth-12,b:innerHeight-12},top=$('#hud>div')?.getBoundingClientRect();if(top?.height)s.t=Math.max(s.t,top.bottom+10);
  for(const el of document.querySelectorAll('#caption,#charge,#controls button,#stick,#hint')){if(el.hidden||el.id==='caption'&&el.style.opacity==='0'||getComputedStyle(el).visibility==='hidden')continue;const r=el.getBoundingClientRect();if(r.height&&r.top>innerHeight*.45)s.b=Math.min(s.b,r.top-10);}
  if(!document.body.classList.contains('chart-tucked')&&!mapCanvas.hidden&&getComputedStyle(mapCanvas).visibility!=='hidden'){const r=mapCanvas.getBoundingClientRect();if(r.width&&r.left>innerWidth*.5)s.r=Math.min(s.r,r.left-10);}return s;}
-function encounterSubject(p){const pr=campaign?.progress,pts=campaignWorld?.points;if(!pr?.entered||!pts||introActive)return null;const near=q=>Math.hypot(p.x-q.x,p.z-q.z)<13;
- return pr.returnCleared&&!pr.outwardAligned&&near(pts.guardian)?subjects.guardian:pr.bridge&&!pr.service&&near(pts.service)?subjects.service:null;}
+function encounterSubject(){return state.started&&!introActive?quest?.subject()||null:null;}
 // Keep hero and encounter actor inside the HUD-free area: pan the look target, widen the arm, and
 // (not in gentle motion, not right after manual Q/E/drag) turn gently only when they cannot fit.
 function frameSubject(subject,pos,dt){
@@ -180,48 +174,126 @@ function frameSubject(subject,pos,dt){
  const wide=(r-l)/(s.r-s.l),fit=Math.max(wide,(bottom-t)/(s.b-s.t-16))/.82;frameDist=T.MathUtils.clamp(frameDist+(fit-1)*(armLength||11)*Math.min(1,dt*1.5),0,9);
  if(!state.gentle&&wide>.9&&frameDist>3&&performance.now()/1000-lastCameraInput>2.5){const c=subject.getCenter(tmpA),want=Math.atan2(pos.x-c.x,pos.z-c.z);cameraYaw+=T.MathUtils.clamp(Math.atan2(Math.sin(want-cameraYaw),Math.cos(want-cameraYaw)),-.35*dt,.35*dt);}
 }
-function objectiveTargets(){const pr=campaign?.progress,pts=campaignWorld?.points;if(pr?.entered&&pts){if(pr.restored)return [porchPoint];return [pts[!pr.bridge?(state.charged?'bridgeWheel':'source'):!pr.service?'service':!pr.inspection?(state.charged?'inspection':'chamberEntry'):!pr.returnCleared?'returnWheel':!pr.returnAligned?'returnVane':!pr.outwardAligned?'outwardVane':'finalBell']];}
- return [state.restored?finish:state.charged?wheelPoint:!state.awakened?bellPoint:!state.porchRead?porchPoint:source];}
-function updateChart(pos){const now=performance.now()/1000;let hit=introActive||!!encounterSubject(pos);
- if(!hit&&!mapCanvas.hidden){const m=mapCanvas.getBoundingClientRect();for(const p of [...objectiveTargets(),context?.target]){if(!p||p.distanceTo(pos)>28)continue;const r=screenBox(new T.Box3(tmpA.set(p.x-.6,p.y,p.z-.6),tmpB.set(p.x+.6,p.y+1.9,p.z+.6)));if(r&&r.r>m.left-16&&r.l<m.right+16&&r.b>m.top-16&&r.t<m.bottom+16){hit=true;break;}}}
+function updateChart(pos){
  // The chart stays tucked unless the player opens it; the intro and encounters tuck it again.
- if(!chartTuck){chartTuck=true;chartUI();}if((introActive||encounterSubject(pos))&&chartOverride){chartOverride=false;chartUI();}}
-const cameraTarget=new T.Vector3(...START);let vista=0,last=performance.now(),wasGrounded=true,lastMode='idle';
+ if(!chartTuck){chartTuck=true;chartUI();}if((introActive||encounterSubject()||quest?.finaleActive)&&chartOverride){chartOverride=false;chartUI();}}
+// ---- 20 s in-engine intro (after the prologue cards), built from world anchors ----
+// dawn terrace -> dull bell -> lanterns sag / pinwheels stop -> the guardian shutters the Hollow -> settle on the hero.
+const SHOTS=[{at:0,focus:'start',yaw:.55,pitch:.62,len:22,up:2},{at:5,focus:'morningBell',yaw:.25,pitch:.3,len:7.5,up:1.4,cue:'dull-bell',text:'The morning bell tolls. Half a note, then nothing.'},{at:9,focus:'start',yaw:-.35,pitch:.42,len:13,up:2.5,text:'Along the terrace, the lanterns sag. The pinwheels stop.'},{at:13,focus:'hollowGate',yaw:-.7,pitch:.36,len:15,up:1.5,cue:'hazard',text:'Deep below, something shutters the Hollow.'},{at:18,focus:'hero',yaw:0,pitch:Math.atan(.48),len:10.8,up:1}];
+const introEngineTime=()=>introActive&&introTime>=CARDS?introTime-CARDS:null;
+function introShot(){const e=introEngineTime();if(e===null)return null;let i=0;while(i<SHOTS.length-1&&e>=SHOTS[i+1].at)i++;return {shot:SHOTS[i],index:i,e};}
+function updateIntro(dt){introTime+=dt;opening.update(Math.min(27,introTime*9/CARD));const s=introShot();if(s&&s.index!==lastShot){lastShot=s.index;if(s.shot.cue)sound(s.shot.cue);caption(s.shot.text||'',s.shot.text?4.5:0);}if(introTime>=CARDS+ENGINE)endIntro();}
+function introCamera(sh){const tv=world.points.terraceView,P=world.points;if(!tv||!sh||sh.index>=4)return null;const e=sh.e-sh.shot.at,flat=(a,b)=>tmpB.set(b.x-a.x,0,b.z-a.z).normalize();
+ if(sh.index===0)return {pos:new T.Vector3().lerpVectors(tv.pos,tv.target,.02*e),look:new T.Vector3(tv.target.x,tv.target.y+e*.1,tv.target.z)};
+ if(sh.index===1){const b=P.morningBell,d=flat(tv.target,tv.pos).clone();return {pos:new T.Vector3(b.x+d.x*6.5-d.z*1.5,b.y+3.2,b.z+d.z*6.5+d.x*1.5),look:new T.Vector3(b.x,b.y+2.2,b.z)};}
+ if(sh.index===2)return {pos:new T.Vector3().lerpVectors(tv.pos,tv.target,.42+.01*e).add(tmpA.set(0,-1.2,0)),look:new T.Vector3(tv.target.x,tv.target.y+.5,tv.target.z)};
+ const g=P.hollowGate,c=P.arena||{x:0,z:0},o=flat(c,g).clone();return {pos:new T.Vector3(g.x+o.x*(12-e*.4)+o.z*3,g.y+5,g.z+o.z*(12-e*.4)-o.x*3),look:new T.Vector3(g.x,g.y+2.2,g.z)};}
+function snapCamera(){if(!movement)return;cameraTarget.copy(movement.position).y+=1;armPitch=armLength=null;frameOffset.set(0,0,0);frameDist=0;}
+const cameraTarget=new T.Vector3();let last=performance.now(),wasGrounded=true;
 function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;last=now;const dt=Math.max(0,Math.min(.05,elapsed));fps=T.MathUtils.lerp(fps,1/Math.max(.001,elapsed),.03);
- if(hero&&movement){if(!state.paused){state.t+=dt;waterfall.update(state.t);art.update?.(state.t,state.gentle,movement.position);movement.update(dt,{enabled:state.started&&!introActive,actionSlow:!!state.action,faceTarget:state.action?state.actionTarget:null});if(movement.recovered){state.recoveryUntil=state.t+.9;caption('A little current catches you and carries you back.',3);sound('capture');}const p=movement.position;travel+=movement.speed*dt;hero.position.copy(p);hero.rotation.y=state.started?movement.yaw:.35;
- if(introActive){introTime+=dt;opening.update(introTime);const beat=introTime<27?Math.floor(introTime/9):3+Math.floor((introTime-27)/7);if(beat!==lastIntroBeat){lastIntroBeat=beat;if(!state.gentle&&beat>=3)cameraTarget.copy(beat===3?campaignWorld.points.guardian:porchPoint).y+=1;if(beat<3)caption('',0);else caption(beat===3?'The guardian has sealed the windworks. Across the village, the wind falls still.':'Mara: “Morning round, apprentice. Pull the bell rope by the path.”',7);}if(introTime>=41)endIntro();}
- campaign?.update(dt,state.t,p,state);campaignWorld?.update(dt,state.t,p,campaign.progress,state);campaignWorld?.atmosphere?.({scene,hemi,sun,renderer},dt,p,campaign.progress);campaignActors?.update(dt,state.t,p,{...state,introTime:introActive?Math.min(27.99,Math.max(0,introTime-13)):null},campaign.telemetry());saveTimer+=dt;if(saveTimer>12&&state.started&&!introActive){saveTimer=0;save();}if(state.started)updateUI();
- if(queued&&state.t>=queued.at){const q=queued;queued=null;caption(typeof q.text==='function'?q.text():q.text,q.duration);q.then?.();}
- if(state.action){state.actionTime+=dt;if(state.actionTime>.38&&state.actionCallback){state.actionCallback();state.actionCallback=null;updateUI();save();}if(state.actionTime>.68)state.action=null;}
- animator.update(dt,{time:state.t,action:state.action,actionProgress:state.actionTime/.68,charged:state.charged});staff.visible=state.porchRead;poseStaff();discoveries?.update(dt,state.t,p,state);garden.update(dt,state.t,p,{open:bypassOpen(),catchable:bypassOpen()&&state.porchRead&&!state.charged&&!state.restored,solved:gardenSolved(),gentle:state.gentle});soundscape.update(dt,{position:p,speed:movement.speed,grounded:movement.grounded,charged:state.charged,restored:state.restored,gardenDistance:p.distanceTo(source),waterDistance:waterDistance(p)});
- if(mara){const head=mara.getObjectByName('head'),arm=mara.getObjectByName('leftArm'),crank=mara.getObjectByName('crank');if(head)head.rotation.y=T.MathUtils.damp(head.rotation.y,p.distanceTo(porchPoint)<4?Math.atan2(p.x-mara.position.x,p.z-mara.position.z)-mara.rotation.y:0,3,dt);if(arm)arm.rotation.x=Math.sin(state.t*.8)*.06;if(crank)crank.rotation.z=Math.sin(state.t*.8)*.08;}
- if(state.started){findContext();drawMap();for(const foot of animator.footfalls)sound('step');if(wasGrounded&&!movement.grounded&&movement.verticalVelocity>0)sound('jump');if(!wasGrounded&&movement.grounded)sound('land');}wasGrounded=movement.grounded;lastMode=movement.mode;
- winds.forEach((o,i)=>{o.visible=bypassOpen()&&!state.charged||state.restored;swirl(o,state.restored?finish:source,(state.restored?1.1:.5)+i*.12,state.t*(.8+i*.12)+i*2);});valveWind.visible=bypassOpen();if(valveWind.visible)swirl(valveWind,valvePoint,.42,state.t*1.6);gardenWind.visible=gardenSolved();if(gardenWind.visible)swirl(gardenWind,gardenPoint,.75,state.t*.6);held.visible=state.charged||state.t<state.recoveryUntil;swirl(held,p,.45,state.t*2);
- transfer.visible=state.action==='release';if(transfer.visible){const from=staff.localToWorld(new T.Vector3(0,1.15,0)),to=state.actionTarget.clone().add(new T.Vector3(0,.85,0)),a=transfer.geometry.attributes.position;for(let i=0;i<48;i++){const f=T.MathUtils.clamp(state.actionTime/.68*1.6-i/47*.45,0,1),v=from.clone().lerp(to,f);v.y+=Math.sin(f*Math.PI)*.7;const width=.065*Math.sin(i/47*Math.PI);a.setXYZ(i*2,v.x,v.y-width,v.z);a.setXYZ(i*2+1,v.x,v.y+width,v.z);}a.needsUpdate=true;}
-
- for(let i=0;i<memoryGlows.length;i++){memoryGlows[i].visible=!state.keepsakes.has(i)&&(i!==1||state.charged||state.restored)&&(i!==3||gardenSolved());memoryGlows[i].rotation.y+=dt;memoryGlows[i].position.y=memories[i].p.y+.4+Math.sin(state.t*2+i)*.08;}
- motes.rotation.y=state.gentle?0:Math.sin(state.t*.025)*.08;if(state.t>captionEnd)$('#caption').style.opacity='0';
- for(let i=0;i<54;i++){const h=insectHomes[i%insectHomes.length],a=i*2.39996+state.t*(.7+(i%3)*.12),r=.35+(i%9)*.08+Math.sin(state.t*1.7+i)*.06;insectPositions[i*3]=h[0]+Math.cos(a)*r;insectPositions[i*3+1]=height(h[0],h[1])+.52+(i%6)*.11+Math.sin(state.t*2.1+i)*.12;insectPositions[i*3+2]=h[1]+Math.sin(a)*r;}insectGeo.attributes.position.needsUpdate=true;
+ if(!(hero&&movement&&quest)){renderer.render(scene,camera);return;}
+ const p=movement.position,cinematic=introActive||quest.finaleActive;
+ const simDt=hitStop>0?0:dt;hitStop=Math.max(0,hitStop-dt);
+ if(!state.paused&&simDt>0){const dt=simDt;state.t+=dt;
+  movement.update(dt,{enabled:state.started&&!cinematic,actionSlow:!!state.action,faceTarget:state.action?state.actionTarget:null});
+  if(movement.recovered){recoveredCount++;caption('A little current catches you and carries you back.',3);sound('capture');}
+  travel+=movement.speed*dt;hero.position.copy(p);hero.rotation.y=state.started?movement.yaw:.35;
+  if(introActive)updateIntro(dt);
+  wind.update(dt,state.t,{hero:p,staffTip:quest.staff?staffTip():null,camera,gentle:state.gentle});
+  quest.update(dt,state.t,p,{started:state.started&&!introActive,gentle:state.gentle});
+  villagers?.update(dt,state.t,{hero:movement.position,restored:quest.restoration,gentle:state.gentle});
+  const e=introEngineTime();world.update(dt,state.t,{wind:wind.state(),restored:quest.restoration,intro:introActive?{t:e??-1,phase:e===null?'cards':['dawn','bell','sag','shutter','settle'][introShot().index]}:null,gentle:state.gentle,hero:p,camera,progress:quest.progress,finale:quest.finaleShot});
+  saveTimer+=dt;if(saveTimer>12&&state.started&&!introActive){saveTimer=0;save();}
+  if(queued&&state.t>=queued.at){const q=queued;queued=null;if(q.text)caption(typeof q.text==='function'?q.text():q.text,q.duration);q.then?.();}
+  if(state.action){state.actionTime+=dt;if(state.actionTime>(state.action==='pull'?.38:.2)&&state.actionCallback){const cb=state.actionCallback;state.actionCallback=null;cb();}if(state.actionTime>.68)state.action=null;}
+  const nearMara=mara&&Math.hypot(p.x-mara.position.x,p.z-mara.position.z)<4.5;
+  animator.update(dt,{time:state.t,action:state.action,actionProgress:state.actionTime/.68,charged:wind.charged,gentle:state.gentle,lookAt:state.action?state.actionTarget:context?.target||(nearMara?tmpB.copy(mara.position).setY(mara.position.y+1.4):null)});staff.visible=quest.staff;poseStaff();
+  const src=[...wind.sources.values()].reduce((m,s)=>Math.min(m,Math.hypot(p.x-s.x,p.z-s.z)),30);
+  soundscape.update(dt,{position:p,speed:movement.speed,grounded:movement.grounded,charged:wind.charged,restored:(quest.restoration.village||0)>.5,gardenDistance:src,waterDistance:30});
+  if(mara)actMara(dt,p);
+  if(pairedBells?.userData.phrase){const ph=pairedBells.userData.phrase,a=bellOutT===null?null:ph(state.t-bellOutT,{gentle:state.gentle}),b=bellRetT===null?null:ph(state.t-bellRetT+1.7,{gentle:state.gentle});pairedBells.userData.setSwing?.({out:a?.out??0,ret:b?.ret??0});}
+  if(state.started){findContext();if((uiTimer-=dt)<=0){uiTimer=.2;updateUI();drawMap();}for(const foot of animator.footfalls)sound('step');if(wasGrounded&&!movement.grounded&&movement.verticalVelocity>0&&!movement.lifting)sound('jump');if(!wasGrounded&&movement.grounded)sound('land');}wasGrounded=movement.grounded;
+  $('#skipIntro').hidden=!(introActive||quest.finaleActive);$('#skipIntro').textContent=quest.finaleActive?'Skip':'Skip · or move to begin';document.body.classList.toggle('cinematic',introActive||quest.finaleActive);
+  if(state.complete&&endingAt&&state.t>=endingAt){endingAt=0;$('#ending').hidden=false;{const q=quest.telemetry();$('#endingDetail').textContent=q.keepsake?'The little keeper’s bell rang the whole return phrase. 3/3 fragments.':`${q.fragments}/3 bell fragments found.`;}}
+  if(state.t>captionEnd)$('#caption').style.opacity='0';
  }
- const pos=movement.position;vista=T.MathUtils.damp(vista,state.restored?1-T.MathUtils.smoothstep(pos.distanceTo(finish),2,7):0,3,dt);const ahead=.8+vista*1.5,sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw);frameSubject(state.started?encounterSubject(pos):null,pos,dt);let focus=new T.Vector3(pos.x-sx*ahead,pos.y+1+vista*.6,pos.z-sz*ahead).add(frameOffset);
- if(introActive&&!state.gentle){focus=(introTime>=34?porchPoint:introTime>=27?campaignWorld.points.guardian:new T.Vector3(...START)).clone().add(new T.Vector3(0,1,0));}
- cameraTarget.lerp(focus,1-Math.exp(-dt*(introActive?1.8:7)));const portrait=camera.aspect<.85,shot=campaignWorld?.restorationShot?.(state.gentle)||0;placeCamera(dt,sx,sz,Math.atan(.48-vista*.13)+shot*.12,(portrait?11.5:10.8)+vista*2.5+frameDist+shot*5);camera.lookAt(cameraTarget);sun.position.set(cameraTarget.x-9,cameraTarget.y+20,cameraTarget.z+8);sun.target.position.copy(cameraTarget);camera.updateMatrixWorld(true);if(!state.paused)world.update(dt,state.t,pos,state.restored,state.gentle,camera,state.charged,state.complete,state.started&&!introActive,bypassOpen());if(state.started&&(hudTimer-=dt)<=0){hudTimer=.15;safe=hudSafe();updateChart(pos);}
- renderer.render(scene,camera);window.__READY__=true;window.__GAME__={pos:[pos.x,pos.z],y:pos.y,fps,speed:movement.speed,mode:movement.mode,grounded:movement.grounded,score:state.complete?1:0,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:state.charged,awakened:state.awakened,restored:state.restored,paused:state.paused,started:state.started,porchRead:state.porchRead,bypassOpen:bypassOpen(),quietObserved:visited.has('quiet-pocket'),keepsakes:state.keepsakes.size,travel,context:context?.kind||null,discoveryId:context?.id||null,discoveries:discoveries?.telemetry(),campaign:campaign?.telemetry(),introActive,introTime,checkpoint:[...checkpoint],heroVersion:'approved-D',cameraYaw};
- }else renderer.render(scene,camera);
+ // ---- camera ----
+ const pos=movement.position,portrait=camera.aspect<.85;let sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw),pitch=Math.atan(.48),length=portrait?11.5:10.8;
+ liftLead=T.MathUtils.damp(liftLead,movement.lifting?1:0,movement.lifting?3:1.5,dt);// rise with the hero and show the ledge above
+ frameSubject(encounterSubject(),pos,dt);
+ const ahead=.8;let focus=tmpA.set(pos.x-sx*ahead,pos.y+1+liftLead*1.3,pos.z-sz*ahead).add(frameOffset),follow=7;
+ pitch-=liftLead*.07;length+=liftLead*2.6+frameDist;
+ const shot=introShot();
+ if(shot&&!state.gentle){const s=shot.shot,q=s.focus==='hero'?pos:world.points[s.focus]||pos;focus=tmpA.set(q.x,q.y+s.up,q.z);sx=Math.sin(cameraYaw+s.yaw+shot.e*.012);sz=Math.cos(cameraYaw+s.yaw+shot.e*.012);pitch=s.pitch;length=s.len;follow=1.6;}
+ else if(introActive){focus=tmpA.set(pos.x,pos.y+1,pos.z);}
+ const rise=world.points.finaleRise,ft=quest.finaleTime??-1,ease=v=>{v=Math.max(0,Math.min(1,v));return v*v*(3-2*v);};
+ if(quest.finaleActive&&!rise){const f=quest.finaleShot,g=world.points.finale||world.points.guardian,e=f*f*(3-2*f);focus=tmpA.set(g.x,g.y+e*14,g.z);pitch=.3+e*.25;length=12+e*16;follow=1.4;}
+ cameraTarget.lerp(focus,1-Math.exp(-dt*follow));placeCamera(dt,sx,sz,pitch,length);
+ if(quest.finaleActive&&rise&&ft>=1.6){
+  // Finale crane: out of the Hollow and up over the waking village, then turn to the far bell.
+  // Keys from world anchors: out through the Hollow's open (camera) side, up over the terrace, turn to the far bell.
+  if(!crane){const P=world.points,tv=P.terraceView,c=P.arena||{x:0,y:0,z:0},far=P.farBell||rise.lookAt,o=new T.Vector3(Math.sin(DEFAULT_YAW),0,Math.cos(DEFAULT_YAW));// the Hollow opens toward the default camera
+   const at=(r,y)=>new T.Vector3(c.x+o.x*r,y,c.z+o.z*r),top=P.hollowGate?.y??4;
+   const over=tv?new T.Vector3().copy(tv.pos).addScaledVector(new T.Vector3().subVectors(tv.pos,tv.target).setY(0).normalize(),5).setY(tv.pos.y+12):at(36,top+22);
+   crane={pos:new T.CatmullRomCurve3([camera.position.clone(),at(3,pos.y+4),at(9,top+2),at(22,top+5),at(34,top+20),over]),
+    looks:[pos.clone().setY(pos.y+1.5),new T.Vector3(c.x,top+2,c.z),tv?new T.Vector3().copy(tv.target):at(0,top),new T.Vector3().copy(far)]};scriptCam.copy(camera.position);}
+  const e=ease((ft-1.6)/7.2);crane.pos.getPoint(e,finaleCam);
+  const L=crane.looks;if(ft<4.5)tmpB.lerpVectors(L[0],L[1],ease((ft-1.6)/2.9));else if(ft<9)tmpB.lerpVectors(L[1],L[2],ease((ft-4.5)/3.5));else tmpB.lerpVectors(L[2],L[3],ease((ft-9)/2.4));
+  const k=1-Math.exp(-dt*(ft<2.2?2:4));scriptCam.lerp(finaleCam,k);camera.position.copy(scriptCam);finaleLook.lerp(tmpB,k);camera.lookAt(finaleLook);
+ }else{crane=null;finaleLook.copy(camera.position).lerp(cameraTarget,1);
+  const tv=world.points.terraceView;
+  if(arrival>0&&tv){// Back on the terrace: ease from the painted terrace view into the normal follow arm.
+   arrival=Math.max(0,arrival-dt);const k=ease(1-arrival/2.6);camera.position.lerpVectors(tv.pos,tmpB.copy(camera.position),k);camera.lookAt(tmpA.lerpVectors(tv.target,cameraTarget,k));
+  }else camera.lookAt(cameraTarget);}
+ // World-anchored intro shots (real world): cut between painted views rather than panning the arm.
+ const ic=introActive&&!state.gentle?introCamera(shot):null;
+ if(ic){if(introCut!==shot.index){introCut=shot.index;scriptCam.copy(ic.pos);finaleLook.copy(ic.look);}const k=1-Math.exp(-dt*1.2);scriptCam.lerp(ic.pos,k);camera.position.copy(scriptCam);finaleLook.lerp(ic.look,k);camera.lookAt(finaleLook);}
+ if(kick>.002){kick*=Math.exp(-dt*9);camera.position.addScaledVector(kickDir,kick*.32*Math.sin(performance.now()/1000*48));}
+ sun.position.set(cameraTarget.x-9,cameraTarget.y+20,cameraTarget.z+8);sun.target.position.copy(cameraTarget);camera.updateMatrixWorld(true);
+ if(state.started&&(hudTimer-=dt)<=0){hudTimer=.15;safe=hudSafe();updateChart(pos);}
+ wind.flush();
+ const area=quest.area(pos);
+ if(look){try{look.setFocus?.({hero:hero.position,heroObject:hero,extra:mara?[mara.position]:[]});look.update(dt,{area:LOOK_AREAS[area]||'terrace-dawn',restored:quest.restoration.village||0,t:state.t,gentle:state.gentle});look.render();}catch(e){console.warn('look failed; plain renderer from now on',e);look=null;renderer.render(scene,camera);}}else renderer.render(scene,camera);
+ window.__READY__=true;
+ const qt=quest.telemetry();
+ window.__GAME__={pos:[pos.x,pos.z],y:pos.y,fps,speed:movement.speed,mode:movement.mode,grounded:movement.grounded,lifting:movement.lifting,knocked:movement.knocked,score:state.complete?1:0,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:wind.charged,chargeKind:wind.charge?.kind??null,paused:state.paused,started:state.started,introActive,introTime,introPhase:shot?SHOTS[shot.index].focus:null,context:context?.kind||null,contextId:context?.id||null,contextLabel:context?.label||null,objective:quest.objective(),area,quest:qt,wind:wind.telemetry(),restoration:{...quest.restoration},finaleTime:quest.finaleTime,finaleActive:quest.finaleActive,recoveredCount,freed:movement.freed,blocked:!!world.blocked(pos.x,pos.z,.23,pos.y),travel,checkpoint:movement.checkpoint.toArray(),cameraYaw,stubWorld:!!world.stub,look:!!look,version:2};
 }
+async function loadWorld(){
+ if((MODULES.world||params.get('world')==='1')&&!params.has('stub')){try{const m=await import('./bellhollow/world.js');return adaptWorld(await m.buildBellhollow({THREE:T,scene,loadAsset:ASSET}),{THREE:T});}catch(e){console.warn('Bellhollow world failed to build; using the stub world.',e);}}
+ return (await import('./bellhollow/stub-world.js')).buildBellhollow({THREE:T,scene});
+}
+async function loadGuardian(){if(!(MODULES.guardian||params.get('guardian')==='1')||params.get('guardian')==='stub')return undefined;try{return (await import('./bellhollow/guardian.js')).createGuardian;}catch(e){console.warn('guardian.js failed; using the stub encounter.',e);return undefined;}}
+async function loadLook(){if(!MODULES.look||params.get('look')==='0')return null;try{const m=await import('./render/look.js');return m.createLook({THREE:T,renderer,scene,camera});}catch(e){console.warn('look.js failed; plain renderer.',e);return null;}}
 try{
- const geography=buildCampaignWorld(scene,art);
- const loaded=await Promise.all([buildWorld(scene,art),createGarden(scene,art),createWoodlandDiscoveries(scene,art,{caption,sound}),geography,geography.then(w=>createCampaignActors(scene,art,w.points)),loadCodeCharacter(buildApprovedHero),ASSET('./assets/campaign-mara.js',{keepHierarchy:true}),ASSET('./assets/staff.js'),art.ready]);
- [world,garden,discoveries,campaignWorld,campaignActors]=loaded;const character=loaded[5];mara=loaded[6];staff=loaded[7];
- memories[0].p.copy(world.keepsakePoint);if(world.shortcutPoint)memories[1].p.copy(world.shortcutPoint);hero=character.root;hero.userData.joints=hero.children[0].userData.joints;scene.add(hero);art.style(staff);staff.scale.setScalar(.73);staffHand=hero.userData.joints.rightHand;staffHand.add(staff);
- campaign=createCampaign({THREE:T,scene,points:campaignWorld.points,caption,sound,onChange:(_progress,event)=>campaignEvent(event)});
- art.style(mara);mara.position.set(-7.2,height(-7.2,11.3),11.3);mara.rotation.y=.55;scene.add(mara);
- movement=createMovement(T,{start:START,sampleGround:(x,z)=>{const g=campaignWorld.ground(x,z);return g===undefined?world.ground(x,z):g;},blocked:(x,z,r)=>campaignWorld.ground(x,z)===undefined?world.blocked(x,z,r):campaignWorld.blocked(x,z,r),stickElement:$('#stick'),jumpButton:$('#jump'),runButton:$('#run'),walkSpeed:1.65,runSpeed:5.8,acceleration:12,deceleration:16,turnResponse:12,cameraYaw:()=>cameraYaw});animator=createAdventureMotion(character,movement);hero.position.copy(movement.position);world.seeThrough(scene,o=>{for(let n=o;n;n=n.parent)if(n===hero)return true;return false;});for(const id of ['guardian','service']){const a=scene.getObjectByName(`campaign-${id}-actor`);if(a)subjects[id]=new T.Box3().setFromObject(a).expandByScalar(.15);}
+ if(legacy)$('#legacyNote').hidden=false;
+ const loaded=await Promise.all([loadWorld(),loadCodeCharacter(buildApprovedHero),Promise.resolve(buildMara(T)),ASSET('./assets/staff.js'),loadGuardian(),loadLook()]);
+ world=loaded[0];const character=loaded[1];mara=loaded[2];staff=loaded[3];const createGuardian=loaded[4];
+ hero=character.root;hero.userData.joints=hero.children[0].userData.joints;scene.add(hero);staff.scale.setScalar(.73);staffHand=hero.userData.joints.rightHand;staffHand.add(staff);staff.visible=false;
+ const P=world.points;start3=[P.start.x,P.start.y,P.start.z];
+ if(P.bellOut&&P.arena&&!world.stub){// Paired bells on the high ring behind the ringing stand, facing the well.
+  pairedBells=buildPairedBells(T);const s=P.bellOut,dx=s.x-P.arena.x,dz=s.z-P.arena.z,L=Math.hypot(dx,dz)||1,x=s.x+dx/L*1.3,z=s.z+dz/L*1.3,g=world.ground(x,z,s.y+.5);pairedBells.position.set(x,g??s.y,z);pairedBells.rotation.y=Math.atan2(-dx,-dz);pairedBells.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=true;});scene.add(pairedBells);}
+ mara.name='mara';mara.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=true;});mara.position.set(P.mara.x,P.mara.y,P.mara.z);mara.rotation.y=Math.atan2(P.start.x-P.mara.x,P.start.z-P.mara.z);scene.add(mara);
+ movement=createMovement(T,{start:start3,sampleGround:(x,z,y)=>world.ground(x,z,y),blocked:(x,z,r,y)=>world.blocked(x,z,r,y),stickElement:$('#stick'),jumpButton:$('#jump'),runButton:$('#run'),walkSpeed:1.65,runSpeed:5.8,acceleration:12,deceleration:16,turnResponse:12,cameraYaw:()=>cameraYaw,maxDrop:14});
+ animator=createAdventureMotion(character,movement);hero.position.copy(movement.position);
+ wind=createWind({THREE:T,scene,movement,sound,fx:()=>look?.fx?.wind});
+ look=loaded[5];
+ quest=createQuest({THREE:T,scene,world,wind,movement,caption,sound,onChange:questEvent,...(createGuardian?{createGuardian:o=>createGuardian({...o,look})}:{})});if(look){for(const [o,role,opts] of [[hero,'character'],[mara,'character'],[quest.guardian?.object,'outline',{dynamic:true,occluder:false}],[pairedBells,'outline',{dynamic:true}]])try{if(o)look.applyTo(o,role,opts);}catch(e){console.warn(e);}
+  try{look.setAreaParams?.('hollow',{height:new T.Vector4(P.arena.y,P.hollowGate.y,.55,.62)});}catch(e){console.warn(e);}
+  // Aim the valley backdrop so the far bell sits where the finale camera turns (sky azimuth: from -z toward +x).
+  if(P.farBell)try{look.setBackdrop?.(new URL('./textures/v2/valley.webp',import.meta.url).href,{azimuthDeg:T.MathUtils.radToDeg(Math.atan2(P.farBell.x,-P.farBell.z))});}catch(e){console.warn(e);}}
+ snapCamera();
+ // Read-only anchors for known-route drivers (plain data; nothing here can change the game).
+ const plain=o=>JSON.parse(JSON.stringify(o));window.__BELLHOLLOW__=Object.freeze({points:plain(P),vents:plain(world.vents||[]),wheels:plain(world.wheels||[]),sails:plain(world.sails||[]),stub:!!world.stub});
  // Read-only probe for camera acceptance captures: clearance, head projection, un-cut line-of-sight blockers.
- window.__CAMERA_PROBE__=()=>{const p=movement.position,ray=new T.Raycaster(),blockers=[],vis=o=>{for(let n=o;n;n=n.parent){if(!n.visible||n===hero)return false;}return true;};let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,viewGround(camera.position.x+a,camera.position.z+b));
-  for(const h of [1.55,1.0]){const target=new T.Vector3(p.x,p.y+h,p.z),dir=target.clone().sub(camera.position),dist=dir.length();ray.set(camera.position,dir.normalize());ray.far=dist-.3;for(const hit of ray.intersectObject(scene,true)){const o=hit.object,m=Array.isArray(o.material)?o.material[0]:o.material;if(!o.isMesh||!vis(o)||m?.transparent&&m.opacity<.5||m?.isMeshBasicMaterial&&!m.depthWrite||world.seeCuts(hit.point))continue;blockers.push({name:o.name||o.parent?.name||'mesh',h,at:+hit.distance.toFixed(2),of:+dist.toFixed(2)});}}
-  const head=new T.Vector3(p.x,p.y+1.55,p.z).project(camera);heroBox.min.set(p.x-.35,p.y,p.z-.35);heroBox.max.set(p.x+.35,p.y+1.75,p.z+.35);
-  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:subjects.guardian?screenBox(subjects.guardian):null,service:subjects.service?screenBox(subjects.service):null,subject:encounterSubject(p)===subjects.guardian?'guardian':encounterSubject(p)?'service':null,chartTucked:document.body.classList.contains('chart-tucked'),safe};};
+ window.__CAMERA_PROBE__=()=>{const p=movement.position,ray=new T.Raycaster(),blockers=[],vis=o=>{for(let n=o;n;n=n.parent){if(!n.visible||n===hero)return false;}return true;};let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));
+  for(const h of [1.55,1.0]){const target=new T.Vector3(p.x,p.y+h,p.z),dir=target.clone().sub(camera.position),dist=dir.length();ray.set(camera.position,dir.normalize());ray.far=dist-.3;for(const hit of ray.intersectObject(scene,true)){const o=hit.object,m=Array.isArray(o.material)?o.material[0]:o.material;if(!o.isMesh||!vis(o)||m?.transparent&&m.opacity<.5||m?.isMeshBasicMaterial&&!m.depthWrite||m?.isShaderMaterial)continue;blockers.push({name:o.name||o.parent?.name||'mesh',h,at:+hit.distance.toFixed(2),of:+dist.toFixed(2)});}}
+  const head=new T.Vector3(p.x,p.y+1.55,p.z).project(camera);heroBox.min.set(p.x-.35,p.y,p.z-.35);heroBox.max.set(p.x+.35,p.y+1.75,p.z+.35);const g=quest.subject();
+  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe};};
+ // Lazy-load the prologue illustrations once the game is ready (not counted against start-up).
+ (window.requestIdleCallback||setTimeout)(()=>{for(const n of [1,2,3]){const i=new Image();i.src=new URL(`./textures/v2/card${n}.webp`,import.meta.url).href;}});
+ // After ready (never blocking it): villagers, then the chart bake from the live scene.
+ const afterReady=import('./bellhollow/villagers.js').then(m=>{villagers=m.createVillagers({THREE:T,scene,world,look});}).catch(e=>console.warn('villagers unavailable',e));
+ afterReady.then(()=>requestAnimationFrame(()=>{try{map=createMap({THREE:T,renderer,scene,world,canvas:mapCanvas,look,hide:[hero,mara,staff,pairedBells,quest.guardian?.object,villagers?.root].filter(Boolean)});requestAnimationFrame(()=>{try{map.bake();}catch(e){console.warn('map bake failed',e);}});}catch(e){console.warn('map unavailable',e);map=null;}}));
  $('#startb').disabled=false;$('#startb').textContent=loadedSave?'Start a new adventure':'Start adventure';$('#continueb').hidden=!loadedSave;updateUI();window.__START__=()=>start(true);
-}catch(e){console.error(e);$('#error').hidden=false;$('#error').textContent='The woodland could not load. '+e.message;}
+}catch(e){console.error(e);$('#error').hidden=false;$('#error').textContent='Bellhollow could not load. '+e.message;}
 requestAnimationFrame(frame);
