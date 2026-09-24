@@ -18,8 +18,8 @@ const fails = [], log = (m) => fails.push(m);
 const check = (cond, msg) => { if (!cond) log(msg); return cond; };
 const P = w.points, R = P.guardianWell.rings;
 const setAll = (o) => w.update(1 / 60, 0, o);
-const OPEN = {terraceGate: 1, sailBridge: 1, pipesBridge: 1, ladderShutter: 1, skyPlanks: 3, hollowGate: 1};
-const CLOSED = {terraceGate: 0, sailBridge: 0, pipesBridge: 0, ladderShutter: 0, skyPlanks: 0, hollowGate: 0};
+const OPEN = {terraceGate: 1, sailBridge: 1, ladderShutter: 1, skyPlanks: 3, hollowGate: 1, frag2: 1, sailsCap: 1, pipesValve: 1};
+const CLOSED = {terraceGate: 0, sailBridge: 0, ladderShutter: 0, skyPlanks: 0, hollowGate: 0, frag2: 0, sailsCap: 0, pipesValve: 0};
 
 check(buildMs < 2500, `build ${buildMs.toFixed(0)} ms >= 2500`);
 
@@ -43,6 +43,8 @@ const stand = {
   ...Object.fromEntries(['low', 'mid', 'high'].flatMap((k) => [[`well.${k}.safe`, R[k].safe], [`well.${k}.vaneStand`, R[k].vaneStand], [`well.${k}.catch`, R[k].catchPoint]])),
   'well.low.vent': new T.Vector3(R.low.vent.x, R.low.vent.y, R.low.vent.z), 'well.mid.vent': new T.Vector3(R.mid.vent.x, R.mid.vent.y, R.mid.vent.z),
   'pairedBells.stand': P.pairedBells.stand, 'terraceView.maraStand': P.terraceView.maraStand,
+  'sails.capSail': P.sails.capSail, 'sails.frag2From': P.sails.frag2From, 'pipes.valve': P.pipes.valve, 'pipes.frag3From': P.pipes.frag3From, 'pipes.frag3To': P.pipes.frag3To,
+  'gallery.source': P.gallery.source, 'well.top': P.guardianWell.rings.top,
 };
 setAll(OPEN);
 let pointChecks = 0;
@@ -60,7 +62,15 @@ for (const k of ['wheelAObject', 'wheelBObject', 'mill']) check(P.pipes[k]?.isVe
 for (const k of ['shutter', 'mill']) check(P.ladders[k]?.isVector3, 'missing millLadders.' + k);
 check(P.terraceView.pos.isVector3 && P.terraceView.target.isVector3, 'terraceView camera');
 check(P.farBell.distanceTo(P.start) > 80, 'far bell is distant');
-check(w.vents.length >= 6, 'vents');
+check(w.vents.length >= 8, 'vents');
+// M3 records
+for (const id of ['frag1', 'ring3']) check(w.vents.some((v) => v.id === id), 'vent ' + id);
+check(w.sails.some((v) => v.id === 'frag2' && v.kind === 'bridge'), 'sail frag2');
+for (const k of ['capTarget', 'capSail']) check(P.sails[k]?.isVector3, 'sails.' + k);
+for (const k of ['valve', 'valveObject', 'outletWrong']) check(P.pipes[k]?.isVector3, 'pipes.' + k);
+for (const c of P.gallery.carvings) check(c.intake?.isVector3 && c.intake.distanceTo(c.panel) < 1.8, c.id + ' intake');
+check(P.gallery.source?.isVector3 && P.gallery.source.distanceTo(P.gallery.carvings[0].stand) < 20, 'gallery source near the carvings');
+check(P.sails.capTarget.y - P.sails.capSail.y > 3, 'cap tail sail above the stand (clear of the hero)');
 for (const m of validateWorld(w)) log('quest contract: missing ' + m);
 for (const v of w.vents) check(v.ledge && Math.abs(v.top - v.ledge.y - .8) < .01, `vent ${v.id}: top must be ledge + 0.8`);
 
@@ -140,19 +150,25 @@ const routes = [
   // Mill of Sails
   ['sails branch', 'walk', [P.loftView, P.sails.branchStart, P.sails.source, P.sails.bridgePush, P.sails.bridgeFrom]],
   ['sails bridge crossing', 'walk', [P.sails.bridgeFrom, P.sails.bridgeTo, G(-115.8, 36.9, 7.5), P.sails.restore]],
-  ['fragment1 spur', 'walk', [P.sails.source, G(-110.6, 25.4, 6), G(-108.6, 26.6, 6), P.fragment1]],
+  ['sails cap sail', 'walk', [P.sails.restore, P.sails.capSail]],
+  ['fragment2 swing platform', 'walk', [P.sails.bridgeTo, P.sails.frag2From, P.sails.frag2To, P.fragment2]],
+  ['fragment1 approach', 'walk', [P.start, G(-31, 19.5, 0), G(-31, 17.5, 0)]],
+  ['fragment1 updraft', 'vent', 'frag1', P.fragment1],
+  ['fragment1 drop back', 'drop', P.fragment1, G(-31, 17.8, 0)],
   // Mill of Pipes
   ['pipes branch', 'walk', [P.loftLedge, P.pipes.source, P.loftLedge, P.pipes.branchStart, ...P.pipes.path, P.pipes.gapFrom]],
   ['pipes jump gap', 'jump', P.pipes.gapFrom, P.pipes.gapTo],
   ['pipes island', 'walk', [...P.pipes.islandPath]],
-  ['fragment2 balcony', 'walk', [P.pipes.wheelA, P.pipes.path.at(-2), P.fragment2]],
+  ['pipes valve', 'walk', [P.pipes.wheelA, P.pipes.path.at(-2), P.pipes.valve]],
+  ['fragment3 approach', 'walk', [P.pipes.restore, ...P.pipes.frag3Path]],
+  ['fragment3 jump gap', 'jump', P.pipes.frag3From, P.pipes.frag3To],
+  ['fragment3 shrine', 'walk', [P.pipes.frag3To, P.fragment3]],
   // Mill of Ladders
   ['ladders to vent0', 'walk', [P.start, P.ladders.vent0]],
   ['ladders updraft 0', 'vent', 'ladders1', P.ladders.ledge0],
   ['ladders L0', 'walk', [P.ladders.ledge0, P.ladders.vent1]],
   ['ladders updraft 1', 'vent', 'ladders2', P.ladders.ledge1],
   ['ladders ledge1', 'walk', [P.ladders.ledge1, P.ladders.vent2, P.ladders.shutterLever]],
-  ['fragment3 perch', 'walk', [P.ladders.ledge1, G(1, 19.4, 9.1), P.fragment3]],
   ['ladders updraft 2', 'vent', 'ladders3', P.ladders.ledge2],
   ['ladders mill', 'walk', [...P.ladders.path]],
   ['ladders drop L2->L1', 'drop', P.ladders.ledge2, G(3.5, 16.4, 9.1)],
@@ -163,10 +179,14 @@ const routes = [
   ['gallery descent', 'walk', [P.hollowGateInside, P.gallery.top, ...galArc(105, 340), P.gallery.bottom, G(340, 7.3, -4), ...arc(340, 250, 7.3, -4), R.high.safe, P.pairedBells.stand, ...arc(225, 300, 7.3, -4), R.high.vaneStand]],
   ['well drop high->mid', 'drop', G(250, 7.2, -4), G(250, 5.2, -9)],
   ['well mid ring', 'walk', [G(250, 5.2, -9), G(250, 5.0, -9), R.mid.catchPoint, ...arc(245, 130, 5.0, -9), R.mid.safe, ...arc(130, 220, 5.0, -9), R.mid.vaneStand]],
-  ['well drop mid->low', 'drop', G(200, 4.8, -9), G(200, 3.6, -14)],
-  ['well low ring', 'walk', [G(200, 3.6, -14), R.low.catchPoint, R.low.vaneStand, R.low.safe]],
-  ['well updraft low->mid', 'vent', 'ring1', G(200, 5.4, -9)],
+  ['well drop mid->low', 'drop', G(132, 4.8, -9), G(132, 3.6, -14)],
+  ['well low ring', 'walk', [G(132, 3.6, -14), G(128, 2.2, -14), R.low.catchPoint, R.low.vaneStand, R.low.safe]],
+  ['well updraft low->mid', 'vent', 'ring1', G(111, 5.6, -9)],
   ['well updraft mid->high', 'vent', 'ring2', G(280, 7.6, -4)],
+  ['well to ring3 grille', 'walk', [R.high.safe, ...arc(250, 186, 7.3, -4), G(184, 8, -4)]],
+  ['well updraft high->top', 'vent', 'ring3', R.top],
+  ['gallery source', 'walk', [P.hollowGateInside, P.gallery.top, P.gallery.source]],
+  ['mid ring widened stretch', 'walk', [G(230, 3.7, -9), G(260, 3.7, -9), G(260, 5.6, -9)]],
 ];
 setAll(OPEN);
 const routeResults = [];
@@ -183,6 +203,7 @@ blockedLeg('gate closed', P.seedWheel, P.terraceGateInside);
 blockedLeg('sail bridge away', P.sails.bridgeFrom, P.sails.bridgeTo);
 blockedLeg('sky bridge absent', P.bridge.start, P.bridge.stages[0].mid);
 blockedLeg('hollow gate shut', P.hollowGate, P.hollowGateInside);
+blockedLeg('frag2 swing away', P.sails.frag2From, P.sails.frag2To);
 // A closed/missing bridge is never an open edge: the barrier stops the walker before the lip.
 for (const [label, a, b] of [['sails lip', P.sails.bridgePush, P.sails.bridgeTo], ['sky lip', P.start, P.bridge.stages[0].mid]]) {
   const n = Math.ceil(a.distanceTo(b) / .05); let y = a.y;
@@ -239,7 +260,7 @@ check(w.blocked(...[at(250, 6.6, -9)].map((p) => [p.x, p.z])[0], .23, -9), 'high
 // the void is allowed only across the declared Pipes jump gap.
 setAll(OPEN);
 let edgeSamples = 0; const voidEdges = [];
-const jumpLips = [P.pipes.gapFrom, P.pipes.gapTo];
+const jumpLips = [P.pipes.gapFrom, P.pipes.gapTo, P.pipes.frag3From, P.pipes.frag3To];
 for (let x = -52; x <= 52; x += .5) for (let z = -52; z <= 52; z += .5) {
   for (const {h} of w.layers(x, z)) {
     if (w.ground(x, z, h) !== h || w.blocked(x, z, .23, h)) continue;

@@ -2,7 +2,9 @@
 //   'sails'   coral-and-ivory cloth sails, timber lattice arms, stone tower
 //   'pipes'   copper-clad cap, copper intake pipes spiralling down the tower
 //   'ladders' tall timber-braced tower, outside ladder and wrap balcony
-// Moving part: userData.rotor (group at the hub; rotates about its local z).
+// Moving parts: userData.cap (the turning cap: dome, hub, rotor and, for 'sails', a tail boom
+// with a tail sail at its back; rotates about local y) and userData.rotor (inside the cap; spins
+// about its local z).
 // Front (the sails) faces +Z. Base y = 0.
 export default function (THREE, opts = {}) {
   const variant = opts.variant || 'sails';
@@ -30,14 +32,25 @@ export default function (THREE, opts = {}) {
   add(new THREE.TorusGeometry(2.15, .05, 4, 24), timber, 0, gy + .75, 0, 0, Math.PI / 2);
   // cap: bell-flared tiled dome, rotated so the hub faces +Z
   const capY = H - 1.6;
+  const cap = new THREE.Group(); cap.name = 'cap'; cap.position.set(0, capY, 0); g.add(cap);
   const prof = [[1.95, 0], [1.9, .15], [1.7, .5], [1.45, 1.1], [1.0, 1.55], [.5, 1.8], [0, 1.9]].map(([x, y]) => new THREE.Vector2(x, y));
-  add(new THREE.LatheGeometry(prof, 12), tileC, 0, capY, 0);
-  add(new THREE.CylinderGeometry(.08, .08, .9, 5), copper, 0, capY + 2.3, 0); add(new THREE.SphereGeometry(.15, 8, 6), copper, 0, capY + 2, 0);
+  add(new THREE.LatheGeometry(prof, 12), tileC, 0, 0, 0, 0, 0, 0, cap);
+  add(new THREE.CylinderGeometry(.08, .08, .9, 5), copper, 0, 2.3, 0, 0, 0, 0, cap); add(new THREE.SphereGeometry(.15, 8, 6), copper, 0, 2, 0, 0, 0, 0, cap);
   // hub housing
   const hubY = capY + .7;
-  add(new THREE.CylinderGeometry(.55, .7, 1.4, 10), variant === 'pipes' ? copper : dark, 0, hubY, 1.5, 0, Math.PI / 2);
+  add(new THREE.CylinderGeometry(.55, .7, 1.4, 10), variant === 'pipes' ? copper : dark, 0, .7, 1.5, 0, Math.PI / 2, 0, cap);
+  if (variant === 'sails') {
+    // tail boom and tail sail at the back of the cap: pushing the tail turns the sails to the wind
+    const boom = new THREE.Group(); cap.add(boom);
+    const b1 = add(new THREE.BoxGeometry(.16, .16, 4.4), dark, 0, -.35, -2.9, 0, -.42, 0, boom); void b1;
+    const b2 = add(new THREE.BoxGeometry(.1, .1, 3.2), timber, 0, -1.2, -2.2, 0, -.95, 0, boom); void b2;
+    const tail = new THREE.PlaneGeometry(1.7, 2.1, 2, 2); const tp = tail.attributes.position; for (let v = 0; v < tp.count; v++) tp.setX(v, tp.getX(v) + .12 * Math.cos(tp.getY(v) * 1.5)); tail.computeVertexNormals();
+    add(tail, coral, 0, -1.9, -4.7, 0, 0, 0, boom);
+    add(new THREE.BoxGeometry(.08, 2.3, .08), dark, 0, -1.9, -3.85, 0, 0, 0, boom);
+    add(new THREE.BoxGeometry(.08, .08, 1.8), dark, 0, -.85, -4.7, 0, 0, 0, boom); add(new THREE.BoxGeometry(.08, .08, 1.8), dark, 0, -2.95, -4.7, 0, 0, 0, boom);
+  }
   // rotor
-  const rotor = new THREE.Group(); rotor.name = 'rotor'; rotor.position.set(0, hubY, 2.3); g.add(rotor);
+  const rotor = new THREE.Group(); rotor.name = 'rotor'; rotor.position.set(0, .7, 2.3); cap.add(rotor);
   add(new THREE.CylinderGeometry(.35, .45, .5, 10), copper, 0, 0, 0, 0, Math.PI / 2, 0, rotor);
   add(new THREE.ConeGeometry(.3, .5, 10), verd, 0, 0, .45, 0, Math.PI / 2, 0, rotor);
   const span = 3.5;
@@ -78,9 +91,9 @@ export default function (THREE, opts = {}) {
     // coral pennants on the cap + reefed spare canvas on the gallery
     for (let k = 0; k < 3; k++) add(new THREE.CylinderGeometry(.15, .15, 1, 8), cloth, -1.2 + k * .3, gy + .3, -1.6, 0, 0, Math.PI / 2);
     const pen = new THREE.Shape(); pen.moveTo(0, 0); pen.lineTo(.8, -.12); pen.lineTo(0, -.3); pen.closePath();
-    add(new THREE.ShapeGeometry(pen), coral, .08, capY + 2.6, 0);
+    add(new THREE.ShapeGeometry(pen), coral, .08, 2.6, 0, 0, 0, 0, cap);
   }
-  g.userData.rotor = rotor;
+  g.userData.rotor = rotor; g.userData.cap = cap;
   const box3 = new THREE.Box3(), v = new THREE.Vector3(); g.updateMatrixWorld(true);
   g.traverse((n) => { const p = n.isMesh && n.geometry.attributes.position; if (!p) return; for (let i = 0; i < p.count; i++) box3.expandByPoint(v.fromBufferAttribute(p, i).applyMatrix4(n.matrixWorld)); });
   const c = box3.getCenter(new THREE.Vector3());

@@ -26,7 +26,8 @@ const camera = new T.PerspectiveCamera(num('fov', 42), 1, .1, 900);
 const t0 = performance.now();
 const world = buildBellhollow({THREE: T, scene});
 const buildMs = performance.now() - t0;
-const state = {skyPlanks: num('planks', 0), terraceGate: num('gate', 0), sailBridge: num('sail', 0), pipesBridge: num('pipes', 0), ladderShutter: num('shutter', 0), hollowGate: num('hollow', 0)};
+const state = {skyPlanks: num('planks', 0), terraceGate: num('gate', 0), sailBridge: num('sail', 0), ladderShutter: num('shutter', 0), hollowGate: num('hollow', 0), sailsCap: num('cap', 0), pipesValve: num('valve', 0), frag2: num('frag2', 0),
+  wind: {wheels: {pipesA: num('flow', 0)}}, restored: Object.fromEntries([0, 1, 2, 3].map((i) => ['carving' + i, num('carve', 0) * (i < num('carves', 4) ? 1 : 0)]))};
 const rest = num('restored', 0); for (const a of ['terrace', 'sails', 'pipes', 'ladders', 'hollow', 'finale']) world.setRestored(a, num('r-' + a, rest));
 world.update(10, 0, state); for (let i = 0; i < 20; i++) world.update(.5, i * .5, state);
 
@@ -38,6 +39,7 @@ const SHOTS = {
   laddersL0: P.ladders.ledge0, laddersL1: P.ladders.ledge1, laddersL2: P.ladders.ledge2, laddersMill: P.ladders.restore,
   skyBridge: P.bridge.stages[1].mid, hollowGate: P.hollowGate, gallery: P.gallery.carvings[1].stand, galleryLow: P.gallery.bottom,
   wellHigh: W.high.safe, wellMid: W.mid.safe, wellLow: W.low.safe,
+  sailsCap: P.sails.capSail, valve: P.pipes.valve, frag1: P.fragment1, frag2: P.fragment2, frag2From: P.sails.frag2From, frag3: P.fragment3, frag3Jump: P.pipes.frag3From, wellTop: W.top, carving0: P.gallery.carvings[0].stand, carving1: P.gallery.carvings[1].stand, gallerySource: P.gallery.source,
 };
 const shotName = q.get('shot') || 'start';
 const target = new T.Vector3();
@@ -48,6 +50,7 @@ const special = {
   overview: () => { target.set(-2, 4, 6); dist = 95; pitch = 34 * Math.PI / 180; },
   overviewWest: () => { target.set(-18, 6, 4); dist = 70; pitch = 28 * Math.PI / 180; yaw = -.35; },
   terraceView: () => { const v = P.terraceView; camera.position.copy(v.pos); camera.lookAt(v.target); return true; },
+  sailsMillWide: () => { target.copy(P.sails.mill).add(new T.Vector3(0, -2, 0)); dist = 19; pitch = 18 * Math.PI / 180; },
   hollowWide: () => { target.set(0, -6, 0); dist = 36; pitch = 30 * Math.PI / 180; },
 };
 function applyShot(name) {
