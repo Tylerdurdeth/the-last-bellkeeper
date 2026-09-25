@@ -25,17 +25,21 @@ const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 // M3 escalation: phase 1 sweeps twice (second from the other side) before the breath settles; phase 2
 // fires A/B twice and only then leaves the breath; phase 3 is a two-column climb (BEATS_TOP) when the
 // world has a top perch + vent 'ring3', else the single-pulse version.
+// ARENA redesign (25 Sep): the whole fight is on the well floor. Each phase is a volley of floor sweeps (telegraph
+// >= 2 s each), then the spent breath settles; phases add sweeps, shorten the telegraphs and widen the wedge.
 const BEATS = [
-  [{ k: 'idle', d: 1.0 }, { k: 'inhale', d: 2.8, lane: 'sweep' }, { k: 'exhale', d: .9 }, { k: 'recoil', d: .5 }, { k: 'inhale', d: 2.2, lane: 'sweep2' }, { k: 'exhale', d: .9 }, { k: 'recoil', d: .5 }, { k: 'slump', d: 3.4 }],
-  [{ k: 'inhale', d: 2.2, lane: 'A' }, { k: 'exhale', d: .7 }, { k: 'recoil', d: .4 }, { k: 'inhale', d: 2.2, lane: 'B' }, { k: 'exhale', d: .7 }, { k: 'recoil', d: .4 },
-    { k: 'inhale', d: 1.9, lane: 'A2' }, { k: 'exhale', d: .7 }, { k: 'recoil', d: .4 }, { k: 'inhale', d: 1.9, lane: 'B2' }, { k: 'exhale', d: .7 }, { k: 'recoil', d: .4 }, { k: 'slump', d: 2.6 }],
-  [{ k: 'inhale', d: 2.2, lane: 'up' }, { k: 'exhale', d: .55 }, { k: 'recoil', d: .45 }, { k: 'turn', d: .3 }, { k: 'inhale', d: 2.2, lane: 'L' }, { k: 'exhale', d: .7 }, { k: 'recoil', d: .4 }, { k: 'slump', d: 2.0 }],
+  [{ k: 'idle', d: 1.0 }, { k: 'inhale', d: 2.8, lane: 'sweep' }, { k: 'exhale', d: .9 }, { k: 'recoil', d: .5 }, { k: 'inhale', d: 2.5, lane: 'sweep2' }, { k: 'exhale', d: .9 }, { k: 'recoil', d: .5 }, { k: 'slump', d: 3.2 }],
+  [{ k: 'inhale', d: 2.4, lane: 'sweep' }, { k: 'exhale', d: .8 }, { k: 'recoil', d: .4 }, { k: 'inhale', d: 2.2, lane: 'sweep2' }, { k: 'exhale', d: .8 }, { k: 'recoil', d: .4 }, { k: 'inhale', d: 2.2, lane: 'sweep3' }, { k: 'exhale', d: .8 }, { k: 'recoil', d: .4 }, { k: 'slump', d: 2.8 }],
+  [{ k: 'inhale', d: 2.2, lane: 'sweep' }, { k: 'exhale', d: .7 }, { k: 'recoil', d: .35 }, { k: 'inhale', d: 2.0, lane: 'sweep2' }, { k: 'exhale', d: .7 }, { k: 'recoil', d: .35 }, { k: 'inhale', d: 2.0, lane: 'sweep3' }, { k: 'exhale', d: .7 }, { k: 'recoil', d: .35 }, { k: 'inhale', d: 2.0, lane: 'sweep4' }, { k: 'exhale', d: .7 }, { k: 'recoil', d: .35 }, { k: 'slump', d: 2.6 }],
 ];
-const BEATS_TOP = [{ k: 'inhale', d: 2.2, lane: 'up' }, { k: 'exhale', d: .55 }, { k: 'recoil', d: .45 }, { k: 'turn', d: .3 }, { k: 'inhale', d: 2.2, lane: 'L' }, { k: 'exhale', d: .7 }, { k: 'recoil', d: .4 },
-  { k: 'inhale', d: 2.2, lane: 'up2' }, { k: 'exhale', d: .55 }, { k: 'recoil', d: .45 }, { k: 'inhale', d: 2.0, lane: 'P' }, { k: 'exhale', d: .8 }, { k: 'recoil', d: .4 }, { k: 'slump', d: 1.6 }];
+const HALF = [.5, .56, .62];                       // half-width (radians) of the swept wedge per phase
+const LIVES = 3;
+// The three floor vanes each glow their own colour; the guardian's heart burns the colour of the vane it will accept.
+const VANE_COLOR = [0x4fd6c4, 0xf2c14e, 0xf0708a], VANE_NAME = ['teal', 'gold', 'rose'];
+const ORDERS = [[1, 0, 2], [2, 1, 0], [0, 2, 1]];   // vane order per attempt (a restart changes the order)
 const RAGE = { windup: 1.8, speed: 6.5, settle: 1.1 };
 // Breaths each vane needs (it visibly turns part-way per breath): the loop repeats with its volley, not padding.
-const BREATHS_PER_VANE = [2, 2, 1];
+const BREATHS_PER_VANE = [1, 1, 1];
 const HOLD_AFTER_KNOCK = 2;
 
 export function resolveWell(world) {
@@ -73,7 +77,7 @@ export function resolveWell(world) {
 export function createGuardian({ THREE: T, scene, world, wind, movement = null, sound = () => {}, caption = () => {}, onEvent = () => {}, look = null, audio = null } = {}) {
   const W = resolveWell(world), C = W.center;
   const LV = W.top ? [...W.rings, W.top] : W.rings;                 // levels: low, mid, high (+ top perch)
-  const beatsOf = ph => ph === 2 && W.top ? BEATS_TOP : BEATS[ph];
+  const beatsOf = ph => BEATS[Math.min(ph, 2)];
   const cycleLength = ph => beatsOf(ph).reduce((s, b) => s + b.d, 0);
   const actor = buildGuardian(T, { height: 5.4 }); actor.name = 'bh-guardian-actor';
   const J = actor.userData.joints, setPose = actor.userData.setPose;
@@ -92,6 +96,9 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
 
   // ---------------- state ----------------
   let phase = 0, clock = 0, cycle = -1, active = false, warned = false, doneT = -1, time = 0, gentle = false;
+  let lives = LIVES, fighting = false, attempt = 0, sealT = 0, heartMat = null, heartHalo = null; const turned = [false, false, false];
+  const targetVane = () => ORDERS[attempt % 3][Math.min(phase, 2)];
+  const vaneCol = VANE_COLOR.map(c => new T.Color(c));
   let lanes = {}, hitThis = new Set(), loiterFrom = null, loiter = false, breath = null, stats = { hits: 0, cycles: 0, exhales: 0, pulses: 0, catches: 0 };
   const pose = { crouch: 0, bloom: 0, spread: 0, thrust: 0, slump: 0, lean: 0, swell: 0, fold: 0, rotorGlow: 0, eyes: 1, rage: 0, lx: 0, ly: 0 };
   let yaw = 0, rotorAngle = 0, hover = W.rings[0].y + HOVER, lastStage = '', stageStart = 0, beatInfo = null;
@@ -115,17 +122,20 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
       return { kind: 'pillar', ring: 3, x, z, y: ground(x, z, T3.y) ?? T3.y, r: 1.35, lo: 0, hi: 99 };
     }
     if (kind === 'A2') kind = 'A'; if (kind === 'B2') kind = 'B';
-    if (kind === 'sweep' || kind === 'sweep2') {
-      const R = W.rings[0], v = R.vane, onFloor = hero && heroRing === 0;
+    if (/^sweep/.test(kind)) {
+      const R = W.rings[0], v = vaneOf(targetVane()), onFloor = hero && heroRing === 0;
       let c0 = onFloor ? ang(hero) : ang(v);
       // Softened (route stall, 24 Sep): while a breath is waiting or carried, phase-1 sweeps never cover the
       // hero's direct path to it / to the vane; they sweep the far side of the floor instead. Before the breath
       // settles, the volley aims at the hero (standing still gets knocked).
       const goal = charged ? v : breathSrc();
-      if (onFloor && goal) { const ga = Math.atan2(goal.z - hero.z, goal.x - hero.x), pa = ang(hero); c0 = pa + Math.PI + (wrap(ga - pa) > 0 ? -.9 : .9); }
+      // Forgiving (owner, 25 Sep): only every other sweep of a volley aims at the hero; the ones between sweep the
+      // floor beside the hero (a wall to keep clear of, not a second shot at the same spot).
+      if (onFloor && !goal && (kind === 'sweep2' || kind === 'sweep4')) c0 = ang(hero) + (current?.dir || 1) * 1.25;
+      if (onFloor && goal) { const pa = ang(hero); c0 = pa - (wrap(ang(goal) - pa) > 0 ? 1 : -1) * 1.2; }   // owner: beside the hero on the side away from the goal (in front of the guardian, never behind it)
       // The second sweep comes from the other side of the first.
-      const s = kind === 'sweep2' ? -(lanes.sweep?.dir || 1) : (cycle % 2 ? 1 : -1), half = .5, e = extent(0, c0);   // ~57 deg wedge: only the swept danger, not the whole floor
-      return { kind: 'sweep', dir: s, ring: 0, a0: c0 - half * s, a1: c0 + half * s, lo: e.lo, hi: Math.min(e.hi, R.outer), width: 1.7, end: at(c0 + half * s * .92, Math.min(e.hi, R.outer) - 2.0, R.y) };
+      const s = kind !== 'sweep' ? -(current?.dir || 1) : (cycle % 2 ? 1 : -1), half = HALF[Math.min(phase, 2)], e = extent(0, c0);   // ~57 deg wedge: only the swept danger, not the whole floor
+      return { kind: 'sweep', dir: s, ring: 0, a0: c0 - half * s, a1: c0 + half * s, lo: e.lo, hi: Math.min(e.hi, R.outer), width: 1.7, end: (() => { const ae = c0 + half * s * .92, ee = extent(0, ae); return at(ae, Math.max(2.4, Math.min(ee.hi, R.outer) - 2.0), R.y); })() };
     }
     // Ring lanes are stretches of ledge the breath runs along (a travelling front), painted end to end.
     const k = kind === 'L' ? 2 : 1, R = W.rings[k];
@@ -171,11 +181,14 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     const hero = o.hero || null; gentle = !!o.gentle; time = t;
     dt = Math.min(.1, Math.max(0, dt || 0));
     if (hero) heroV.set(hero.x, hero.y, hero.z);
-    const near = hero && rad(hero) < LV[LV.length - 1].outer + 4 && hero.y < LV[LV.length - 1].y + 8 && hero.y > C.y - 3;
-    active = o.active !== false && phase < 3 && !!near;
+    const F = W.rings[0], onFloor = hero && hero.y < F.y + 1.6 && hero.y > F.y - 3 && rad(hero) < F.outer + 1.5;
+    if (o.active !== false && phase < 3 && onFloor && !fighting) { fighting = true; lives = LIVES; onEvent({ lives, fight: true }); }
+    active = o.active !== false && phase < 3 && fighting && !!hero && hero.y < F.y + 6;
+    sealT += dt; world.setState?.('wellSeal', fighting && phase < 3 ? 1 : 0);
     audio?.update?.(dt, { fight: phase < 3 && (active || !!rage), phase, rage: !!rage, x: actor.position.x, y: actor.position.y + 2.7, z: actor.position.z });
-    if (phase >= 3) { doneT += dt; actTend(dt, t); bands.flush(t); return; }
-    if (!active) { clock = 0; cycle = -1; lanes = {}; actIdle(dt, t, 'idle'); bands.flush(t); return; }
+    if (phase >= 3) { doneT += dt; actTend(dt, t); tickVents(dt); bands.flush(t); return; }
+    if (!active) { clock = 0; cycle = -1; lanes = {}; actIdle(dt, t, 'idle', hero ? Math.atan2(hero.x - C.x, hero.z - C.z) : yaw); bands.flush(t); return; }
+    drawVanes(t);
     if (!warned) { warned = true; }
     if (rage) { runRage(dt, t, hero); tickVents(dt); bands.flush(t); return; }
     // After a knock the next telegraph waits HOLD_AFTER_KNOCK s (frozen at its start) before it counts down.
@@ -210,7 +223,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     if (rage.t < w) { // rise and flare; the whole ring floor is painted and fills as the timer
       const f = rage.t / w, e = ease(f);
       applyActor(dt, t, { crouch: 0, bloom: 1, spread: .6 * e, thrust: 0, slump: 0, lean: 0, swell: .7 * e, fold: 0, rotorGlow: .6 * f, rage: e }, 10, face, { x: .45 * e, y: 0 });   // rears up: petals flared, arms raised, heart red-gold
-      bands.sector({ cx: C.x, cz: C.z, y: R.y, a0: 0, a1: TAU, lo: rage.lo, hi: rage.hi, fill: f, firing: false, alpha: .7, t, ground: gr });
+      if (rage.hi > rage.lo + .1) bands.sector({ cx: C.x, cz: C.z, y: R.y, a0: 0, a1: TAU, lo: rage.lo, hi: rage.hi, fill: f, firing: false, alpha: .7, t, ground: gr });
       drawInhale(f, t);
       if (!rage.slammed && f > .98) { rage.slammed = true; }
     } else if (rage.t < w + travel) {
@@ -225,6 +238,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
         const why = safeReason(hero); if (why) spared = { reason: why + ' (shockwave)', at: +time.toFixed(2) }; else { rage.hit = true; beatInfo = { i: -1 }; knock(hero, ang(hero)); }
       }
     } else {
+      if (!rage.boom) { rage.boom = true; sound('guardian-slam'); audio?.event?.('wall'); wind?.burst?.({ x: C.x, y: W.rings[0].y, z: C.z }, { radius: 3.5, duration: .7, rays: 14 }); }
       applyActor(dt, t, { crouch: .2, bloom: .1, spread: 0, thrust: 0, slump: .4, lean: .2, swell: 0, fold: 0, rotorGlow: .3 }, 4, face, { x: -.2, y: 0 });
       if (rage.t >= end) { rage = null; lastStage = ''; }
     }
@@ -246,8 +260,8 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     // volley's last-but-one lane fires again next cycle (its countdown ring shows the window).
     const until = id => { const beats = beatsOf(phase); let s = 0; for (let i = 0; i < beats.length; i++) { if (beats[i].k === 'exhale' && beats[i - 1]?.lane === id) return s; s += beats[i].d; } return 0; };
     const L = cycleLength(phase);
-    if (phase === 0 && lane.id === 'sweep2') offerBreath(lane.end, L - B.start + until('sweep2') - .3);
-    if (phase === 1 && lane.id === 'B2') { const a = [lanes.A2, lanes.A].find(l => l && !l.aimed); offerBreath(a ? a.end : (W.rings[1].catchPoint || W.rings[1].safe), L - B.start + until('A2') - .3); }
+    const last = beatsOf(phase).filter(b => b.lane).at(-1).lane; void until;
+    if (lane.id === last) offerBreath(lane.end, L - .3);   // stays a whole cycle (>= 8 s), countdown ring shows it
   }
   function offerBreath(p, ttl) {
     if (!wind || wind.charged) return;
@@ -269,8 +283,9 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   let pendingBreath = null, ventTimer = 0;
   function tickVents(dt) {
     if (pendingBreath && time >= pendingBreath.at) { offerBreath(pendingBreath.p, pendingBreath.ttl); pendingBreath = null; }
-    // After vane 1 the floor grille breathes on its own (4.2 s column, 2 s rest) so the mid ring is always reachable.
-    if (phase >= 1 && W.toMid && (ventTimer -= dt) <= 0) { ventTimer = 6.2; wind?.openVent?.(W.toMid, { duration: 4.2 }); onEvent({ updraft: { id: W.toMid.id, x: W.toMid.x, y: W.toMid.y, z: W.toMid.z, top: W.toMid.top, duration: 4.2, pulse: false } }); }
+    // Arena fight: the floor grille is sealed until the guardian is calmed; then both ring grilles breathe on their own
+    // (4.2 s column, 2 s rest) so the way back up the well (floor -> mid -> high ring, the bells, the gallery) is open.
+    if (phase >= 3 && (ventTimer -= dt) <= 0) { ventTimer = 6.2; for (const v of [W.toMid, W.pulse]) if (v) { wind?.openVent?.(v, { duration: 4.2 }); onEvent({ updraft: { id: v.id, x: v.x, y: v.y, z: v.z, top: v.top, duration: 4.2, pulse: false } }); } }
   }
 
   // Beat behaviour: telegraph paint, acting targets, ribbons, hits.
@@ -278,7 +293,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     const k = B.b.k, lane = current, R = lane && lane.ring !== undefined ? LV[lane.ring] : W.rings[Math.min(phase, 2)];
     // Phase 3 climbs with the hero so the hood stays in frame on every level.
     const hy = hero ? LV[ringOf(hero)].y : W.rings[1].y;
-    const hoverTarget = (phase === 0 ? W.rings[0].y : phase === 1 ? W.rings[1].y - .6 : Math.max(W.rings[1].y - .4, Math.min(hy - .8, (W.top ? W.rings[2].y : W.rings[1].y) + .4))) + HOVER;
+    const hoverTarget = W.rings[0].y + HOVER; void hy;
     hover += (hoverTarget - hover) * (1 - Math.exp(-dt * 1.2));
     // Facing: toward the lane (sweep follows its sweeping angle), else the hero.
     let face = hero ? Math.atan2(hero.x - C.x, hero.z - C.z) : yaw, look = { x: -.25, y: 0 };
@@ -290,7 +305,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     if (lane?.kind === 'sweep') laneFace = laneAngle(k === 'exhale' ? lane.a0 + (lane.a1 - lane.a0) * ease((B.u - .12) / (B.b.d - .12)) : lane.a0 + (lane.a1 - lane.a0) * .15);
     else if (lane?.kind === 'pillar') laneFace = Math.atan2(lane.x - C.x, lane.z - C.z);
     else if (lane?.kind === 'arc') laneFace = laneAngle(lane.a0 + (lane.a1 - lane.a0) * (k === 'exhale' ? ease(B.u / B.b.d) : .3));
-    if (laneFace !== null && (k === 'exhale' || k === 'inhale')) { const w = k === 'exhale' ? 1 : ease((B.f - .45) / .4); face = face + wrap(laneFace - face) * w; }
+    if (laneFace !== null && (k === 'exhale' || k === 'inhale')) { const w = k === 'exhale' ? 1 : ease((B.f - .45) / .4); face = face + Math.max(-.8, Math.min(.8, wrap(laneFace - face))) * w; }   // owner: body, heart and face stay toward the hero; only a partial turn onto the lane
     if (k === 'inhale') {
       const f = B.f, e = ease(f);
       target = { crouch: e, bloom: ease(f * 1.5), spread: ease(f * 1.25), lean: -.12 * e, swell: e, rotorGlow: Math.pow(f, 1.2), thrust: 0, slump: 0, fold: 0 };
@@ -320,10 +335,10 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     applyActor(dt, t, target, rate, face, look);
   }
   function actIdleTargets(target, t) { const b = Math.sin(t * 1.1); target.bloom = .08 + .06 * b; target.swell = .08 * b; target.rotorGlow = .12 + .05 * b; }
-  function actIdle(dt, t, why) {
+  function actIdle(dt, t, why, face = yaw) {
     const target = { crouch: 0, bloom: 0, spread: 0, thrust: 0, slump: 0, lean: 0, swell: 0, fold: 0, rotorGlow: .1 }; actIdleTargets(target, t);
     hover += ((W.rings[0].y + HOVER) - hover) * (1 - Math.exp(-dt));
-    applyActor(dt, t, target, 3, yaw, { x: -.1, y: 0 });
+    applyActor(dt, t, target, 3, face, { x: -.1, y: 0 });
   }
   function actTend(dt, t) {
     // Fold (3 s), turn to the roots, sink, then tend: slow breaths, hands brushing the roots.
@@ -345,6 +360,14 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     rotorAngle += dt * (.4 + 16 * pose.rotorGlow * pose.rotorGlow) * (gentle ? .5 : 1);
     const tremble = beatInfo?.b?.k === 'inhale' && beatInfo.f > .7 && !gentle ? Math.sin(t * 55) * .012 * (beatInfo.f - .7) / .3 : 0;
     setPose({ ...pose, look: { x: pose.lx, y: pose.ly }, rotor: rotorAngle, trail: Math.sin(t * 1.7) * .08 * m + tremble * 4, trailPitch: Math.sin(t * 1.1) * .05 * m });
+    if (heartMat === null) { heartMat = false; actor.traverse(o => { if (!heartMat && o.material?.name === 'guardian-glow') heartMat = o.material; }); }
+    if (heartMat && phase < 3 && fighting && !rage) { heartMat.emissive.lerp(vaneCol[targetVane()], .8); heartMat.emissiveIntensity = Math.max(heartMat.emissiveIntensity, 1.6); }
+    if (!heartHalo && J.rotor) { // a ring of the target vane's colour round the rotor heart (reads at phone size)
+      const b = new T.Box3().setFromObject(J.rotor), sc = J.rotor.getWorldScale(new T.Vector3()).x || 1, rr = Math.max(.2, (b.max.x - b.min.x) / 2 / sc);
+      const mat = new T.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, transparent: true, opacity: .95 }); mat.userData.look = false;
+      heartHalo = new T.Mesh(new T.TorusGeometry(rr * 1.08, rr * .13, 8, 32), mat); heartHalo.name = 'guardian-heart-halo'; J.rotor.add(heartHalo);
+    }
+    if (heartHalo) { heartHalo.visible = phase < 3 && fighting && !rage; if (heartHalo.visible) { heartHalo.material.color.copy(vaneCol[targetVane()]); heartHalo.scale.setScalar(1 + .06 * Math.sin(t * 5)); } }
     actor.rotation.y = yaw;
     if (!keepXZ) { actor.position.x += (C.x - actor.position.x) * (1 - Math.exp(-dt * 2)); actor.position.z += (C.z - actor.position.z) * (1 - Math.exp(-dt * 2)); }
     actor.position.y = hover + Math.sin(t * 1.3) * .12 * m + tremble;
@@ -429,6 +452,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   function safeReason(hero) {
     if (movement?.lifting) return 'lifting';
     if (movement && !movement.grounded) return 'airborne';
+    if (fighting && phase < 3) return null;
     for (const v of world.vents || []) if (Math.abs(hero.y - v.y) < 1.5 && Math.hypot(hero.x - v.x, hero.z - v.z) < (v.radius || 1) + 1.5) return 'near grille ' + v.id;
     return null;
   }
@@ -436,11 +460,27 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   const s2g = f => .3 + .7 * f;
   function knock(hero, a) {
     hitThis.add(beatInfo.i); stats.hits++; hold = HOLD_AFTER_KNOCK; // the next volley waits while the hero recovers
-    const k = ringOf(hero), s = LV[k].safe, to = [s.x, (ground(s.x, s.z, LV[k].y) ?? LV[k].y), s.z];
+    const s = W.rings[0].safe, to = [s.x, (ground(s.x, s.z, W.rings[0].y) ?? W.rings[0].y), s.z];
     const dx = Math.cos(a), dz = Math.sin(a);
     sound('hazard'); audio?.event?.('hit');
     wind?.burst?.({ x: hero.x, y: hero.y, z: hero.z }, { radius: 2.2, duration: .6 });
-    onEvent({ knock: { to, x: dx, z: dz, power: 1 }, knockback: { x: dx, z: dz, dy: 1.6, to } });
+    lives = Math.max(0, lives - 1);
+    if (lives > 0) { onEvent({ knock: { to, x: dx, z: dz, power: 1 }, knockback: { x: dx, z: dz, dy: 1.6, to }, lives }); return; }
+    // Out of lives: the gust sweeps the hero back to the arena entry and the fight starts over (phase 1, vanes still).
+    stats.sweeps = (stats.sweeps || 0) + 1; restartFight();
+    onEvent({ knock: { to, x: dx, z: dz, power: 1.4 }, knockback: { x: dx, z: dz, dy: 2.4, to }, lives, sweep: 'The guardian’s gust sweeps you back to the edge of the well. The vanes fall still. Try again.', phase: 0 });
+  }
+  function restartFight() {
+    phase = 0; fed = 0; lives = LIVES; attempt++; rage = null; hold = 3; clock = 0; cycle = -1; lanes = {}; current = null; lastStage = ''; loiter = false; pendingBreath = null;
+    for (let k = 0; k < 3; k++) { turned[k] = false; world.setRestored?.('vane' + (k + 1), 0); }
+    wind?.removeSource?.('guardianBreath'); breath = null; if (wind?.charge?.kind === 'guardian') wind.setCharge?.(null);
+  }
+  // Vane markers: every still vane shows its colour on the floor; the one the heart matches gets a rising column.
+  function drawVanes(t) {
+    if (!wind) return; const tv = targetVane();
+    for (let k = 0; k < 3; k++) { if (turned[k]) continue; const v = vaneOf(k), c = vaneCol[k], on = k === tv && !rage, pulse = .75 + .25 * Math.sin(t * 4);
+      wind.ring(v.x, v.y + .06, v.z, 1.25, { width: on ? .3 : .16, alpha: on ? .95 * pulse : .55, taper: false, color: c });
+      if (on) for (let i = 0; i < 2; i++) wind.helix(v.x, v.y + .3, v.z, v.y + 3.6, .7, 1.2, t * 2.4 + i * Math.PI, { width: .2, alpha: .8 * pulse, n: 28, color: c }); }
   }
   function drawBreathFx(t) {
     // The catchable spent breath: a big flat glowing swirl + a countdown ring that empties as the window closes.
@@ -458,24 +498,26 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   }
 
   // ---------------- interaction ----------------
-  const vaneOf = k => k === 2 && W.top ? W.top.vane : W.rings[k].vane;
+  const vaneOf = k => W.rings[k].vane;           // arena: rings[0..2].vane are the three floor vanes
+  const nearVane = (p, r, h) => { let best = -1, bd = r; for (let k = 0; k < 3; k++) { if (turned[k]) continue; const v = vaneOf(k), d = Math.hypot(p.x - v.x, p.z - v.z); if (d < bd && Math.abs(p.y - v.y) < h) { bd = d; best = k; } } return best; };
   function context(p, yaw_, charged = wind?.charged) {
     if (phase >= 3) return null;
-    const v = vaneOf(phase);
     if (!charged) {
       const src = wind?.sourceAt?.(p);
       if (src?.id === 'guardianBreath') return { kind: 'catch', id: 'guardianBreath', label: 'Catch the spent breath', target: new T.Vector3(src.x, src.y + .9, src.z), anim: 'capture', owner: 'guardian' };
-      if (Math.hypot(p.x - v.x, p.z - v.z) < 2.6 && Math.abs(p.y - v.y) < 2) return { kind: 'info', id: 'vane', label: `Return vane ${phase + 1}/3 · ${vaneLeft()} · needs the guardian’s breath`, target: new T.Vector3(v.x, v.y + 1.2, v.z), owner: 'guardian', why: 'This vane turns only on the guardian’s own spent breath: the glowing swirl where its lane ends.' };
+      const k = nearVane(p, 2.6, 2); if (k >= 0) { const v = vaneOf(k); return { kind: 'info', id: 'vane', label: `The ${VANE_NAME[k]} vane · needs the guardian’s breath`, target: new T.Vector3(v.x, v.y + 1.2, v.z), owner: 'guardian', why: `This vane turns only on the guardian’s own spent breath, and only while its heart burns ${VANE_NAME[k]}.` }; }
       return null;
     }
-    if (Math.hypot(p.x - v.x, p.z - v.z) < 5 && Math.abs(p.y - v.y) < 2.5) return { kind: 'give', id: 'vane', label: `Give the breath to vane ${phase + 1}/3 · ${vaneLeft()}`, target: new T.Vector3(v.x, v.y + 1.2, v.z), anim: 'release', owner: 'guardian' };
-    return null;
+    const k = nearVane(p, 5, 2.5); if (k < 0) return null; const v = vaneOf(k);
+    return { kind: 'give', id: 'vane', vane: k, label: `Give the breath to the ${VANE_NAME[k]} vane`, target: new T.Vector3(v.x, v.y + 1.2, v.z), anim: 'release', owner: 'guardian' };
   }
   function interact(ctx, { staffTip } = {}) {
     if (!ctx) return false;
     if (ctx.kind === 'catch') { const ok = wind.catchFrom('guardianBreath', staffTip); if (ok) { stats.catches++; breath = null; } return ok; }
     if (ctx.kind === 'give') {
       if (wind.charge?.kind !== 'guardian') { wind.release('spill', staffTip, ctx.target); caption('Ordinary wind slips through the vane. It needs the guardian’s own breath.', 4); return true; }
+      const want = targetVane();
+      if (ctx.vane !== undefined && ctx.vane !== want) { stats.wrong = (stats.wrong || 0) + 1; wind.release('spill', staffTip, ctx.target); caption(`The ${VANE_NAME[ctx.vane]} vane shrugs the breath off. The guardian’s heart burns ${VANE_NAME[want]}: feed that vane.`, 5); return true; }
       const k = phase;
       wind.release('give', staffTip, ctx.target, { onArrive: () => feedVane(k) });
       return true;
@@ -489,40 +531,53 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     if (phase !== k) return;
     fed++;
     if (fed < BREATHS_PER_VANE[k]) { // part turn: the vane creaks round, the volley goes on
-      world.setRestored?.('vane' + (k + 1), fed / BREATHS_PER_VANE[k]); sound('restore'); audio?.event?.('vane', { full: false });
-      const v = vaneOf(k); onEvent({ vane: { index: k + 1, at: [v.x, v.y, v.z], fed, of: BREATHS_PER_VANE[k] } }); return;
+      world.setRestored?.('vane' + (targetVane() + 1), fed / BREATHS_PER_VANE[k]); sound('restore'); audio?.event?.('vane', { full: false });
+      const v = vaneOf(targetVane()); onEvent({ vane: { index: k + 1, at: [v.x, v.y, v.z], fed, of: BREATHS_PER_VANE[k] } }); return;
     }
     fed = 0; powerVane(k);
   }
   function powerVane(k) {
     if (phase !== k) return;
+    const vk = targetVane(); turned[vk] = true;
     phase = k + 1; clock = 0; cycle = -1; lanes = {}; current = null; lastStage = ''; loiter = false; pendingBreath = null;
     wind?.removeSource?.('guardianBreath'); breath = null;
-    world.setRestored?.('vane' + (k + 1), 1); sound('restore'); audio?.event?.('vane', { full: true }); if (phase < 3) { audio?.event?.('phase', { phase }); audio?.event?.('rage', { d: RAGE.windup }); }
-    const v = vaneOf(k), safe = (k === 2 && W.top ? W.top : W.rings[k]).safe;
+    world.setRestored?.('vane' + (vk + 1), 1); sound('restore'); audio?.event?.('vane', { full: true }); if (phase < 3) { audio?.event?.('phase', { phase }); audio?.event?.('rage', { d: RAGE.windup }); }
+    const v = vaneOf(vk), safe = W.rings[0].safe;
     // Between phases: a short rage beat (rise, flare, slam) with a floor shockwave to jump over.
-    if (phase < 3) { const R = W.rings[k], e = extent(k, ang(v)); rage = { t: 0, ring: k, lo: k === 0 ? 1.4 : Math.max(R.inner, e.lo), hi: k === 0 ? R.outer : Math.min(R.outer, e.hi + .3), hit: false }; }
+    if (phase < 3) rage = { t: 0, ring: 0, lo: 1.4, hi: 1.4, hit: false };   // arena: a roar and slam between phases, no rolling wall (every hit costs a life)
     if (phase === 3) { doneT = 0; sound('guardian-fold'); audio?.event?.('calm'); }
-    onEvent({ vane: { index: k + 1, at: [v.x, v.y, v.z] }, phase, checkpoint: [safe.x, safe.y, safe.z], ...(phase === 3 ? { done: true } : {}) });
-    if (phase === 1) ventTimer = .6;
+    onEvent({ vane: { index: vk + 1, at: [v.x, v.y, v.z] }, phase, lives, checkpoint: [safe.x, safe.y, safe.z], ...(phase === 3 ? { done: true, fight: false } : {}) });
+    if (phase === 3) ventTimer = 2.5;
   }
 
   function stage() { return phase >= 3 ? (doneT < 3 ? 'fold' : 'tend') : rage ? 'rage' : !active ? 'idle' : beatInfo?.b?.k || 'idle'; }
   const box = new T.Box3();
+  // Reveal hook (main.js): before the first descent the guardian is hidden and held (no telegraphs); during it, it is
+  // lowered from above by `off` metres and still held; the fight starts when main releases the hold.
+  const reveal = { held: false, hidden: false, off: 0 };
+  function revealUpdate(dt, t, o = {}) {
+    if (o && o.isVector3) o = { hero: o };
+    update(dt, t, reveal.held ? { ...o, active: false } : o);
+    if (reveal.off) actor.position.y += reveal.off;
+    actor.visible = !reveal.hidden;
+  }
   return {
-    actor, object: actor, layout: W, update, context, interact,
+    actor, object: actor, layout: W, update: revealUpdate, context, interact,
+    setReveal(r) { Object.assign(reveal, r || {}); },
     get phase() { return phase; }, get done() { return phase >= 3; }, get stage() { return stage(); },
     get lane() { return current; }, get pose() { return { ...pose }; },
     subject() { actor.updateMatrixWorld(true); return box.setFromCenterAndSize(tmp.copy(actor.position).add(tmp2.set(0, 2.7, 0)), tmp2.set(3.8, 5.2, 3.8).clone()); },
-    objective() { return phase >= 3 ? null : ['Dodge the breath, catch it, turn vane 1/3', 'Ride the grille up; catch after the volley; vane 2/3', W.top ? 'Ride two updrafts to the perch; turn vane 3/3' : 'Ride the upward breath; turn vane 3/3'][phase] + (BREATHS_PER_VANE[Math.min(phase, 2)] > 1 ? ` (${vaneLeft()})` : ''); },
-    target() { if (phase >= 3) return null; const v = vaneOf(phase); return new T.Vector3(v.x, v.y, v.z); },
-    serialize() { return { phase }; },
-    restore(d) { rage = null; hold = 0; fed = 0; phase = Math.max(0, Math.min(3, d?.phase | 0)); for (let k = 1; k <= phase; k++) world.setRestored?.('vane' + k, 1); clock = 0; cycle = -1; lastStage = ''; doneT = phase >= 3 ? 10 : -1; },
-    reset() { rage = null; hold = 0; fed = 0; phase = 0; clock = 0; cycle = -1; warned = false; lastStage = ''; lanes = {}; current = null; doneT = -1; loiter = false; pendingBreath = null; stats = { hits: 0, cycles: 0, exhales: 0, pulses: 0, catches: 0 }; },
+    objective() { return phase >= 3 ? null : !fighting ? 'Go down to the floor of the well' : `Dodge, catch the spent breath, feed the ${VANE_NAME[targetVane()]} vane (${phase + 1}/3)`; },
+    target() { if (phase >= 3) return null; const v = fighting ? vaneOf(targetVane()) : W.rings[0].safe; return new T.Vector3(v.x, v.y, v.z); },
+    // Mid-fight saves keep only "not calmed": a reload starts the fight from scratch (never stuck mid-phase).
+    serialize() { return { phase: phase >= 3 ? 3 : 0 }; },
+    restore(d) { rage = null; hold = 0; fed = 0; fighting = false; lives = LIVES; phase = (d?.phase | 0) >= 3 ? 3 : 0; for (let k = 0; k < 3; k++) { turned[k] = phase >= 3; world.setRestored?.('vane' + (k + 1), phase >= 3 ? 1 : 0); } clock = 0; cycle = -1; lastStage = ''; doneT = phase >= 3 ? 10 : -1; },
+    reset() { rage = null; hold = 0; fed = 0; phase = 0; fighting = false; lives = LIVES; attempt = 0; for (let k = 0; k < 3; k++) { turned[k] = false; world.setRestored?.('vane' + (k + 1), 0); } clock = 0; cycle = -1; warned = false; lastStage = ''; lanes = {}; current = null; doneT = -1; loiter = false; pendingBreath = null; stats = { hits: 0, cycles: 0, exhales: 0, pulses: 0, catches: 0 }; },
+    get lives() { return lives; }, get fighting() { return fighting && phase < 3; }, get targetVane() { return phase >= 3 ? -1 : targetVane(); },
     telemetry() {
       const B = beatInfo?.b ? beatInfo : null, L = phase < 3 ? cycleLength(phase) : 0;
       return { phase, stage: stage(), beat: B ? B.b.k + (B.b.lane ? ':' + B.b.lane : '') : null, beatLeft: B ? +(B.b.d - B.u).toFixed(2) : null, clock: +clock.toFixed(2), cycle: L ? +(clock % L).toFixed(2) : 0,
-        lane: current ? { kind: current.kind, id: current.id || current.kind, ring: current.ring, aimed: !!current.aimed } : null, loiter, fed, need: BREATHS_PER_VANE[Math.min(phase, 2)], hold: +hold.toFixed(2), rage: rage ? { t: +rage.t.toFixed(2), ring: rage.ring, front: rage.t > RAGE.windup ? +rageFront().toFixed(2) : null, lo: rage.lo, hi: rage.hi } : null, climb: !!W.top, knockRules: KNOCK_RULES, spared, heroSafe: heroV ? safeReason(heroV) : null, breath: breath ? { ...breath, left: +(breath.closesAt - time).toFixed(2) } : null, ...stats, derived: W.derived };
+        lane: current ? { kind: current.kind, id: current.id || current.kind, ring: current.ring, aimed: !!current.aimed, a0: current.a0, a1: current.a1, lo: current.lo, hi: current.hi } : null, loiter, fed, need: BREATHS_PER_VANE[Math.min(phase, 2)], lives, fighting, targetVane: phase >= 3 ? -1 : targetVane(), targetName: phase >= 3 ? null : VANE_NAME[targetVane()], turned: [...turned], attempt, hold: +hold.toFixed(2), rage: rage ? { t: +rage.t.toFixed(2), ring: rage.ring, front: rage.t > RAGE.windup ? +rageFront().toFixed(2) : null, lo: rage.lo, hi: rage.hi } : null, climb: !!W.top, knockRules: KNOCK_RULES, spared, heroSafe: heroV ? safeReason(heroV) : null, breath: breath ? { ...breath, left: +(breath.closesAt - time).toFixed(2) } : null, ...stats, derived: W.derived };
     },
     dispose() { scene.remove(actor); bands.dispose(); },
   };

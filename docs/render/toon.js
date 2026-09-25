@@ -44,9 +44,9 @@ export function createToon(THREE) {
   const rectStart = src.indexOf('#if ( NUM_RECT_AREA_LIGHTS > 0 )');
   if (dirStart < 0 || rectStart < 0) throw Error('look: lights_fragment_begin layout changed');
   const LIGHTS = src.slice(0, dirStart)
-    + 'vec3 bkSun = vec3( 0.0 );\nvec3 bkDD0 = reflectedLight.directDiffuse;\n'
+    + 'vec3 bkSun = vec3( 0.0 );\nfloat bkNL = 0.0;\nvec3 bkDD0 = reflectedLight.directDiffuse;\n'
     + src.slice(dirStart, rectStart).replace('RE_Direct( directLight,',
-      'bkSun += directLight.color * saturate( dot( geometryNormal, directLight.direction ) );\n\t\tRE_Direct( directLight,')
+      'bkSun += directLight.color * saturate( dot( geometryNormal, directLight.direction ) );\n\t\tbkNL = max( bkNL, saturate( dot( geometryNormal, directLight.direction ) ) );\n\t\tRE_Direct( directLight,')
     + 'vec3 bkDirDiffuse = reflectedLight.directDiffuse - bkDD0;\n'
     + src.slice(rectStart).replace('getHemisphereLightIrradiance( hemisphereLights[ i ], geometryNormal )',
       'bkHemi( hemisphereLights[ i ], geometryNormal )');
@@ -77,6 +77,9 @@ vec3 bkHemi( const in HemisphereLight h, const in vec3 n ) {
     bkSoft *= 3.0;
   #endif
   float bkK = dot( bkSun, ${LUM} ) / max( dot( bkKeyColor, ${LUM} ), 1e-4 );
+  // Faces the sun only grazes (deck rims, curbs, plank edges) take the smooth unshadowed term: the shadow map aliases
+  // into crawling stair-step stripes there as the camera and shadow focus move.
+  bkK = mix( bkNL, bkK, smoothstep( 0.12, 0.38, bkNL ) );
   float bkBand = bkBands.w * smoothstep( bkBands.x - bkSoft, bkBands.x + bkSoft, bkK )
                + ( 1.0 - bkBands.w ) * smoothstep( bkBands.y - bkSoft, bkBands.y + bkSoft, bkK );
   vec3 bkAlbedo = diffuseColor.rgb;

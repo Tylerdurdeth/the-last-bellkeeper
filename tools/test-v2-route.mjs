@@ -178,6 +178,15 @@ W = B.stub ? await (await import('../game/bellhollow/stub-world.js')).buildBellh
   : adaptWorld(await (await import('../game/bellhollow/world.js')).buildBellhollow({ THREE, scene: new THREE.Scene() }), { THREE });
 const P = W.points, vent = id => W.vents.find(v => v.id === id), wheel = id => W.wheels.find(v => v.id === id), sail = id => W.sails.find(v => v.id === id);
 const measure = () => page.evaluate(() => { const r = document.querySelector('#stick').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width * .36 }; });
+// --from=guardian: continue from a save at the well floor (fight-only regression; the full route is the default).
+const FROM = (process.argv.find(a => a.startsWith('--from=')) || '').slice(7);
+if (FROM === 'guardian') {
+  await page.evaluate(c => { const f = ['bell', 'bypass', 'staff', 'seed', 'loft', 'sailsBridge', 'sailsCap', 'sails', 'pipesA', 'pipesValve', 'pipesB', 'pipes', 'ladders', 'skyBridge', 'hollow', 'carvingOut', 'carvingReturn'];
+    localStorage.setItem('bellkeeper-adventure-v2', JSON.stringify({ version: 2, quest: { version: 2, progress: Object.fromEntries(f.map(k => [k, true])), reached: { loft: true, ladders1: true, ladders2: true, ladders3: true }, fragments: [], seen: [], charge: null, guardian: { phase: 0 } }, map: null, checkpoint: c, savedAt: Date.now() })); localStorage.removeItem('bellkeeper-guardian-seen'); }, [P.ring1.x, P.ring1.y, P.ring1.z]);
+  await page.reload({ waitUntil: 'load' }); await page.waitForFunction(() => window.__READY__ && !document.querySelector('#continueb').hidden, { timeout: 60000 });
+  if (touch) await page.tap('#continueb'); else await page.click('#continueb');
+  await sleep(800); t0 = Date.now(); if (touch) stick = await measure();
+} else {
 if (touch) await page.tap('#startb'); else await page.click('#startb');
 await sleep(800); t0 = Date.now();
 if (touch) { stick = await measure(); await steer(0, -1, 1, 0); await sleep(150); await hold([]); stick = await measure(); } else await page.keyboard.press('ArrowUp');
@@ -251,45 +260,57 @@ if (gsrc) {
   await catchAt('gallerySource'); await giveAt(gc[1]?.intake || gc[1]?.panel || P.carvingReturn, 'carvingReturn', 'carving-return-lights'); await sleep(1200); await shot('carving-return');
 } else { await travel(P.carvingOut, 'carving out', { tol: 1 }); await press('carvingOut'); await shot('carving-out'); await travel(P.carvingReturn, 'carving return', { tol: 1 }); await press('carvingReturn'); await shot('carving-return'); }
 await travel(P.ring1, 'down into the well', { tol: 1 }); beat('guardian');
-// ---- Guardian: dodge, catch its spent breath, turn the vanes ----
-// Vane per phase; the last one is on the top perch (the guardian's rings.top.vane when present).
-const vaneFor = k => { const r = P.guardianWell?.rings, lv = r && !Array.isArray(r) && r[['low', 'mid', 'top'][k]] || null, alt = k === 2 && r && !Array.isArray(r) && !r.top ? r.high : null, q = (lv || alt) && ((lv || alt).vaneStand || (lv || alt).vane); return q ? { x: q.x, y: q.y, z: q.z } : P['vane' + (k + 1)]; };
-// Phase 3: (re)climb to the perch from wherever the hero is. A fall on the way (high -> mid, mid -> low) is not a
-// trap in the real game: the floor grille (ring1) breathes every 6.2 s after vane 1 and the pulse grille (ring2)
-// opens every phase-3 cycle, so ride back up ring by ring like a player would, then retry the perch grille.
-async function climbToPerch() {
-  for (let tries = 0; tries < 5; tries++) {
-    let y = (await read()).y;
-    if (y < vent('ring2').y - .5) { await travel(vent('ring1'), 'floor grille', { tol: .4 }); await ride(vent('ring1'), 'ride-floor-again'); y = (await read()).y; }
-    if (y < vent('ring3').y - .5) { await travel(vent('ring2'), 'pulse grille', { tol: .4 }); await ride(vent('ring2'), 'ride-pulse-again'); }
-    try { await travel(vent('ring3'), 'perch grille', { tol: .4 }); } catch (e) { if (!/No path|Kept falling/.test(e.message)) throw e; result.steps.push({ label: 'fell on the way to the perch grille, climbing again' }); continue; }
-    if ((await read()).y < vent('ring3').y - .5) continue;
-    await ride(vent('ring3'), 'ride-perch'); if ((await read()).y >= vent('ring3').ledge.y - .5) return;
-  }
-  throw Error('could not climb back to the perch');
 }
-for (let phase = 0; phase < 3; phase++) {
-  if (phase === 1) await ride(vent('ring1'), 'ride-ring1');
-  if (phase === 2) { await travel(vent('ring2'), 'pulse grille', { tol: .4 }); await ride(vent('ring2'), 'ride-pulse'); }
-  await waitFor(() => window.__GAME__.quest.guardian?.stage === 'inhale', 'inhale', 25000); await shot(`guardian-inhale-${phase + 1}`);
-  await waitFor(() => window.__GAME__.quest.guardian?.stage === 'exhale', 'exhale', 8000); await sleep(200); await shot(`guardian-exhale-${phase + 1}`);
-  if ((await read()).knocked) { result.steps.push({ label: 'knocked back by the breath (safe, no progress lost)' }); await shot(`guardian-knock-${phase + 1}`); }
-  await waitFor(() => !window.__GAME__.knocked, 'knock settled', 6000);
-  for (let feed = 0; feed < 3 && (await read()).quest.guardian.phase < phase + 1; feed++) {
-    if (phase === 2 && vent('ring3') && (await read()).y < vent('ring3').ledge.y - .5) await climbToPerch();
-    for (let tries = 0; tries < 4; tries++) {
-      const s = await waitSource('guardianBreath', 30000);
-      try { await travel(s, 'breath', { tol: .5 }); await press('guardianBreath'); await waitFor(() => window.__GAME__.charged, 'caught breath', 2500); break; }
-      catch (e) { if (tries === 3) throw e; result.steps.push({ label: 'missed the breath window, waiting for the next', err: String(e.message).slice(0, 120) }); await waitFor(() => !window.__GAME__.wind.sources.some(x => x.id === 'guardianBreath'), 'breath gone', 15000).catch(() => {}); }
+// ---- Guardian (arena redesign): all on the well floor. Dodge the sweeps, catch the spent breath, give it to the vane
+// whose colour the guardian's heart burns (telemetry targetVane); 3 lives, out of lives restarts the fight. ----
+const vaneAt = k => { const r = P.guardianWell.rings[['low', 'mid', 'high'][k]], q = r.vaneStand || r.vane; return { x: q.x, y: q.y, z: q.z }; };
+await waitFor(() => window.__GAME__.quest.guardian?.fighting, 'fight starts (after the reveal)', 25000);
+const shotPhase = new Set(), gstart = Date.now();
+// Wait for pred while stepping out of any painted sweep wedge (like a player dodging the telegraph).
+async function dodgeWait(pred, label, timeout = 30000, arg) {
+  const end = Date.now() + timeout, C = P.guardianWell.centre, wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
+  while (Date.now() < end) {
+    if (await page.evaluate(pred, arg)) return;
+    const g = await read(), G = g.quest.guardian, L = G?.lane;
+    if (L && Number.isFinite(L.a0) && (G.stage === 'inhale' || G.stage === 'exhale') && !g.knocked && g.grounded) {
+      const hx = g.pos[0] - C.x, hz = g.pos[1] - C.z, hr = Math.hypot(hx, hz), ha = Math.atan2(hz, hx), mid = (L.a0 + L.a1) / 2, half = Math.abs(L.a1 - L.a0) / 2 + .3, d = wrapA(ha - mid);
+      if (Math.abs(d) < half && hr > L.lo - .6 && hr < L.hi + .6) {
+        const planner = createPlanner(W, { maxDrop: 5.5 }); let tgt = null;
+        for (const side of [Math.sign(d) || 1, -(Math.sign(d) || 1)]) for (const r of [hr, 9, 6, 3.6]) { const a = mid + side * (half + .25), q = { x: C.x + Math.cos(a) * r, y: g.y, z: C.z + Math.sin(a) * r }; if (!tgt && planner.snap(q)) tgt = q; }
+        if (tgt) { await go(tgt.x, tgt.z, 'dodge the sweep', { tol: .6 }); await hold([]); continue; }
+      }
     }
-    if (!(await read()).charged) throw Error('never caught the guardian breath in phase ' + phase);
-    await burst(`guardian-catch-${phase + 1}-${feed + 1}`, 1);
-    const before = (await read()).quest.guardian;
-    await giveAt(vaneFor(phase), 'vane', `vane-${phase + 1}-${feed + 1}`);
-    await waitFor(({ n, f }) => { const g = window.__GAME__.quest.guardian; return g.phase >= n || g.fed > f; }, 'vane fed', 5000, { n: phase + 1, f: before.fed ?? -1 });
+    await hold([]); await sleep(80);
   }
-  await waitFor(n => window.__GAME__.quest.guardian?.phase >= n, 'vane turned', 5000, phase + 1);
+  throw Error('Timed out waiting (dodging): ' + label);
 }
+while ((await read()).quest.guardian.phase < 3) {
+  if (Date.now() - gstart > 420000) throw Error('guardian fight took too long ' + JSON.stringify((await read()).quest.guardian).slice(0, 400) + ' steps: ' + JSON.stringify(result.steps.slice(-25).map(s => s.label + (s.err ? ':' + s.err.slice(0, 60) : ''))));
+  const G0 = (await read()).quest.guardian, phase = G0.phase;
+  if (!shotPhase.has(phase)) {
+    shotPhase.add(phase);
+    await dodgeWait(() => window.__GAME__.quest.guardian?.stage === 'inhale', 'inhale', 25000).catch(() => {}); await sleep(700); await shot(`guardian-inhale-${phase + 1}`);
+    await dodgeWait(() => ['exhale', 'recoil'].includes(window.__GAME__.quest.guardian?.stage), 'exhale', 8000).catch(() => {}); await sleep(200); await shot(`guardian-exhale-${phase + 1}`);
+    if ((await read()).knocked) { result.steps.push({ label: 'knocked back by the breath (one life)' }); await shot(`guardian-knock-${phase + 1}`); }
+    await waitFor(() => !window.__GAME__.knocked, 'knock settled', 6000);
+  }
+  if (!(await read()).charged) {
+    await dodgeWait(() => window.__GAME__?.wind.sources.some(x => x.id === 'guardianBreath'), 'guardian breath', 40000); const s = (await read()).wind.sources.find(x => x.id === 'guardianBreath');
+    if (!s) continue;
+    try { await travel(s, 'breath', { tol: .5 }); await press('guardianBreath'); await waitFor(() => window.__GAME__.charged, 'caught breath', 2500); }
+    catch (e) { result.steps.push({ label: 'missed the breath window, waiting for the next', err: String(e.message).slice(0, 120) }); await waitFor(() => !window.__GAME__.wind.sources.some(x => x.id === 'guardianBreath'), 'breath gone', 15000).catch(() => {}); continue; }
+    await burst(`guardian-catch-${phase + 1}`, 1);
+  }
+  const G1 = (await read()).quest.guardian;
+  if (G1.phase !== phase || G1.attempt !== G0.attempt) continue;   // swept back (out of lives) meanwhile
+  try { await giveAt(vaneAt(G1.targetVane), 'vane', `vane-${phase + 1}-${G1.targetName}`); }
+  catch (e) { result.steps.push({ label: 'could not give the breath (knocked?)', err: String(e.message).slice(0, 120) }); continue; }
+  await waitFor(({ n, a }) => { const g = window.__GAME__.quest.guardian; return g.phase >= n || g.attempt !== a; }, 'vane turned', 5000, { n: phase + 1, a: G1.attempt }).catch(() => {});
+}
+{ const g = (await read()).quest.guardian; result.guardian = { hits: g.hits, sweeps: g.sweeps || 0, wrong: g.wrong || 0, attempts: g.attempt + 1, lives: g.lives }; }
+// Calmed: the floor grille's lid swings up and both ring grilles breathe; ride floor -> mid -> high ring (the bells).
+await sleep(2500); await shot('guardian-calmed');
+await ride(vent('ring1'), 'ride-ring1-up'); await travel(vent('ring2'), 'mid-ring grille', { tol: .4 }); await ride(vent('ring2'), 'ride-ring2-up');
 beat('guardian calmed');
 // ---- Paired bells, finale, Mara ----
 await travel(P.bellOut, 'paired bells', { tol: 1 }); await press('bellOut'); await sleep(1000); await press('bellReturn'); beat('finale');

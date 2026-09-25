@@ -45,7 +45,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const B = new Builder(T, gm, root);
   const M = materials(T);
   const R = rng(1207);
-  const dyn = {terraceGate: 0, sailBridge: 0, ladderShutter: 0, skyPlanks: 0, hollowGate: 0, bellSwing: 0, sailsCap: 0, pipesValve: 0, frag2: 0};
+  const dyn = {wellSeal: 0, terraceGate: 0, sailBridge: 0, ladderShutter: 0, skyPlanks: 0, hollowGate: 0, bellSwing: 0, sailsCap: 0, pipesValve: 0, frag2: 0};
   const restored = Object.fromEntries(AREAS.map((a) => [a, 0]));
   const at = (az, r, y = 0) => { const [x, z] = polar(az, r); return [x, y, z]; };
   const V = (p) => new T.Vector3(p[0], p[1], p[2]);
@@ -356,7 +356,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const loftVentP = at(-91.5, 20.5, 0);
   // Vents: {id,x,y,z,top,radius,ledge}; top = ledge + 0.8 (the column carries the hero over the lip).
   function vent(id, p, ledgeY, area, extra = {}) {
-    place(ventGrille, {id}, p[0], p[1], p[2], 0, {collide: null});
+    place(ventGrille, {id}, p[0], p[1], p[2], 0, {collide: null, scale: extra.scale ?? 1});   // extra.scale: a narrower grille for a narrow ring (catch radius unchanged)
     const v = {id, x: p[0], y: p[1], z: p[2], top: ledgeY + .8, radius: .8, area, ...extra};
     vents.push(v); return v;
   }
@@ -716,9 +716,10 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   B.railArc('well-front-lip', {r: H.floorFront - .2, a0: -9.5, a1: 99.5, y: H.low.y, style: 'parapet', step: 4});
   // Ring vents, vanes, carvings, return channel, paired bells frame.
   const ringVents = {
-    low: vent('ring1', at(102, 3.4, H.low.y), H.mid.y, 'hollow', {to: 'ring-mid'}),
-    mid: vent('ring2', at(280, 5.75, H.mid.y), H.high.y, 'hollow', {to: 'ring-high'}),
-    high: vent('ring3', at(184, 8, H.high.y), .5, 'hollow', {to: 'ring-top'}),
+    // grille plates (Ø ~2.8 m) sit fully on open floor: clear of the low-tip parapet, the high ring's wall and the gallery wall
+    low: vent('ring1', at(102, 2.55, H.low.y), H.mid.y, 'hollow', {to: 'ring-mid'}),
+    mid: vent('ring2', at(280, 5.25, H.mid.y), H.high.y, 'hollow', {to: 'ring-high'}),
+    high: vent('ring3', at(184, 8, H.high.y), .5, 'hollow', {to: 'ring-top', scale: .8}),
   };
   // mid ring widened (r 3.4) where the guardian's phase-2 lanes sweep (az 170..290)
   const MIDW = {a0: 170, a1: 290, r0: 3.4};
@@ -733,10 +734,17 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const vanes = {};
   // ring vanes stand on stone corbels bracketed off the ring's open inner lip (vane over the drop), never on the
   // walkway; the player turns them from the path side (stand is outward of the plinth)
-  for (const [ring, az, r, y] of [['low', 140, 3.0, H.low.y], ['mid', 220, MIDW.r0 - .25, H.mid.y], ['high', 300, H.high.r0 - .25, H.high.y]]) {
-    const p = at(az, r, y); vanes[ring] = returnVane('vane-' + ring, p, az, ring === 'low' ? -1 : 1);
-    if (ring !== 'low') { B.add(new T.CylinderGeometry(.5, .12, 1.1, 8).translate(p[0], y - .55, p[2]), 'stoneShade'); const q = at(az, r + .55, y); B.add(new T.BoxGeometry(.5, .5, .5).translate(q[0], y - .25, q[2]), 'stoneShade'); }   // corbel + tie-in under the lip
+  // Guardian fight (arena redesign, 25 Sep): all three return vanes stand on the well floor, spaced round the arena
+  // (spaced round the open front floor's outer edge); the upper rings are scenery and the way back up.
+  for (const [ring, az, r] of [['low', 2, 10], ['mid', 44, 10], ['high', 86, 10]]) {   // round the front floor's outer edge, clear of the ring1 grille
+    const p = at(az, r, H.low.y); vanes[ring] = returnVane('vane-' + ring, p, az, 1,   // stand on the OUTER side: the vane sits between hero and guardian, never next to the fight camera
+      {low: 0x4fd6c4, mid: 0xf2c14e, high: 0xf0708a}[ring]);   // teal / gold / rose (guardian.js VANE_COLOR)
   }
+  // Seal over the floor grille (ring1): a copper lid that lies shut while the guardian fight runs (dyn.wellSeal,
+  // set by guardian.js) and swings up once it is calmed, when the grille breathes the hero back up the well.
+  const wellLid = new T.Group(); { const g = ringVents.low, LR = 1.5, e = at(102, Math.hypot(g.x, g.z) + LR, H.low.y);   // hinge on the grille's outer rim (follows the vent)
+    wellLid.position.set(e[0], H.low.y + .06, e[2]); wellLid.rotation.order = 'YXZ'; wellLid.rotation.y = Math.atan2(g.x - e[0], g.z - e[2]); root.add(wellLid);
+    const lid = new T.Mesh(new T.CylinderGeometry(LR, LR, .1, 24).translate(0, .05, LR), M.copper), rib = new T.Mesh(new T.BoxGeometry(.18, .1, 2 * LR - .1).translate(0, .12, LR), M.verdigris), rib2 = new T.Mesh(new T.BoxGeometry(2 * LR - .1, .1, .18).translate(0, .12, LR), M.verdigris); wellLid.add(lid, rib, rib2); }
   // top perch vane (the guardian's third vane when it fights from the perch); stand beside it on the perch
   vanes.top = returnVane('vane-top', at(209.5, 7.5, TOP.y), 209.5); vanes.top.stand = V(at(205.5, 8.2, TOP.y));
   // Carved panels on the gallery back wall (outward bell, returning bell, paired channels).
@@ -1291,8 +1299,13 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     life.hangers.push({kind: 'chain', note: id, pts: [[P0[0], P0[1] + top - .08, P0[2]], [Q0[0], Q0[1] + top - .08, Q0[2]]]});
     barriers.push(rec);
   }
-  function returnVane(id, p, az, standSide = -1) {
+  function returnVane(id, p, az, standSide = -1, color = null) {
     const pivot = new T.Group(); pivot.position.set(p[0], p[1], p[2]); root.add(pivot);
+    if (color !== null) { // the vane's own colour: a glowing collar on the pole and a lamp on the hub (matched by the guardian's heart)
+      const cm = new T.MeshBasicMaterial({color, toneMapped: false}); cm.userData.look = false;
+      const collar = new T.Mesh(new T.TorusGeometry(.2, .07, 8, 20).rotateX(Math.PI / 2), cm); collar.position.y = 1.15; pivot.add(collar);
+      const band = new T.Mesh(new T.CylinderGeometry(.46, .46, .09, 16), cm); band.position.y = .5; pivot.add(band);
+    }
     B.add(new T.CylinderGeometry(.35, .45, .5, 8).translate(p[0], p[1] + .25, p[2]), 'stoneShade');
     B.add(new T.CylinderGeometry(.08, .08, 2.1, 6).translate(p[0], p[1] + 1.3, p[2]), 'copper');
     const rot = new T.Group(); rot.position.y = 2.1; pivot.add(rot);
@@ -1300,6 +1313,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     for (const s of [-1, 1]) { const petal = new T.SphereGeometry(.55, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2); petal.scale(1, .25, 1.6); petal.rotateZ(s * Math.PI / 2); petal.translate(0, 0, s * .8); bins.add(petal, s < 0 ? 'verdigris' : 'copper'); }
     bins.add(new T.SphereGeometry(.18, 8, 6), 'copper');
     bins.bake(rot);
+    if (color !== null) { const cm = new T.MeshBasicMaterial({color, toneMapped: false}); cm.userData.look = false; rot.add(new T.Mesh(new T.SphereGeometry(.24, 12, 8), cm)); }
     gm.addCircle({id, x: p[0], z: p[2], r: .45, y0: p[1], y1: p[1] + 2.2});
     const out = polar(az, 1);
     const rec = {id, x: p[0], y: p[1], z: p[2], rotor: rot, target: V([p[0], p[1] + 2.1, p[2]]), stand: V([p[0] + standSide * out[0] * 1.3, p[1], p[2] + standSide * out[1] * 1.3])};
@@ -1369,11 +1383,11 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   // ================================================================================
   const WHEEL_ALIAS = {seedWheel: 'seed', pipesWheel1: 'pipesA', pipesWheel2: 'pipesB', terraceGate: 'seed'};
   const setState = (k, v) => { if (k in dyn) dyn[k] = v; };
-  const setRestored = (area, amount) => { if (area in restored || /^carving\d$/.test(area)) restored[area] = Math.max(0, Math.min(1, amount)); };
+  const setRestored = (area, amount) => { if (/^vane[123]$/.test(area)) { vaneTurn[['low', 'mid', 'high'][area[4] - 1]] = Math.max(0, Math.min(1, amount)); return; } if (area in restored || /^carving\d$/.test(area)) restored[area] = Math.max(0, Math.min(1, amount)); };
   let introWake = 0, introShut = false;
   const alive = (area) => Math.max(restored[area] || 0, restored.finale || 0, introWake);
   const smooth = (cur, target, dt, k = 3) => cur + (target - cur) * Math.min(1, dt * k);
-  const vis = {terraceGate: 0, sailBridge: 0, ladderShutter: 0, skyPlanks: 0, hollowGate: 0, sailsCap: 0, pipesValve: 0, frag2: 0};
+  const vis = {wellSeal: 0, terraceGate: 0, sailBridge: 0, ladderShutter: 0, skyPlanks: 0, hollowGate: 0, sailsCap: 0, pipesValve: 0, frag2: 0};
   let wheelSpin = {}; const vaneTurn = {low: 0, mid: 0, high: 0, top: 0};
   const zAxis = new T.Vector3(0, 0, 1), yAxis = new T.Vector3(0, 1, 0), qTmp = new T.Quaternion();
   function update(dt = 1 / 60, t = 0, state = {}) {
@@ -1414,6 +1428,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     wrongFlag.children[0].rotation.z = -(1 - flowA * (1 - vis.pipesValve)) * 1.2;
     for (let i = 0; i < carvings.length; i++) carvings[i].glow.emissiveIntensity = Math.max(0, Math.min(1, restored['carving' + i] ?? 0)) * (1.5 + .3 * Math.sin(t * 3 + i));
     shutter.rotation.z = 0; shutter.children.forEach((c) => { c.rotation.x = -vis.ladderShutter * 1.9; });
+    wellLid.visible = vis.wellSeal > .02; wellLid.rotation.x = -(1 - vis.wellSeal) * 1.9;
     // sky bridge stages: reveal plank by plank (scale in along the span)
     for (const s of sbStages) { const f = Math.max(0, Math.min(1, vis.skyPlanks - s.k)); s.grp.visible = f > .02; }
     const hero = state.hero?.isVector3 ? state.hero : state.hero?.position ?? (state.hero && Number.isFinite(state.hero.x) ? state.hero : null);

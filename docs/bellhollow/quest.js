@@ -300,7 +300,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     if (e.vane || e.phase) { const at = e.vane?.at; if (at) wind.petals({ x: at[0], y: at[1] + 1, z: at[2] }, { count: 45 }); }
     if (e.done) { progress.guardian = true; applyWorld(); later(6.5, () => say('Two bells hang above the high ring: one faces the village, one faces the roots.', 6)); }
     // Only events main acts on are forwarded (breath/updraft notices are guardian-internal).
-    const out = { ...(e.knock ? { knock: e.knock } : {}), ...(e.checkpoint ? { checkpoint: e.checkpoint } : {}), ...(e.done ? { restored: 'hollow' } : {}) };
+    const out = { ...(e.lives !== undefined ? { lives: e.lives } : {}), ...(e.sweep ? { sweep: e.sweep } : {}), ...(e.fight !== undefined ? { fight: e.fight } : {}), ...(e.knock ? { knock: e.knock } : {}), ...(e.checkpoint ? { checkpoint: e.checkpoint } : {}), ...(e.done ? { restored: 'hollow' } : {}) };
     if (Object.keys(out).length) emit(out);
   }
 
@@ -361,6 +361,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     if (pr.complete) return 'Bellhollow breathes again';
     if (pr.finale) return 'Ring the morning bell with Mara';
     if (finaleT >= 0) return 'Listen';
+    if (pr.guardian && !pr.bellReturn && inWellBelow()) return 'Ride the grilles back up to the bells';   // arena fight ends on the well floor
     if (pr.guardian) return !pr.bellOut ? 'Ring the outward bell' : 'Now ring the return bell';
     if (pr.hollow && carvingsLive() && !pr.carvingOut) return wind.charged ? 'Give the gust to the carving' : 'Catch the gust in the gallery';
     if (pr.hollow && carvingsLive() && !pr.carvingReturn) return wind.charged ? 'Give the gust to the second carving' : 'Catch the gallery gust again';
@@ -391,6 +392,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     const pr = progress, c = wind.charged;
     if (pr.complete) return null;
     if (pr.finale) return V(pts.morningBell);
+    if (pr.guardian && !pr.bellReturn && inWellBelow()) return V(movement.position.y < (pts.ring1?.y ?? -99) + 2 ? vents.ring1 : vents.ring2);
     if (pr.guardian) return V(pr.bellOut ? pts.bellReturn : pts.bellOut);
     if (pr.hollow && carvingsLive() && !(pr.carvingOut && pr.carvingReturn)) return c ? intake(pr.carvingOut ? 1 : 0) : V(gallerySource);
     if (pr.hollow) return guardian.target?.() || V(pts.arena);
@@ -415,6 +417,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     if (progress.seed) add(pts.seedWheel); add(pts.mara); add(pts.start);
     return a;
   }
+  function inWellBelow() { const q = movement?.position, b = pts.bellOut; return !!(q && b && vents.ring1 && q.y < b.y - 2 && Math.hypot(q.x, q.z) < 14); }
   function hint() { return `Nothing to use right here. Next: ${objective().replace(/^./, c => c.toLowerCase())}.`; }
   function area(p) { return world.area?.(p) || (p.y < -1 ? 'hollow' : p.y > 3 ? 'branches' : 'terrace'); }
 

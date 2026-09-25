@@ -35,7 +35,8 @@ let saveTimer=0,introTime=0,introActive=false,lastShot=-1,queued=null,uiTimer=0,
 let stickReleasedAt=-9,beat=null,villagers=null,map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
 // Camera spring arm, subject framing and chart tucking state (see frame()).
-let galK=0,galYaw=null,galSet=0,galNudge=0,galSgn=1,skipGuardianBox=false,encK=0,viewShift=0,appliedShift=0,armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
+const REVEAL_END=4.6,REVEAL_H=16;let revealWasSet=false,revealLanded=false,revealDone=false;try{revealDone=localStorage.getItem('bellkeeper-guardian-seen')==='1';}catch{}
+let fightAimK=0,revealCut=false;const fightAim=new T.Vector3();let galK=0,fightYaw=null,fightSet=0,fightNudge=0,revealT=-1,galYaw=null,galSet=0,galNudge=0,galSgn=1,skipGuardianBox=false,encK=0,viewShift=0,appliedShift=0,armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
 const loadedSave=readSave(),legacy=!loadedSave&&hasLegacySave();
 const CARD=7,CARDS=3*CARD,ENGINE=20;// prologue cards, then the 20 s in-engine intro
 function save(){if(!state.started||introActive||!quest||quest.finaleActive||!movement)return;const c=movement.checkpoint;writeSave({quest,checkpoint:[c.x,c.y,c.z],map});}
@@ -57,6 +58,7 @@ function updateUI(){
  if(quest){$('#objective').textContent=quest.objective();$('#zoneName').textContent=AREA_NAMES[quest.area(movement.position)]||'BELLHOLLOW';}
  const held=wind?.charge,frags=quest?.telemetry().fragments||0;
  $('#chargeText').textContent=(held?(held.kind==='guardian'?'Guardian’s breath held':'Gust held in the bell'):'Bell empty')+(frags?` · ${frags}/3 fragments`:'');$('#chargeIcon').textContent=held?'✧':'◌';document.body.classList.toggle('wind-held',!!held);
+ {const G=quest?.guardian,f=!!(G?.fighting&&quest.progress.hollow&&!quest.progress.guardian),n=G?.lives|0,L=$('#lives');L.hidden=!f;if(f&&L.dataset.n!==String(n)){L.dataset.n=n;L.innerHTML='<i></i>'.repeat(n)+'<i class="off"></i>'.repeat(Math.max(0,3-n));L.setAttribute('aria-label',n+' of 3 lives');}}// guardian fight lives
  $('#sound').textContent='Sound: '+(state.muted?'off':'on');$('#motion').textContent='Gentle motion: '+(state.gentle?'on':'off');
  $('#subtitles').textContent='Captions: '+(captionsEnabled?'on':'off');
 }
@@ -80,6 +82,7 @@ function action(){if(!state.started||state.paused||state.action||introActive||qu
 function questEvent(_progress,e={}){
  try{storyBeats();}catch(err){console.warn(err);}
  if(e.knock){movement.knockback(e.knock);sound('knock');if(!state.gentle){hitStop=.11;kick=1;kickDir.set(Math.random()-.5,.6,Math.random()-.5).normalize();}}
+ if(e.sweep){const b=document.body;b.classList.remove('swept');void b.offsetWidth;b.classList.add('swept');setTimeout(()=>b.classList.remove('swept'),1900);caption(e.sweep,5);}// guardian fight: out of lives -> soft fade, restart
  if(e.bells==='out')bellOutT=state.t;if(e.bells==='return'){bellRetT=state.t;bellOutT??=state.t-1.7;}
  if(e.mara==='lever')maraAct.leverT=0;if(e.mara==='gesture'){maraAct.gesture=1.6;handover();}
  if(['sails','pipes','ladders'].includes(e.restored)){const h=world.points[e.restored]?.mill;if(h){const port=camera.aspect<.85,v=V3(h);startBeat(v.clone().setY(v.y-1.5),{dist:port?24:18,up:2.5,dur:3.2,kind:'mill',normal:rotorNormal(v)||new T.Vector3(.615,0,.788),hold:1.8,subject:v.clone().setY(v.y-3)});}}
@@ -90,7 +93,7 @@ function questEvent(_progress,e={}){
  if(e.restored)sound('restore');
  updateUI();if(e.checkpoint||e.restored||e.complete)save();}
 $('#storyNext').onclick=()=>{if(introActive&&introTime<CARDS)introTime=Math.min(CARDS,(Math.floor(introTime/CARD)+1)*CARD);};
-$('#startb').onclick=()=>{if(loadedSave)clearSave();start();};$('#continueb').onclick=continueGame;$('#skipIntro').onclick=()=>{if(quest?.finaleActive)quest.skipFinale();else endIntro();};$('#action').onclick=action;$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>pause(false);$('#keepExploring').onclick=()=>$('#ending').hidden=true;
+$('#startb').onclick=()=>{if(loadedSave)clearSave();revealDone=false;try{localStorage.removeItem('bellkeeper-guardian-seen');}catch{}start();};$('#continueb').onclick=continueGame;$('#skipIntro').onclick=()=>{if(quest?.finaleActive)quest.skipFinale();else endIntro();};$('#action').onclick=action;$('#pause').onclick=()=>pause(true);$('#resume').onclick=()=>pause(false);$('#keepExploring').onclick=()=>$('#ending').hidden=true;
 $('#creditsb').onclick=()=>$('#creditsPanel').hidden=false;$('#closeCredits').onclick=()=>$('#creditsPanel').hidden=true;
 $('#settingsb').onclick=()=>{$('#pausePanel').hidden=false;$('#resume').textContent='Back';$('#reset').hidden=true;$('#safeSpot').hidden=true;};
 $('#resume').onclick=()=>{if(state.started)pause(false);else $('#pausePanel').hidden=true;};
@@ -103,7 +106,7 @@ $('#audioUnlock').onclick=()=>soundscape.resume().then(()=>{$('#audioUnlock').hi
 for(const id of ['controls','world'])$('#'+id).addEventListener('pointerdown',()=>{if(state.started)soundscape.resume().then(()=>$('#audioUnlock').hidden=true).catch(()=>{});},{passive:true});
 $('#sound').onclick=()=>{state.muted=!state.muted;soundscape.setMuted(state.muted);titleMusic.setMuted(state.muted);titleSoundLabel();localStorage.setItem('bellkeeper-muted',state.muted?'1':'0');updateUI();};$('#motion').onclick=()=>{state.gentle=!state.gentle;localStorage.setItem('bellkeeper-gentle',state.gentle?'1':'0');updateUI();};
 $('#safeSpot').onclick=()=>{if(!state.started)return;const c=movement.checkpoint;movement.reset(safeSpot([c.x,c.y,c.z]));animator.reset();snapCamera();pause(false);caption('A little current carries you back to safe ground.',3);sound('capture');};
-$('#reset').onclick=()=>{bellOutT=bellRetT=null;opening.end();titleMusic.fadeOut(1);Object.assign(state,{complete:false,action:null,actionCallback:null});quest.reset();clearSave();queued=null;introActive=false;$('#skipIntro').hidden=true;document.body.classList.remove('cinematic');$('#ending').hidden=true;cameraYaw=DEFAULT_YAW;movement.reset(start3);animator.reset();travel=0;snapCamera();pause(false);updateUI();save();caption('Another morning. The bell is waiting by the path.',4);};
+$('#reset').onclick=()=>{revealDone=false;try{localStorage.removeItem('bellkeeper-guardian-seen');}catch{}bellOutT=bellRetT=null;opening.end();titleMusic.fadeOut(1);Object.assign(state,{complete:false,action:null,actionCallback:null});quest.reset();clearSave();queued=null;introActive=false;$('#skipIntro').hidden=true;document.body.classList.remove('cinematic');$('#ending').hidden=true;cameraYaw=DEFAULT_YAW;movement.reset(start3);animator.reset();travel=0;snapCamera();pause(false);updateUI();save();caption('Another morning. The bell is waiting by the path.',4);};
 addEventListener('keydown',e=>{if(e.code==='Space'&&state.started&&!introActive){e.preventDefault();if(!e.repeat)action();}if(e.code==='Escape')pause(!state.paused);});// Touch browsers can blur the window during native gestures while still visible.
 // Actual backgrounding is handled by visibilitychange on every device.
 addEventListener('blur',()=>{if(!matchMedia('(any-pointer: coarse)').matches&&state.started)pause(true);});
@@ -277,7 +280,11 @@ function hudSafe(){const s={l:12,t:12,r:innerWidth-12,b:innerHeight-12},top=$('#
  for(const el of document.querySelectorAll('#caption,#charge,#controls button,#stick,#hint')){if(el.hidden||el.id==='caption'&&el.style.opacity==='0'||getComputedStyle(el).visibility==='hidden')continue;const r=el.getBoundingClientRect();if(r.height&&r.top>innerHeight*.45)s.b=Math.min(s.b,r.top-10);}
  if(!document.body.classList.contains('chart-tucked')&&!mapCanvas.hidden&&getComputedStyle(mapCanvas).visibility!=='hidden'){const r=mapCanvas.getBoundingClientRect();if(r.width&&r.left>innerWidth*.5)s.r=Math.min(s.r,r.left-10);}return s;}
 // The carved gallery (outer ring walkway, r > ~9 m, above the high ring) is not the fight: no encounter framing there.
-const inGallery=p=>!!p&&quest?.area?.(p)==='hollow'&&Math.hypot(p.x,p.z)>9.2&&p.y>-3;
+// Inside the Hollow (gate, gallery, ramps and stairs, down to the arena floor) but not in the arena fight and not in the
+// reveal: the forced open-side camera. The fight = after the reveal (or a saved phase), with the hero on the floor ring.
+const inGallery=p=>{if(!p||quest?.area?.(p)!=='hollow')return false;if(revealT>=0&&revealT<REVEAL_END)return false;
+ const R=world?.points?.guardianWell?.rings,G=quest?.guardian,fought=revealDone||(G?.phase|0)>0||!!quest?.progress?.guardian;
+ return !(fought&&R&&p.y<R.low.y+2.5&&!quest?.progress?.guardian);};
 function encounterSubject(){return state.started&&!introActive&&!inGallery(movement?.position)?quest?.subject()||null:null;}
 // Keep hero and encounter actor inside the HUD-free area: pan the look target, widen the arm, and
 // (not in gentle motion, not right after manual Q/E/drag) turn gently only when they cannot fit.
@@ -343,7 +350,7 @@ function startBeat(look,{dur=2.6,dist=16,up=5,from=null,kind='',normal=null,hold
  beat={t:0,dur:state.gentle?dur+.6:dur,pos,look:look.clone(),kind,hold:Math.min(hold,dur-.6),subject:subject?subject.clone():null,from:p.clone()};}
 function skipBeat(){if(beat&&beat.t>=beat.hold&&beat.t<beat.dur-.6)beat.t=beat.dur-.6;}
 // A held arrow (key repeat) is steering, not a skip: only a fresh press skips, and never before the beat's hold.
-addEventListener('keydown',e=>{if(beat&&!e.repeat&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyA'].includes(e.code))skipBeat();},{capture:true});
+addEventListener('keydown',e=>{if(revealT>=1.5&&revealT<3.2&&!e.repeat&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyA'].includes(e.code))revealT=3.2;if(beat&&!e.repeat&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyA'].includes(e.code))skipBeat();},{capture:true});
 // Mechanism framing helpers: a windmill's sail disc faces along its rotor's spin axis (local +z).
 function rotorNormal(hub){let best=null,bd=4;world.root.traverse(o=>{if(/^bh-rotor/.test(o.name)){const w=o.getWorldPosition(new T.Vector3()),d=w.distanceTo(hub);if(d<bd){bd=d;best=o;}}});return best?best.getWorldDirection(new T.Vector3()):null;}
 const V3=v=>v?new T.Vector3(v.x,v.y,v.z):null;
@@ -356,7 +363,7 @@ function storyBeats(){const P=world.points,pr=quest.progress,was=lastProgress;la
  // The final ring with Mara: bell and Mara together.
  if(on('complete')&&mara&&P.morningBellObject){const b=V3(P.morningBellObject),m=mara.position.clone().setY(mara.position.y+1.3),mid=b.clone().add(m).multiplyScalar(.5);startBeat(mid,{dist:port?10:8,up:1.6,dur:3.4,kind:'bell',normal:tmpA.set(-(movement.position.z-mid.z),0,movement.position.x-mid.x).clone(),hold:1.6,subject:mara.position.clone()});}   // from the side: the hero is not in front of the lens
  if(on('fragSail')&&P.fragment2){const f=V3(P.fragment2);startBeat(f,{dist:9,up:4,dur:2.6,kind:'hint',normal:tmpA.set(movement.position.x-f.x,0,movement.position.z-f.z).clone(),hold:1.8,subject:f});}}
-$('#stick').addEventListener('pointerdown',()=>skipBeat(),{capture:true});
+$('#stick').addEventListener('pointerdown',()=>{skipBeat();if(revealT>=1.5&&revealT<3.2)revealT=3.2;},{capture:true});
 function introCamera(sh){const tv=world.points.terraceView,P=world.points;if(!tv||!sh||sh.index>=4)return null;const e=sh.e-sh.shot.at,flat=(a,b)=>tmpB.set(b.x-a.x,0,b.z-a.z).normalize();
  if(sh.index===0)return {pos:new T.Vector3().lerpVectors(tv.pos,tv.target,.02*e),look:new T.Vector3(tv.target.x,tv.target.y+e*.1,tv.target.z)};
  if(sh.index===1){const b=P.morningBell,d=flat(tv.target,tv.pos).clone();return {pos:new T.Vector3(b.x+d.x*6.5-d.z*1.5,b.y+3.2,b.z+d.z*6.5+d.x*1.5),look:new T.Vector3(b.x,b.y+2.2,b.z)};}
@@ -369,7 +376,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  const p=movement.position,cinematic=introActive||quest.finaleActive;
  const simDt=hitStop>0?0:dt;hitStop=Math.max(0,hitStop-dt);
  if(!state.paused&&simDt>0){const dt=simDt;state.t+=dt;
-  movement.update(dt,{enabled:state.started&&!cinematic,actionSlow:!!state.action,faceTarget:state.action?state.actionTarget:null});
+  movement.update(dt,{enabled:state.started&&!cinematic&&!(revealT>=0&&revealT<REVEAL_END),actionSlow:!!state.action,faceTarget:state.action?state.actionTarget:null});
   if(movement.recovered){recoveredCount++;caption('A little current catches you and carries you back.',3);sound('capture');}
   travel+=movement.speed*dt;hero.position.copy(p);hero.rotation.y=state.started?movement.yaw:.35;
   if(introActive)updateIntro(dt);
@@ -394,9 +401,22 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  // ---- camera ----
  {const nowS=performance.now()/1000;if(movement.stickHeld)stickReleasedAt=nowS;
   openSpaceSwing(dt,nowS,state.started&&!state.paused&&!introActive&&!quest.finaleActive&&!beat&&!(arrival>0)&&!cameraDrag&&!encounterSubject()&&nowS-lastCameraInput>((armLength??11)<4?.8:2.5)&&nowS-stickReleasedAt>1);}   // pinned against a tower: swing sooner
+ // ---- Guardian reveal: hidden until the hero first reaches the well floor; then ~4.6 s (skippable after 1.5 s):
+ // input frozen, camera low behind the hero, the guardian lowered from high in the trunk, a heavy landing, then the fight.
+ {const G=quest.guardian,R=world.points.guardianWell?.rings;
+  if(G?.setReveal&&R){const pending=quest.progress.hollow&&!quest.progress.guardian&&!revealDone&&(G.phase|0)===0;
+   if(!pending){if(revealT>=0||revealWasSet){G.setReveal({held:false,hidden:false,off:0});revealWasSet=false;}revealT=-1;}
+   else if(revealT<0){G.setReveal({held:true,hidden:true,off:REVEAL_H});revealWasSet=true;const p=movement.position;
+    if(movement.grounded&&p.y<R.low.y+1.2&&Math.hypot(p.x,p.z)<Math.hypot(R.low.safe.x,R.low.safe.z)+2.5){revealT=0;revealLanded=false;fightYaw=null;revealCut=true;galK=0;armPitch=armLength=null;{const c0=G.object.position;if(Math.hypot(p.x-c0.x,p.z-c0.z)<5){movement.reset([R.low.safe.x,R.low.safe.y,R.low.safe.z]);movement.yaw=Math.atan2(c0.x-R.low.safe.x,c0.z-R.low.safe.z);}}   /* never under the landing guardian */
+     const c=G.object.position;movement.yaw=Math.atan2(c.x-p.x,c.z-p.z);bossAudio.event?.('rage',{d:1.6});}}
+   else{revealT+=dt;const t=revealT,e=v=>{v=Math.max(0,Math.min(1,v));return 1-Math.pow(1-v,3);};
+    const off=t<.8?REVEAL_H:t<3.2?REVEAL_H*(1-e((t-.8)/2.4)):t<3.7?-.35*Math.sin(Math.PI*(t-3.2)/.5):0;
+    if(t>=3.2&&!revealLanded){revealLanded=true;bossAudio.event?.('wall');bossAudio.event?.('phase',{phase:1});sound('knock');kick=1;kickDir.set(0,-1,0);}
+    G.setReveal({held:true,hidden:t<.8,off});
+    if(t>=REVEAL_END){G.setReveal({held:false,hidden:false,off:0});revealDone=true;revealT=-1;try{localStorage.setItem('bellkeeper-guardian-seen','1');}catch{}}}}}
  const pos=movement.position,portrait=camera.aspect<.85;let sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw),pitch=Math.atan(.48),length=portrait?11.5:10.8;
  liftLead=T.MathUtils.damp(liftLead,movement.lifting?1:0,movement.lifting?3:1.5,dt);// rise with the hero and show the ledge above
- frameSubject(encounterSubject(),pos,dt);
+ frameSubject(null,pos,dt);   /* the fight has its own camera below (behind the hero, facing the guardian) */
  const ahead=.8;let focus=tmpA.set(pos.x-sx*ahead,pos.y+1+liftLead*1.3,pos.z-sz*ahead).add(frameOffset),follow=7;
  pitch-=liftLead*.07;length+=liftLead*2.6+frameDist;
  // Hollow gallery (ring walkways round the open well, trunk centred on the origin), outside the fight: keep the lens
@@ -406,17 +426,29 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  // LOCKED to the open-void side of the hero with a small lead along the walk, at a steady arm. Q/E/drag may nudge it
  // up to ~30 deg; it springs back. Phone and desktop alike, stick held or not.
  {const inG=!introActive&&!quest.finaleActive&&!beat&&inGallery(pos);galK=T.MathUtils.damp(galK,inG?1:0,2.5,dt);
-  if(inG){const r=Math.hypot(pos.x,pos.z),ix=-pos.x/r,iz=-pos.z/r,tx=-iz,tz=ix,fy=movement.yaw,ft=Math.sin(fy)*tx+Math.cos(fy)*tz;
+  if(inG&&Math.hypot(pos.x,pos.z)>1.5){const r=Math.hypot(pos.x,pos.z),ix=-pos.x/r,iz=-pos.z/r,tx=-iz,tz=ix,fy=movement.yaw,ft=Math.sin(fy)*tx+Math.cos(fy)*tz;
    if(Math.abs(ft)>.3)galSgn=Math.sign(ft);const want=Math.atan2(ix-galSgn*tx*.4,iz-galSgn*tz*.4);
    if(galYaw===null){galYaw=cameraYaw;galSet=cameraYaw;galNudge=0;}
    const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a)),nowS=performance.now()/1000;
    galNudge=T.MathUtils.clamp(galNudge+wrap(cameraYaw-galSet),-.52,.52);if(nowS-lastCameraInput>1.2&&!cameraDrag)galNudge*=Math.exp(-dt*1.5);
    galYaw+=T.MathUtils.clamp(wrap(want-galYaw),-1.4*dt,1.4*dt);cameraYaw=galYaw+galNudge;galSet=cameraYaw;sx=Math.sin(cameraYaw);sz=Math.cos(cameraYaw);}
   else galYaw=null;
-  if(galK>.01)pitch=T.MathUtils.lerp(pitch,.55,galK);}
- // Guardian fight (a deep well): look down from over the well, not across it, so ring walls and posts stay out of the
- // lens and the hero, the guardian and the breath lanes read from above. Eased so no snap when the fight starts/ends.
- encK=T.MathUtils.damp(encK,encounterSubject()?1:0,1.5,dt);if(encK>.01){pitch=T.MathUtils.lerp(pitch,Math.max(pitch,portrait?.7:.6),encK);}
+  if(galK>.01){pitch=T.MathUtils.lerp(pitch,.6,galK);length=T.MathUtils.lerp(length,Math.min(length+1.5,(Math.hypot(pos.x,pos.z)+6.5)/Math.cos(.6)),galK);}}   /* lower down the well is narrow: never reach across it into the far wall */   /* a slightly wider, higher view for the whole descent */
+ // Guardian fight: close behind the hero on the line from the guardian through the hero (a little to one side), low,
+ // always looking toward the guardian so the hero is in the foreground and the boss towers over him. The yaw only
+ // tracks the hero round the well (smooth, no swings to other sides); walls are handled by the arm and the feelers.
+ // The reveal uses the same rig, lower and closer, looking up at the guardian coming down.
+ const fightG=encounterSubject();encK=T.MathUtils.damp(encK,fightG?1:0,1.5,dt);
+ if(fightG&&!introActive&&!quest.finaleActive){const gc=fightG.getCenter(tmpB).clone(),dx=pos.x-gc.x,dz=pos.z-gc.z,rr=Math.hypot(dx,dz)||1,
+   rv=revealT>=0&&revealT<REVEAL_END,want=Math.atan2(dx,dz)+(portrait?(rv?.14:.1):(rv?.35:.28)),wrap=a=>Math.atan2(Math.sin(a),Math.cos(a)),nowS=performance.now()/1000;
+  if(fightYaw===null)fightYaw=revealCut?want:cameraYaw;if(revealCut){revealCut=false;cameraTarget.set(pos.x,pos.y+1.4,pos.z);}   /* the reveal starts on a clean cut, not a swing through the wall */fightNudge=T.MathUtils.clamp(fightNudge+wrap(cameraYaw-fightSet),-.45,.45);if(nowS-lastCameraInput>1.2&&!cameraDrag)fightNudge*=Math.exp(-dt*1.2);
+  const yr=rv?Math.min(2.4,.6+revealT*1.6):1.6;fightYaw+=T.MathUtils.clamp(wrap(want-fightYaw),-yr*dt,yr*dt);   /* the reveal swings round from the open-side view, eased in */cameraYaw=fightYaw+fightNudge;fightSet=cameraYaw;sx=Math.sin(cameraYaw);sz=Math.cos(cameraYaw);
+  // look from the hero's head a third of the way toward the guardian's heart (up at it on the floor, down from the perch)
+  // the arm orbits the hero's head; the lens then turns toward the guardian's heart (fightAim) without losing the hero
+  const fk=encK,heart=gc.clone().setY(rv?(world.points.guardianWell.rings.low.y+3.8):fightG.min.y+(fightG.max.y-fightG.min.y)*.55);   /* reveal: aim where it will land, not at the lifted body */focus=tmpA.lerpVectors(tmpA.set(pos.x-sx*ahead,pos.y+1+liftLead*1.3,pos.z-sz*ahead),new T.Vector3(pos.x,pos.y+1.4+liftLead*1.3,pos.z),fk);
+  const close=T.MathUtils.clamp(5.5-rr,0,3.5),camD=rr+(rv?(portrait?5:4.2):6.5)+close*.8;heart.y=Math.min(heart.y,pos.y+1.5+Math.tan(.42)*camD);fightAim.copy(heart);   /* never look up past ~24 deg: no sky, no view up the skirt */fightAimK=fk*(rv?.36:.3*(1-close/5));
+  pitch=T.MathUtils.lerp(pitch,rv?.12:(portrait?.36:.3)+liftLead*.1+close*.07,fk);length=T.MathUtils.lerp(length,rv?(portrait?5:4.2):(portrait?6.2:6.5)+liftLead*2+close*.8,fk);   /* right under the guardian: pull back and up a little so the hero stays in frame */skipGuardianBox=true;}
+ else{fightYaw=null;fightNudge=0;skipGuardianBox=false;fightAimK=0;}
  const shot=introShot();
  if(shot&&!state.gentle){const s=shot.shot,q=s.focus==='hero'?pos:world.points[s.focus]||pos;focus=tmpA.set(q.x,q.y+s.up,q.z);sx=Math.sin(cameraYaw+s.yaw+shot.e*.012);sz=Math.cos(cameraYaw+s.yaw+shot.e*.012);pitch=s.pitch;length=s.len;follow=1.6;}
  else if(introActive){focus=tmpA.set(pos.x,pos.y+1,pos.z);}
@@ -443,7 +475,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
   const tv=world.points.terraceView;
   if(arrival>0&&tv){// Back on the terrace: ease from the painted terrace view into the normal follow arm.
    arrival=Math.max(0,arrival-dt);const k=ease(1-arrival/2.6);camera.position.lerpVectors(tv.pos,tmpB.copy(camera.position),k);camera.lookAt(tmpA.lerpVectors(tv.target,cameraTarget,k));
-  }else camera.lookAt(cameraTarget);}
+  }else camera.lookAt(fightAimK>.01?tmpB.copy(cameraTarget).lerp(fightAim,fightAimK):cameraTarget);}
  // Portrait phones: the stick and action button cover the lower screen, so shift the frame to put the hero higher.
  {const want=camera.aspect<.85&&state.started&&!introActive&&!quest.finaleActive&&!beat?.14:0;viewShift=T.MathUtils.damp(viewShift,want,3,dt);
   if(Math.abs(viewShift-appliedShift)>.002||(!viewShift&&appliedShift)){appliedShift=viewShift<.003?0:viewShift;if(appliedShift)camera.setViewOffset(innerWidth,innerHeight,0,appliedShift*innerHeight,innerWidth,innerHeight);else camera.clearViewOffset();}}

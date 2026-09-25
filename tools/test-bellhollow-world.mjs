@@ -177,11 +177,11 @@ const routes = [
   ['ladders drop L0->terrace', 'drop', P.ladders.ledge0, G(-15.5, 16.3, 0)],
   // Sky Bridge and the Hollow
   ['sky bridge', 'walk', [P.start, G(-12, 22, 0), P.bridge.start, ...arc(-8, 86, 22, 0, 4).map((p) => G(Math.atan2(p.x, p.z) * 180 / Math.PI, 22, 4.2)).map((p, i, A) => { const a = -8 + 94 * i / (A.length - 1); return G(a, 22, (a + 8) / 94 * 4 + .1); }), P.bridge.end, P.hollowGate, P.hollowGateInside]],
-  ['gallery descent', 'walk', [P.hollowGateInside, P.gallery.top, ...galArc(105, 340), P.gallery.bottom, G(340, 7.3, -4), ...arc(340, 250, 7.3, -4), R.high.safe, P.pairedBells.stand, ...arc(225, 300, 7.3, -4), R.high.vaneStand]],
+  ['gallery descent', 'walk', [P.hollowGateInside, P.gallery.top, ...galArc(105, 340), P.gallery.bottom, G(340, 7.3, -4), ...arc(340, 250, 7.3, -4), R.high.safe, P.pairedBells.stand, ...arc(225, 300, 7.3, -4)]],
   ['well drop high->mid', 'drop', G(250, 7.2, -4), G(250, 5.2, -9)],
-  ['well mid ring', 'walk', [G(250, 5.2, -9), G(250, 5.0, -9), R.mid.catchPoint, ...arc(245, 130, 5.0, -9), R.mid.safe, ...arc(130, 220, 5.0, -9), R.mid.vaneStand]],
+  ['well mid ring', 'walk', [G(250, 5.2, -9), G(250, 5.0, -9), R.mid.catchPoint, ...arc(245, 130, 5.0, -9), R.mid.safe, ...arc(130, 220, 5.0, -9)]],
   ['well drop mid->low', 'drop', G(150, 4.8, -9), G(152, 3.8, -14)],
-  ['well low ring', 'walk', [G(152, 3.8, -14), G(160, 2.4, -14), G(128, 1.6, -14), R.low.catchPoint, R.low.vaneStand, R.low.safe]],
+  ['well low ring', 'walk', [G(152, 3.8, -14), G(160, 2.4, -14), G(128, 1.6, -14), R.low.catchPoint, R.low.safe, G(8, 11.3, -14), R.low.vaneStand, G(8, 11.3, -14), R.low.safe, G(36, 11.3, -14), R.mid.vaneStand, G(36, 11.3, -14), R.low.safe, G(80, 11.3, -14), R.high.vaneStand, G(80, 11.3, -14), R.low.safe]],   // arena fight: all three vanes on the floor
   ['well updraft low->mid', 'vent', 'ring1', G(111, 5.6, -9)],
   ['well updraft mid->high', 'vent', 'ring2', G(280, 7.6, -4)],
   ['well to ring3 grille', 'walk', [R.high.safe, ...arc(250, 186, 7.3, -4), G(184, 8, -4)]],

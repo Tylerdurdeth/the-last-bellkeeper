@@ -144,4 +144,32 @@ assert(quest.progress.pipes && quest.progress.sails && !quest.progress.ladders);
 assert(wind.pushValue('sailsBridge') === 1 && wind.pushValue('terraceGate') === 1, 'pushed states persist instantly');
 assert.equal(world.restored.skyBridge, 2 / 3);
 assert(!readSave({ getItem: () => '{"version":2,"quest":{},"checkpoint":[0,0,1e9]}' }), 'rejects out-of-range checkpoint');
+// --- Real guardian, arena fight (25 Sep redesign) on the real world: lives, sweep-back restart, right-vane puzzle, seal ---
+{
+  const { buildBellhollow: buildReal } = await import('../game/bellhollow/world.js');
+  const { createGuardian } = await import('../game/bellhollow/guardian.js');
+  const rw = buildReal({ THREE, scene: new THREE.Scene() }), rwind = createWind({ THREE, scene: new THREE.Scene() }), ev = [], caps = [];
+  const mv = { grounded: true, lifting: false, knocked: false };
+  const G = createGuardian({ THREE, scene: new THREE.Scene(), world: rw, wind: rwind, movement: mv, caption: c => caps.push(c), onEvent: e => ev.push(e) });
+  const F = rw.points.guardianWell.rings.low, hero = new THREE.Vector3(F.safe.x, F.safe.y, F.safe.z);
+  let gt = 0; const run = (sec, fn) => { for (let i = 0; i < sec * 30; i++) { gt += 1 / 30; G.update(1 / 30, gt, { hero, active: true }); rwind.update(1 / 30, gt, { hero }); if (fn?.()) return true; } return false; };
+  run(.1); assert(G.fighting && G.lives === 3 && rw.state.wellSeal === 1, 'fight starts on the floor with 3 lives; floor grille sealed');
+  assert(!G.context(new THREE.Vector3(F.vent.x, F.vent.y, F.vent.z), 0) || G.context(new THREE.Vector3(F.vent.x, F.vent.y, F.vent.z), 0).kind !== 'vent');
+  // Standing still in the open gets swept: three hits empty the lives and the fight restarts from scratch.
+  assert(run(60, () => (rwind.removeSource('guardianBreath'), ev.some(e => e.sweep))), 'out of lives: swept back');   // (no breath waiting: every volley aims at the hero)
+  const sw = ev.find(e => e.sweep); assert.equal(sw.lives, 3); assert.equal(G.phase, 0); assert.equal(ev.filter(e => e.knock).length, 3, 'each hit costs one life');
+  assert.deepEqual(sw.knock.to.map(v => +v.toFixed(1)), [F.safe.x, F.safe.y, F.safe.z].map(v => +v.toFixed(1)), 'swept back to the arena entry');
+  // Right vane only: the breath given to a vane that does not match the heart spills; the matching one turns.
+  const vaneP = k => rw.points.guardianWell.rings[['low', 'mid', 'high'][k]].vaneStand;
+  mv.lifting = true;   // (the knock rules spare a lifted hero: this part checks the puzzle, not the dodging)
+  for (let ph = 0; ph < 3; ph++) {
+    assert(run(40, () => rwind.sources.get('guardianBreath')?.active), 'spent breath settles in phase ' + (ph + 1));
+    const tv = G.targetVane, wrong = [0, 1, 2].find(k => k !== tv && !G.telemetry().turned[k]);
+    if (wrong !== undefined) { rwind.setCharge('guardianBreath', 'guardian'); const c = G.context(vaneP(wrong), 0, true); assert.equal(c.kind, 'give'); G.interact(c, { staffTip: vaneP(wrong) }); assert.equal(G.phase, ph, 'wrong vane does not turn ' + JSON.stringify({ ph, tv, wrong, c })); assert(/heart burns/.test(caps.at(-1))); }
+    rwind.setCharge('guardianBreath', 'guardian'); const c = G.context(vaneP(tv), 0, true); assert.equal(c.vane, tv); G.interact(c, { staffTip: vaneP(tv) });
+    assert(run(6, () => G.phase === ph + 1), 'right vane turns in phase ' + (ph + 1)); rwind.setCharge(null);
+  }
+  assert(G.done && ev.some(e => e.done)); run(3); assert.equal(rw.state.wellSeal, 0, 'calmed: the seal opens');
+  assert.deepEqual(G.serialize(), { phase: 3 }); G.restore({ phase: 1 }); assert.equal(G.phase, 0, 'a mid-fight save restarts the fight');
+}
 console.log(`PASS: v2 quest route with stub world — terrace beats, chain, updraft, push+reset lever, sails cap (wrong-order hint), pipes valve (wrong outlet, no penalty), timed shutter, gallery carvings by wind, fragments + keepsake, three mills in order, sky bridge, gallery, guardian stub 3 phases, paired bells, finale, Mara ending; saves v2 (v1 ignored). ${captions.length} captions.`);

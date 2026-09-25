@@ -111,3 +111,6 @@ body.finale-cine #stick{visibility:hidden!important}
 /* Ending: a proper panel centred low over the ringing bell, with Mara's line (not a small toast). */
 #ending.completion{width:min(620px,calc(100vw - 32px));padding:22px 28px 20px;border-top:3px solid var(--copper);border-radius:4px 14px 14px 4px;background:linear-gradient(120deg,#243e37fa,#243e37ec);box-shadow:0 14px 40px #142b3455}
 #ending.completion p:not(.eyebrow){font-size:17px;line-height:1.5}#ending.completion #endingDetail{display:block;margin-top:8px;font-style:italic;color:#eedfb8}
+/* guardian fight: three bell-shaped lives beside the bell status; soft fade when the gust sweeps the hero back */
+#lives{display:inline-flex;gap:5px;margin-left:4px;padding-left:10px;border-left:1px solid #fff0c933}#lives i{width:15px;height:17px;background:#e2b975;border-radius:8px 8px 3px 3px;box-shadow:0 2px 0 #7a4a2a,0 0 6px #e2b97599}#lives i.off{background:transparent;border:2px solid #e2b97577;box-shadow:none}
+body.swept canvas{animation:swept 1.8s ease both}@keyframes swept{0%{filter:none}30%,65%{filter:brightness(.22) saturate(.6) blur(2px)}100%{filter:none}}
