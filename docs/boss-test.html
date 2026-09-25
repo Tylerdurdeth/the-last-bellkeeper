@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boss test · The Last Bellkeeper</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #16211f; color: #efe6cf; font: 17px/1.5 Georgia, serif; }
+  main { max-width: 30rem; padding: 24px 16px; }
+  h1 { font-size: 1.5rem; margin: 0 0 .5rem; }
+  p { margin: .5rem 0 1rem; color: #cfc6ad; }
+  a, button { display: block; width: 100%; box-sizing: border-box; margin: 10px 0; padding: 14px 16px; border-radius: 10px; border: 1px solid #a07a4e; background: #2c3d38; color: #efe6cf; font: inherit; text-align: center; text-decoration: none; cursor: pointer; }
+  small { color: #9d957f; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Boss test</h1>
+  <p>Jumps straight to the Hollow gallery, just before the walk down to the guardian's arena. Everything earlier in the game is marked done.</p>
+  <p><small>This replaces your saved journey on this device.</small></p>
+  <button id="go">Start at the Hollow gallery</button>
+  <a href="./">Back to the normal game</a>
+</main>
+<script>
+// Dev shortcut: seeds a v2 save with every beat up to the carving return done, checkpoint on the gallery,
+// and clears the "guardian seen" flag so the reveal plays. Then Continue loads it.
+document.getElementById('go').onclick = () => {
+  const done = ['bell', 'bypass', 'staff', 'seed', 'loft', 'sailsBridge', 'sails', 'pipesA', 'pipesB', 'pipes', 'ladders', 'skyBridge', 'hollow', 'carvingOut', 'carvingReturn'];
+  const save = { version: 2, checkpoint: [-2.982, 0.551, -9.754], quest: { version: 2, progress: Object.fromEntries(done.map(k => [k, true])), reached: { loft: true, ladders1: true, ladders2: true, ladders3: true }, fragments: [], seen: [], charge: null } };
+  try {
+    localStorage.setItem('bellkeeper-adventure-v2', JSON.stringify(save));
+    localStorage.removeItem('bellkeeper-guardian-seen');
+  } catch (e) { alert('This browser blocked storage, so the shortcut cannot work here.'); return; }
+  location.href = './';
+};
+</script>
+</body>
+</html>
