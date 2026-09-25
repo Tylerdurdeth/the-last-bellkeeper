@@ -35,7 +35,7 @@ let saveTimer=0,introTime=0,introActive=false,lastShot=-1,queued=null,uiTimer=0,
 let stickReleasedAt=-9,beat=null,villagers=null,map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
 // Camera spring arm, subject framing and chart tucking state (see frame()).
-let skipGuardianBox=false,encK=0,viewShift=0,appliedShift=0,armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
+let galK=0,galYaw=null,galSet=0,galNudge=0,galSgn=1,skipGuardianBox=false,encK=0,viewShift=0,appliedShift=0,armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
 const loadedSave=readSave(),legacy=!loadedSave&&hasLegacySave();
 const CARD=7,CARDS=3*CARD,ENGINE=20;// prologue cards, then the 20 s in-engine intro
 function save(){if(!state.started||introActive||!quest||quest.finaleActive||!movement)return;const c=movement.checkpoint;writeSave({quest,checkpoint:[c.x,c.y,c.z],map});}
@@ -246,7 +246,7 @@ function placeCamera(dt,sx,sz,pitch,length){wantLength=length;// Test the arm fr
  // Blocked: rise first (up to ~55° at full length), then pull in a little (>= 6.5 m), then lower angles at full
  // length, then shorten — but keep the arm >= 5.5 m, then >= 4.5 m. Only where truly enclosed (overhangs, alleys) the pitch/length pair with the longest
  // free arm, preferring gentle pitches: never the old 60°/2.5 m straight-down collapse.
- if(armHit(armOrigin,sx,sz,p,l)){let found=false;const lifting=!!movement?.lifting,MAXP=lifting?.72:.96;   // riding an updraft: never tip toward top-down, pull in instead
+ if(galK<.5&&armHit(armOrigin,sx,sz,p,l)){let found=false;const lifting=!!movement?.lifting,MAXP=lifting?.72:.96;   // riding an updraft: never tip toward top-down, pull in instead
   for(let q=pitch+.05;q<=MAXP+1e-6&&!found;q+=.05)if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;}
   for(let q=pitch;q<=MAXP+1e-6&&!found;q+=.08){const hit=armHit(armOrigin,sx,sz,q,l);const l2=Math.max(6.5,hit-.6);if(l2<l&&!armHit(armOrigin,sx,sz,q,l2)){p=q;l=l2;found=true;}}
   for(let q=pitch-.05;q>=.2&&!found;q-=.05)if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;}
@@ -256,7 +256,7 @@ function placeCamera(dt,sx,sz,pitch,length){wantLength=length;// Test the arm fr
   for(const L of [l,7,5.5,4.5])for(let q=MAXP+.04;q<=(lifting?.8:1.12)+1e-6&&!found&&L<=l;q+=.04)if(!armHit(armOrigin,sx,sz,q,L)){p=q;l=L;found=true;}
   if(!found){let best=-1;for(let q=.12;q<=MAXP+1e-6;q+=.08){const hit=armHit(armOrigin,sx,sz,q,l),free=Math.max(2.5,hit-.6)-Math.abs(q-pitch)*1.5;if(free>best){best=free;p=q;l=Math.max(2.5,hit-.6);}}}}
  // Branch bark (never fades, curved tubes the height tests miss): one ray along the chosen arm; rise, else pull in.
- let cut=barkCut(armOrigin,sx,sz,p,l);if(cut){for(let q=p+.12;q<=(encK>.5?1.25:1.0)&&cut;q+=.12){if(!armHit(armOrigin,sx,sz,q,l)&&!barkCut(armOrigin,sx,sz,q,l)){p=q;cut=0;}}
+ let cut=galK<.5?barkCut(armOrigin,sx,sz,p,l):0;if(cut){for(let q=p+.12;q<=(encK>.5?1.25:1.0)&&cut;q+=.12){if(!armHit(armOrigin,sx,sz,q,l)&&!barkCut(armOrigin,sx,sz,q,l)){p=q;cut=0;}}
   for(let q=p-.12;q>=.3&&cut;q-=.12){if(!armHit(armOrigin,sx,sz,q,l)&&!barkCut(armOrigin,sx,sz,q,l)){p=q;cut=0;}}
   for(const L of [l*.75,l*.55])if(cut&&L>=6){for(const q of [p,pitch]){if(cut&&!armHit(armOrigin,sx,sz,q,L)&&!barkCut(armOrigin,sx,sz,q,L)){p=q;l=L;cut=0;}}}if(cut)l=Math.max(3.5,Math.min(l,cut-.5));}
  // Right beside the guardian (catching its breath) its body would squeeze the arm: then let the lens pass it instead.
@@ -276,7 +276,9 @@ function screenBox(box){let l=1e9,t=1e9,r=-1e9,b=-1e9;for(let i=0;i<8;i++){ndc.s
 function hudSafe(){const s={l:12,t:12,r:innerWidth-12,b:innerHeight-12},top=$('#hud>div')?.getBoundingClientRect();if(top?.height)s.t=Math.max(s.t,top.bottom+10);
  for(const el of document.querySelectorAll('#caption,#charge,#controls button,#stick,#hint')){if(el.hidden||el.id==='caption'&&el.style.opacity==='0'||getComputedStyle(el).visibility==='hidden')continue;const r=el.getBoundingClientRect();if(r.height&&r.top>innerHeight*.45)s.b=Math.min(s.b,r.top-10);}
  if(!document.body.classList.contains('chart-tucked')&&!mapCanvas.hidden&&getComputedStyle(mapCanvas).visibility!=='hidden'){const r=mapCanvas.getBoundingClientRect();if(r.width&&r.left>innerWidth*.5)s.r=Math.min(s.r,r.left-10);}return s;}
-function encounterSubject(){return state.started&&!introActive?quest?.subject()||null:null;}
+// The carved gallery (outer ring walkway, r > ~9 m, above the high ring) is not the fight: no encounter framing there.
+const inGallery=p=>!!p&&quest?.area?.(p)==='hollow'&&Math.hypot(p.x,p.z)>9.2&&p.y>-3;
+function encounterSubject(){return state.started&&!introActive&&!inGallery(movement?.position)?quest?.subject()||null:null;}
 // Keep hero and encounter actor inside the HUD-free area: pan the look target, widen the arm, and
 // (not in gentle motion, not right after manual Q/E/drag) turn gently only when they cannot fit.
 function frameSubject(subject,pos,dt){
@@ -336,6 +338,8 @@ function startBeat(look,{dur=2.6,dist=16,up=5,from=null,kind='',normal=null,hold
  // Last resort: high on the hero's side of the subject (both usually visible) before giving the beat up.
  for(const up2 of [5,8])if(!good){const c=new T.Vector3(p.x-look.x,0,p.z-look.z).normalize().multiplyScalar(Math.min(dist,9)).add(look);c.y=Math.max(look.y,p.y)+up2;guardLens(c);if(beatClear(look,c)&&!solidAt(c.x,c.z,c.y,.45))good=c;}
  if(!good)return;pos=good;
+ // Never a beat lens right on top of the hero or in bark (the narrow Hollow gallery showed both): skip it instead.
+ if(pos.distanceTo(p)<3||inTrunk(pos.x,pos.z,pos.y)||barkBetween(tmpB.set(p.x,p.y+1.4,p.z).clone(),pos))return;
  beat={t:0,dur:state.gentle?dur+.6:dur,pos,look:look.clone(),kind,hold:Math.min(hold,dur-.6),subject:subject?subject.clone():null,from:p.clone()};}
 function skipBeat(){if(beat&&beat.t>=beat.hold&&beat.t<beat.dur-.6)beat.t=beat.dur-.6;}
 // A held arrow (key repeat) is steering, not a skip: only a fresh press skips, and never before the beat's hold.
@@ -395,6 +399,21 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  frameSubject(encounterSubject(),pos,dt);
  const ahead=.8;let focus=tmpA.set(pos.x-sx*ahead,pos.y+1+liftLead*1.3,pos.z-sz*ahead).add(frameOffset),follow=7;
  pitch-=liftLead*.07;length+=liftLead*2.6+frameDist;
+ // Hollow gallery (ring walkways round the open well, trunk centred on the origin), outside the fight: keep the lens
+ // over the void, looking out at the hero and a little along the walk. A slow eased turn, allowed even while the phone
+ // stick is held (it only drifts ~0.6 rad/s, so steering does not swim); paused after manual Q/E or drag.
+ // Hollow gallery (outer ring walkway round the open well, trunk centred on the origin), outside the fight: the lens is
+ // LOCKED to the open-void side of the hero with a small lead along the walk, at a steady arm. Q/E/drag may nudge it
+ // up to ~30 deg; it springs back. Phone and desktop alike, stick held or not.
+ {const inG=!introActive&&!quest.finaleActive&&!beat&&inGallery(pos);galK=T.MathUtils.damp(galK,inG?1:0,2.5,dt);
+  if(inG){const r=Math.hypot(pos.x,pos.z),ix=-pos.x/r,iz=-pos.z/r,tx=-iz,tz=ix,fy=movement.yaw,ft=Math.sin(fy)*tx+Math.cos(fy)*tz;
+   if(Math.abs(ft)>.3)galSgn=Math.sign(ft);const want=Math.atan2(ix-galSgn*tx*.4,iz-galSgn*tz*.4);
+   if(galYaw===null){galYaw=cameraYaw;galSet=cameraYaw;galNudge=0;}
+   const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a)),nowS=performance.now()/1000;
+   galNudge=T.MathUtils.clamp(galNudge+wrap(cameraYaw-galSet),-.52,.52);if(nowS-lastCameraInput>1.2&&!cameraDrag)galNudge*=Math.exp(-dt*1.5);
+   galYaw+=T.MathUtils.clamp(wrap(want-galYaw),-1.4*dt,1.4*dt);cameraYaw=galYaw+galNudge;galSet=cameraYaw;sx=Math.sin(cameraYaw);sz=Math.cos(cameraYaw);}
+  else galYaw=null;
+  if(galK>.01)pitch=T.MathUtils.lerp(pitch,.55,galK);}
  // Guardian fight (a deep well): look down from over the well, not across it, so ring walls and posts stay out of the
  // lens and the hero, the guardian and the breath lanes read from above. Eased so no snap when the fight starts/ends.
  encK=T.MathUtils.damp(encK,encounterSubject()?1:0,1.5,dt);if(encK>.01){pitch=T.MathUtils.lerp(pitch,Math.max(pitch,portrait?.7:.6),encK);}
