@@ -70,10 +70,18 @@ export default function(THREE) {
 
  // Short boyish cut from R-hero: a close sculpted cap above the ears, chunky pointed clumps swept back on top, a side-swept fringe clear of the eyes.
  const hairShadow=mat(0x241a24),hairMid=mat(0x352733),hairSun=mat(0x4b3747);
- const scalp=new THREE.SphereGeometry(1,48,28,0,Math.PI*2,0,Math.PI*.70),sp=scalp.attributes.position;
- // Coverage by direction: low at the nape, above the ears at the sides, a clean hairline over the brow at the front.
- for(let j=0;j<=28;j++)for(let i=0;i<=48;i++){const a=i/48*Math.PI*2,f=Math.max(0,Math.sin(a)),b=Math.max(0,-Math.sin(a)),cover=Math.PI*(.40*f+.56*b+.50*(1-f-b)),t=j/28*cover,sn=Math.sin(t);sp.setXYZ(j*49+i,-Math.cos(a)*sn*.124,.185+Math.cos(t)*.160*(1+.10*Math.max(0,Math.cos(t))*(1-f)),Math.sin(a)*sn*.119-.022);}
+ const scalp=new THREE.SphereGeometry(1,48,28,0,Math.PI*2,0,Math.PI*.76),sp=scalp.attributes.position;
+ // Coverage by direction: down to the nape at the back (slightly ragged), above the ears at the sides, a clean hairline over the brow at the front.
+ for(let j=0;j<=28;j++)for(let i=0;i<=48;i++){const a=i/48*Math.PI*2,f=Math.max(0,Math.sin(a)),b=Math.max(0,-Math.sin(a)),tooth=1-Math.abs((i+1)%6-3)/3,cover=Math.PI*(.40*f+.50*(1-f)+b**.75*(.19+.06*tooth+.012*Math.sin(a*5+1))),t=j/28*cover,sn=Math.sin(t);sp.setXYZ(j*49+i,-Math.cos(a)*sn*.124,.185+Math.cos(t)*.160*(1+.10*Math.max(0,Math.cos(t))*(1-f*Math.sin(t))),Math.sin(a)*sn*.119-.022);}
+ // Shrink-wrap the lower back and behind-ear coverage onto the skull, so the nape hair hugs the head instead of flaring into a cap rim.
+ const skullPts=[];for(let i=0;i<fp.count;i++)if(fp.getZ(i)<.03)skullPts.push(new THREE.Vector3(fp.getX(i),fp.getY(i),fp.getZ(i)));
+ // Back-of-head surface point (skull, or neck below it), pushed out by `off`: nape locks are laid on the real form.
+ const neckZ=y=>{const t=THREE.MathUtils.clamp((y+.06)/.155,0,1);return -.025-(.027+.008*(1-t)**3+.007*t**4);};
+ const onBack=(x,y,off)=>{let best=1,z=0;for(const p of skullPts){if(p.z>-.01)continue;const e=(p.x-x)**2+(p.y-y)**2;if(e<best){best=e;z=p.z;}}const nz=Math.abs(x)<.03?neckZ(y):0;return [x,y,(best<.00015?Math.min(z,nz):nz)-off];};
+ {const v=new THREE.Vector3();for(let i=0;i<sp.count;i++){v.fromBufferAttribute(sp,i);const w=(1-THREE.MathUtils.smoothstep(v.y,.150,.230))*THREE.MathUtils.smoothstep(-v.z,.02,.06);if(w<=0)continue;const z=onBack(v.x,v.y,.006)[2];sp.setZ(i,THREE.MathUtils.lerp(v.z,Math.min(z,v.z+.004),w));}}
  scalp.computeVertexNormals();mesh(head,scalp,hairMid).receiveShadow=false;
+ // Point on the (wrapped) hair shell nearest (x,y) on the back half, pushed out by `off`: behind-ear locks sit on it, not inside the head.
+ const onScalp=(x,y,off)=>{let best=1,z=0;for(let i=0;i<sp.count;i++){const pz=sp.getZ(i);if(pz>-.01)continue;const e=(sp.getX(i)-x)**2+(sp.getY(i)-y)**2;if(e<best){best=e;z=pz;}}return [x,y,z-off];};
  // One clump: a rounded-base, pointed, flattened lathe laid along base→tip, flat face turned away from the skull, tip curling back toward it.
  function clump(base,tip,width,thick,curl,material){
   const B=new THREE.Vector3(...base),T=new THREE.Vector3(...tip),dir=T.clone().sub(B),len=dir.length();dir.normalize();
@@ -90,14 +98,16 @@ export default function(THREE) {
  clump([-.070,.300,.070],[.020,.245,.125],.042,.022,.010,hairSun);
  clump([-.020,.310,.060],[.070,.240,.118],.040,.022,.010,hairMid);
  clump([.040,.300,.050],[.110,.235,.085],.032,.020,.010,hairMid);
- // Short sides hugging the head above the ears, and a neat nape.
- for(const side of [-1,1]){clump([side*.098,.270,.020],[side*.118,.210,-.020],.028,.010,.006,side<0?hairMid:hairShadow);clump([side*.085,.230,-.070],[side*.095,.150,-.100],.028,.010,.006,hairShadow);}
- clump([.000,.210,-.110],[.000,.105,-.118],.050,.016,.010,hairShadow);
+ // Short sides hugging the head above the ears, blending behind the ears down into the nape.
+ for(const side of [-1,1]){clump([side*.098,.270,.020],[side*.118,.210,-.020],.028,.010,.006,hairMid);clump([side*.085,.230,-.070],[side*.095,.150,-.100],.028,.010,.006,hairMid);
+  clump(onScalp(side*.090,.180,.004),onScalp(side*.082,.105,.010),.026,.009,.006,hairShadow);clump(onScalp(side*.068,.150,.004),onBack(side*.062,.072,.010),.024,.009,.006,side<0?hairMid:hairShadow);}
  // Back of the head, the view the game camera sees most: layered locks falling from the crown to the nape so it reads as hair, not a cap.
- for(let i=0;i<5;i++){const u=(i-2)/2,x=u*.085;clump([x*.5,.312,-.100],[x*1.10,.150+Math.abs(u)*.024,-.170+Math.abs(u)*.022],.054,.020,.020,i===2?hairMid:i%2?hairShadow:hairMid);}
- for(let i=0;i<4;i++){const u=(i-1.5)/1.5,x=u*.075;clump([x*.6,.250,-.132],[x*1.15,.108,-.160],.044,.016,.014,hairShadow);}
+ for(let i=0;i<5;i++){const u=(i-2)/2,x=u*.085;clump([x*.5,.310,-.086],[x*1.10,.150+Math.abs(u)*.024,-.170+Math.abs(u)*.022],.054,.020,.020,i===2?hairMid:i%2?hairShadow:hairMid);}
+ for(let i=0;i<4;i++){const u=(i-1.5)/1.5,x=u*.070,drop=[.004,-.012,.008,-.006][i];clump(onBack(x*.6,.225,.002),onBack(x*1.1,.100+drop,.014),.042,.014,.012,hairShadow);}
+ // Soft, slightly ragged nape: short tapered locks lying on the skull, tips just over the top of the neck.
+ for(let i=0;i<7;i++){const u=(i-3)/3,x=u*.058,tipY=.054+Math.abs(u)*.018+[.006,-.006,.008,-.004,.010,-.008,.004][i];clump(onBack(x,.140,.000),onBack(x*1.08+(i%2?.004:-.004),tipY,.004),.030-Math.abs(u)*.005,.009,.011,i%2?hairMid:hairShadow);}
  // Tufts that break the cap's rim: sideburns in front of the ears and short flicks behind them.
- for(const side of [-1,1]){clump([side*.108,.215,.030],[side*.118,.168,.042],.020,.009,.004,hairMid);clump([side*.110,.225,-.040],[side*.126,.170,-.062],.024,.010,.006,hairShadow);clump([side*.096,.205,-.090],[side*.108,.150,-.112],.024,.010,.006,hairShadow);}
+ for(const side of [-1,1]){clump([side*.108,.215,.030],[side*.118,.168,.042],.020,.009,.004,hairMid);clump([side*.110,.225,-.040],[side*.126,.170,-.062],.024,.010,.006,hairMid);clump([side*.096,.205,-.090],[side*.108,.150,-.112],.024,.010,.006,hairShadow);}
  root.userData.faceStudy=true;
 
 
