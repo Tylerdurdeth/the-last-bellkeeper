@@ -23,7 +23,7 @@ export default function (THREE, opts = {}) {
   const metal = Object.assign(new T.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .42, metalness: .35 }), { name: 'metal' });
   const shiny = Object.assign(new T.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .22, metalness: .75, emissive: 0x3a1c08, emissiveIntensity: .35 }), { name: 'metal' });
   const C = h => new T.Color(h);
-  const SKIN = C(0xE3AC86), SKIN_SH = C(0xC98C69), BLUSH = C(0xE58F7A), LINE = C(0xB5785C), LIP = C(0xD08070), HAIR = C(0xDCDDD8), HAIR_SH = C(0xA3ABA8),
+  const SKIN = C(0xE3AC86), SKIN_SH = C(0xC98C69), BLUSH = C(0xE58F7A), LINE = C(0xB5785C), LIP = C(0xD08070), HAIR = C(0xDCDDD8), HAIR_SH = C(0xB2A99C),
     BLOUSE = C(0xF2E6C9), BLOUSE_SH = C(0xD8C7A4), APRON = C(0xC49A4C), APRON_SH = C(0x9C7536), STITCH = C(0x7A5A2A), SKIRT = C(0x5E4130), SKIRT_SH = C(0x46301F),
     BOOT = C(0x6E4830), BOOT_SH = C(0x4B3021), LEATHER = C(0x7A4E33), CORAL = C(0xD96956), CORAL_SH = C(0xB14E3F), COPPER = C(0xB8733F), VERD = C(0x3E9C8C),
     WHITE = C(0xF6EFE2), IRIS = C(0x5C4028), IRIS_L = C(0x7F6A3A), INK = C(0x2A1E1C);
@@ -187,7 +187,7 @@ export default function (THREE, opts = {}) {
     const lid = ell(eyes, (v, o) => o.copy(SKIN).lerp(SKIN_SH, .2), ex, .0125, ez + .0005, .0205, .0056, .008, paint, 14, 8); lid.rotation.z = -s * .1;
     tube(eyes, [[ex - s * .019, .002, ez + .002], [ex, .0105, ez + .007], [ex + s * .021, .003, ez + .001]], .0018, .0011, INK);
     tube(eyes, [[ex - s * .013, -.0065, ez + .003], [ex, -.009, ez + .004], [ex + s * .014, -.006, ez + .002]], .0009, .0007, LINE);
-    tube(head, [[s * .014, HY + .05, .095], [s * .034, HY + .063, .095], [s * .057, HY + .055, .088]], .0066, .0035, C(0x6E6158));   // brows, raised and kind
+    tube(head, [[s * .015, HY + .05, .095], [s * .034, HY + .062, .095], [s * .055, HY + .055, .088]], .0036, .002, C(0xB4AFA6));   // brows: fine, silver-grey, raised and kind
   }
   // Hair: silver cap swept back from the brow in waves, side waves over the ears, a bun with a copper pin.
   {

@@ -11,9 +11,9 @@ export const VILLAGER_CLIPS = { baker: { clip: 'Idle_Talking_Loop', phase: .1 },
 const DEG = Math.PI / 180, polar = (az, r) => [r * Math.sin(az * DEG), r * Math.cos(az * DEG)];
 // who, preferred spot (terrace azimuth / radius from the trunk), the mill (area) they watch
 const CAST = [
-  { who: 'baker', az: -12, r: 23.4, mill: 'terrace' },       // on the outer rim near the start, in the open (seen from the street)
+  { who: 'baker', az: -10, r: 23.4, mill: 'terrace' },       // on the outer rim near the start, in the open (seen from the street)
   { who: 'elder', az: -55, r: 24, mill: 'sails' },           // on the market rim beside the planters, watching the street
-  { who: 'girl', az: -38.5, r: 23.6, mill: 'ladders' },      // between the market stalls, pinwheel up
+  { who: 'girl', az: -31, r: 23.6, mill: 'ladders' },      // between the market stalls, pinwheel up
   { who: 'seller', az: -27, r: 22.9, mill: 'pipes' },        // in front of the market stalls (street side, not under the awning)
 ];
 const BOARDWALK = [18.5, 22.2];                               // the street ring (world.js 18.8..21.8, padded)
@@ -31,6 +31,8 @@ export function createVillagers({ THREE: T, scene, world, look = null } = {}) {
   // Everything a player walks to or through: anchors, gust/vent spots, wheels, sails (keep 2.5 m clear).
   const keepOut = [];
   const walk = (o, d = 0) => { if (!o || d > 2) return; if (Number.isFinite(o.x) && Number.isFinite(o.z)) keepOut.push({ x: o.x, z: o.z, y: o.y ?? 0, r: 2.5 }); else if (typeof o === 'object') for (const v of Object.values(o)) walk(v, d + 1); };
+  // street lantern posts (world.js: az -13.5 -22.5 -40 -58 -94 at r 22.3): nobody stands within 1.2 m of one
+  for (const az of [-13.5, -22.5, -40, -58, -94]) { const [x, z] = polar(az, 22.3); keepOut.push({ x, z, y: 0, r: 1.5 }); }
   walk(P); for (const v of world.vents || []) keepOut.push({ x: v.x, z: v.z, y: v.y, r: (v.radius || 1) + 2 }); for (const w of [...(world.wheels || []), ...(world.sails || [])]) keepOut.push({ x: w.x, z: w.z, y: w.y ?? 0, r: 2.5 });
   const ray = new T.Raycaster(), down = new T.Vector3(0, -1, 0);
   function surfaceOk(x, y, z) { // no standing on inlays/medallions (emissive inlay materials) or the timber deck
@@ -69,14 +71,17 @@ export function createVillagers({ THREE: T, scene, world, look = null } = {}) {
     for (const o of list) {
       const r = restored[o.s.mill] ?? 0; if (r > (last[o.id] ?? r) + .2) o.cheer = 3.2; last[o.id] = r;
       const village = Math.max(r, restored.village ?? 0) > .45;
+      // Ending (the whole village restored): each cheers for ~3 s in a staggered ~10 s cycle.
+      if ((restored.village ?? 0) > .95 && o.cheer <= 0 && ((t * .1 + o.seed * .23) % 1) < dt * .1) o.cheer = 3;
       let act = 'idle';
       if (o.cheer > 0) { o.cheer -= dt; act = o.cheer > .9 ? 'cheer' : 'wave'; }
-      else if (!village && Math.sin(t * .21 + o.seed * 2.1) > .7) act = 'worried';                 // glances up at the silent bells now and then
+      // a soft, continuous glance up at the silent bells now and then (eased again inside setPose)
+      const worry = village ? 0 : Math.max(0, Math.min(1, (Math.sin(t * .21 + o.seed * 2.1) - .55) / .35));
       let want = 0, yaw = 0, pitch = 0;
       if (hero) { const dx = hero.x - o.x, dz = hero.z - o.z, d = Math.hypot(dx, dz); if (d < 6) { want = 1; yaw = Math.atan2(Math.sin(Math.atan2(dx, dz) - o.yaw), Math.cos(Math.atan2(dx, dz) - o.yaw)); pitch = Math.atan2((hero.y ?? o.y) + 1.2 - (o.y + 1.5), d); } }
       yaw = Math.max(-1.1, Math.min(1.1, yaw));
       o.look += (want - o.look) * (1 - Math.exp(-dt * 3)); o.headYaw += (yaw - o.headYaw) * (1 - Math.exp(-dt * 4)); o.headPitch += (pitch - o.headPitch) * (1 - Math.exp(-dt * 4));
-      o.v.userData.setPose({ t: t + o.seed, motion: o.motion, act, yaw: o.headYaw, pitch: -o.headPitch, look: o.look * (act === 'cheer' ? .3 : 1), gentle });
+      o.v.userData.setPose({ t: t + o.seed, motion: o.motion, act, worry: act === 'idle' ? worry : 0, yaw: o.headYaw, pitch: -o.headPitch, look: o.look, gentle });
     }
   }
   return { root, list, update, telemetry: () => list.map(o => ({ id: o.id, at: [o.x, o.y, o.z].map(n => +n.toFixed(2)), r: +Math.hypot(o.x, o.z).toFixed(2), cheer: +o.cheer.toFixed(2) })) };

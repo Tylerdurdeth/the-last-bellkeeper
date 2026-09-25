@@ -17,13 +17,18 @@ export default function (THREE, opts = {}) {
   const C = h => new T.Color(h);
   const root = new T.Group(); root.name = 'bh-villager-' + who; const rig = new T.Group(); rig.name = 'villager-rig'; root.add(rig);
   const paint = Object.assign(new T.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .86 }), { name: 'fabric' });
+  // Face skin keeps a minimum brightness in shade (as the hero's face does): a small self-lit share of its own colour.
+  const skinPaint = Object.assign(new T.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .86 }), { name: 'fabric' });
+  skinPaint.onBeforeCompile = sh => { sh.vertexShader = 'attribute float skinGlow; varying float vSkinGlow;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvSkinGlow = skinGlow;');
+    sh.fragmentShader = 'varying float vSkinGlow;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * 0.26 * vSkinGlow;'); };
+  const skin = new Set(), asSkin = () => { const l = parts.get(lastPv); skin.add(l[l.length - 1][0]); }; let lastPv = null;
   const joints = {}; root.userData.joints = joints; root.userData.keepHierarchy = true;
   const group = (name, x, y, z, parent = rig) => { const g = new T.Group(); g.name = name; g.position.set(x, y, z); parent.add(g); joints[name] = g; return g; };
   const parts = new Map(); const E = new T.Euler(), Q = new T.Quaternion();
-  const put = (pv, geo, col, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) => { if (!parts.has(pv)) parts.set(pv, []); parts.get(pv).push([geo, col, new T.Matrix4().compose(new T.Vector3(x, y, z), Q.clone().setFromEuler(E.set(rx, ry, rz)), new T.Vector3(sx, sy, sz))]); };
+  const put = (pv, geo, col, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) => { lastPv = pv; if (!parts.has(pv)) parts.set(pv, []); parts.get(pv).push([geo, col, new T.Matrix4().compose(new T.Vector3(x, y, z), Q.clone().setFromEuler(E.set(rx, ry, rz)), new T.Vector3(sx, sy, sz))]); };
   const ell = (pv, col, x, y, z, a, b, c, ws = 12, hs = 8, rx = 0, ry = 0, rz = 0) => put(pv, new T.SphereGeometry(1, ws, hs), col, x, y, z, rx, ry, rz, a, b, c);
-  const lathe = (pv, prof, col, x = 0, y = 0, z = 0, depth = 1, segs = 24, fold = 0, foldN = 9) => {
-    const g = new T.LatheGeometry(prof.map(([r, h]) => new T.Vector2(Math.max(.0005, r), h)), segs);
+  const lathe = (pv, prof, col, x = 0, y = 0, z = 0, depth = 1, segs = 24, fold = 0, foldN = 9, gap = 0) => {   // gap: front opening half-angle
+    const g = new T.LatheGeometry(prof.map(([r, h]) => new T.Vector2(Math.max(.0005, r), h)), segs, gap, Math.PI * 2 - 2 * gap);
     if (fold) { const p = g.attributes.position, top = prof[prof.length - 1][1], bot = prof[0][1]; for (let i = 0; i < p.count; i++) { const a = Math.atan2(p.getX(i), p.getZ(i)), w = Math.max(0, (top - p.getY(i)) / (top - bot || 1)), k = 1 + fold * Math.sin(a * foldN) * w; p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } }
     g.scale(1, 1, depth); g.computeVertexNormals(); put(pv, g, col, x, y, z);
   };
@@ -53,7 +58,7 @@ export default function (THREE, opts = {}) {
   // hs: head scale (1 = Mara-sized head, ~0.23 m tall); limb radii scale lr.
   const S = {
     baker: { hip: .74, thigh: .36, shin: .34, sh: .47, sw: .185, ua: .26, fa: .23, hs: 1.02, lr: 1.18, waist: .16, chest: .2, hipsW: .22, skin: 0xE8B48E, skinSh: 0xCB9270, iris: 0x5A3A22, brow: 0x2E2320, lips: 0xC8766A, blush: .9, age: .15, cheeks: 1.25, jaw: 1.05, smile: 1 },
-    elder: { hip: .86, thigh: .42, shin: .4, sh: .5, sw: .175, ua: .3, fa: .27, hs: .98, lr: .92, waist: .12, chest: .15, hipsW: .15, skin: 0xE2AA86, skinSh: 0xC48A66, iris: 0x4F6E78, brow: 0xECECE6, lips: 0xB07466, blush: .55, age: 1, cheeks: .85, jaw: .92, smile: .8 },
+    elder: { hip: .79, thigh: .386, shin: .368, sh: .46, sw: .175, ua: .3, fa: .27, hs: .98, lr: .92, waist: .12, chest: .15, hipsW: .15, skin: 0xE2AA86, skinSh: 0xC48A66, iris: 0x4F6E78, brow: 0xECECE6, lips: 0xB07466, blush: .55, age: 1, cheeks: .85, jaw: .92, smile: .8 },
     girl: { hip: .56, thigh: .27, shin: .26, sh: .33, sw: .125, ua: .19, fa: .17, hs: .92, lr: .78, waist: .1, chest: .11, hipsW: .12, skin: 0xF0C6A2, skinSh: 0xD6A07E, iris: 0x5A3A22, brow: 0x4A3222, lips: 0xD27A6C, blush: 1, age: 0, cheeks: 1.3, jaw: .88, smile: 1.1, child: 1 },
     seller: { hip: .88, thigh: .43, shin: .41, sh: .5, sw: .195, ua: .3, fa: .27, hs: 1, lr: 1, waist: .14, chest: .17, hipsW: .16, skin: 0xB07A52, skinSh: 0x8F5E3E, iris: 0x3A2618, brow: 0x241812, lips: 0x9A5A4A, blush: .35, age: 0, cheeks: .95, jaw: 1, smile: 1 },
   }[who];
@@ -107,7 +112,7 @@ export default function (THREE, opts = {}) {
   }
   // ---------------- head: the Mara method (one sculpted surface, painted), scaled per person ----------------
   const neck = group('neck', 0, SH + .03, -.005, chest);
-  lathe(neck, [[.05 * S.hs * S.lr ** .3, -.05], [.046 * S.hs, 0], [.043 * S.hs, .05], [.045 * S.hs, .075]], S.skin, 0, 0, 0, .92, 16);
+  lathe(neck, [[.05 * S.hs * S.lr ** .3, -.05], [.046 * S.hs, 0], [.043 * S.hs, .05], [.045 * S.hs, .075]], S.skin, 0, 0, 0, .92, 16); asSkin();
   const head = group('head', 0, .035, .004, neck); head.scale.setScalar(S.hs * 1.12);
   const HY = .11;
   // The sculpted head as a function of the unit sphere (also used to lay the mouth line exactly on the surface).
@@ -145,7 +150,7 @@ export default function (THREE, opts = {}) {
     const n = g.attributes.normal, v = new T.Vector3(), e = new T.Vector3();
     for (let i = 0; i < p.count; i++) { const front = sm(-.15, .45, oz[i]), low = sm(.3, -.1, oy[i]), nose = Math.exp(-((ox[i] / .16) ** 2) - (((oy[i] + .12) / .2) ** 2)) * sm(.6, .9, oz[i]);
       e.set(ox[i] * .45, oy[i] * .25 + .12, 1).normalize(); v.fromBufferAttribute(n, i).lerp(e, front * (.6 + .35 * low) * (1 - .35 * nose)).normalize(); n.setXYZ(i, v.x, v.y, v.z); }
-    put(head, g, null, 0, HY, 0);
+    put(head, g, null, 0, HY, 0); asSkin();
   }
   // smile line, ears, eyes with lids and catchlights, brows
   { const pts = []; for (let i = 0; i <= 14; i++) { const tx = -.029 + i * .058 / 14, ty = -.054 + 13 * tx * tx * S.smile; let ux = tx / .088, uy = ty / .112;
@@ -153,7 +158,7 @@ export default function (THREE, opts = {}) {
       const uz = Math.sqrt(Math.max(0, 1 - ux * ux - uy * uy)), [x, y, z] = headAt(ux, uy, uz); pts.push([x, HY + y, z + .0009]); }
     const mc = C(S.lips).lerp(C(0x3A2220), .55); for (let i = 0; i < pts.length - 1; i++) put(head, new T.TubeGeometry(new T.LineCurve3(new T.Vector3(...pts[i]), new T.Vector3(...pts[i + 1])), 1, .0011, 4, false), mc);
   }
-  for (const s of [-1, 1]) { ell(head, S.skin, s * .088, HY + .005, -.004, .017, .03, .014); ell(head, S.skinSh, s * .092, HY + .004, .002, .007, .016, .005); }
+  for (const s of [-1, 1]) { ell(head, S.skin, s * .088, HY + .005, -.004, .017, .03, .014); asSkin(); ell(head, S.skinSh, s * .092, HY + .004, .002, .007, .016, .005); asSkin(); }
   const eyes = group('eyes', 0, HY + .016, 0, head);
   for (const s of [-1, 1]) {
     const ex = s * .035, ez = .084, es = S.child ? 1.62 : 1.45;
@@ -198,17 +203,16 @@ export default function (THREE, opts = {}) {
     // arms: rolled coral sleeves; a woven basket of loaves on the left forearm
     const A = arms({ sleeve: CORAL, cuff: CORAL_SH, sleeveTo: .5, rolledAt: .0 });
     for (const s of [-1, 1]) lathe(s < 0 ? A.left.ua : A.right.ua, [[R * 1.05, -S.ua * .72], [R * 1.22, -S.ua * .79], [R * 1.08, -S.ua * .86]], CORAL_SH, 0, 0, 0, 1, 14);
-    const bk = group('basket', 0, -S.fa * .55, .12, A.left.fa);
+    const hang = group('basketHang', 0, -S.fa * .45, .02, A.left.fa), bk = group('basket', 0, -.25, .04, hang);
     const weave = (v, c) => c.set(0xC08A4E).lerp(C(0x8C6232), (Math.floor(v.y * 55) + Math.floor(Math.atan2(v.x, v.z) * 7)) % 2 ? .45 : 0);
     lathe(bk, [[.001, -.08], [.12, -.075], [.16, -.02], [.17, .05], [.155, .055], [.15, .04]], weave, 0, 0, 0, .7, 24);
-    put(bk, new T.TorusGeometry(.155, .011, 6, 26, Math.PI), 0x8C6232, 0, .05, 0, 0, Math.PI / 2, 0, 1, 1.35, .7);
+    put(bk, new T.TorusGeometry(.14, .012, 6, 26, Math.PI), 0x8C6232, 0, .05, 0, 0, 0, 0, 1, 1.45, 1);
     for (const [x, y, z, rz] of [[-.07, .06, .02, .3], [.03, .07, -.02, -.2], [.07, .055, .05, .5], [-.02, .05, .06, -.1]]) {
       ell(bk, (v, c) => c.set(0xC9884A).lerp(C(0xF0D0A0), v.y > y + .01 ? .35 : 0), x, y, z, .075, .032, .036, 14, 8, 0, rz, 0);
       for (let k = -1; k <= 1; k++) ell(bk, 0xF0D8A6, x + k * .03 * Math.cos(rz), y + .028, z - k * .03 * Math.sin(rz), .006, .004, .02, 6, 4, 0, rz, 0);
     }
     hold = (J, t) => { // basket arm: elbow bent, forearm forward, basket resting against the hip
       J.leftUpperArm.rotation.set(.1, 0, -.28); J.leftLowerArm.rotation.set(-1.3, -.25, 0); J.leftHand.rotation.set(0, 0, 0);
-      J.basket && J.basket.rotation.set(1.3, .25, .28);
     };
     cheer.left = false;
   } else if (who === 'elder') {
@@ -219,9 +223,9 @@ export default function (THREE, opts = {}) {
     const rib = (v, c) => c.set(JUMPER).lerp(C(JUMPER_SH), Math.max(0, Math.sin(Math.atan2(v.x, v.z) * 40)) * .3);
     lathe(chest, [[S.hipsW * 1.06, -.16], [S.waist * 1.2, -.02], [S.chest * 1.08, .12], [S.chest * 1.1, .22], [S.sw * 1.02, SH - .05], [S.sw * .75, SH + .01], [.065, SH + .04]], rib, 0, 0, 0, .8, 26);
     lathe(neck, [[.055, -.06], [.06, -.02], [.057, .015]], rib, 0, 0, 0, .95, 18);
-    const vest = (v, c) => { c.set(VEST).lerp(C(VEST_SH), Math.max(0, Math.sin(v.y * 90)) * .15); if (Math.abs(v.x) < .022 && v.z > 0) c.set(JUMPER); if (Math.hypot(v.x - .06, v.y - .02) < .032 && v.z > 0) c.set(0x8A6A3A); };
-    lathe(chest, [[S.hipsW * 1.16, -.24], [S.hipsW * 1.12, -.17], [S.waist * 1.3, -.03], [S.chest * 1.14, .12], [S.chest * 1.14, .2], [S.sw * .88, SH - .06], [.08, SH - .02]], vest, 0, 0, 0, .82, 26);
-    for (let i = 0; i < 4; i++) ell(chest, 0x5A3E22, .03, -.12 + i * .065, S.chest * .92, .008, .008, .005, 6, 4);
+    const vest = (v, c) => { c.set(VEST).lerp(C(VEST_SH), Math.max(0, Math.sin(v.y * 90)) * .15); if (Math.hypot(v.x - .07, v.y - .02) < .03 && v.z > 0) c.set(0x8A6A3A); };
+    lathe(chest, [[S.hipsW * 1.1, -.17], [S.waist * 1.3, -.03], [S.chest * 1.14, .12], [S.chest * 1.14, .2], [S.sw * .88, SH - .06], [.08, SH - .02]], vest, 0, 0, 0, .82, 28, 0, 9, .32);   // open at the front
+    for (let i = 0; i < 4; i++) ell(chest, 0x5A3E22, .042, -.12 + i * .06, S.chest * .9, .008, .008, .005, 6, 4);
     for (const s of [-1, 1]) slab(chest, VEST_SH, s * .075, -.1, S.chest * .88, .055, .03, .01, 5);
     // white side hair and nape, full beard and moustache, flat cap with a peak
     for (const s of [-1, 1]) tube(head, [[s * .078, HY + .045, .03], [s * .09, HY + .01, -.02], [s * .075, HY - .005, -.075], [0, HY - .01, -.095]], .016, 0xEDEDE8, .012, 7, 10);
@@ -271,11 +275,11 @@ export default function (THREE, opts = {}) {
     };
     cheer.right = false;
   } else { // seller
-    const SHIRT = 0x7FA878, SHIRT_SH = 0x5E8A5A, VEST = 0x6E4A33, TROUSER = 0x3E4A38, HAIR = 0x221610;
+    const SHIRT = 0x7FA878, SHIRT_SH = 0x5E8A5A, VEST = 0x6E4A33, TROUSER = 0x4E5A44, HAIR = 0x221610;
     legs({ trouser: TROUSER, shoe: 0x4A3226, rolled: 0x4A5A44 });
     lathe(hips, [[S.hipsW * 1.02, -.1], [S.hipsW * 1.06, -.02], [S.hipsW * .98, .03]], TROUSER, 0, 0, 0, .82, 20);
     lathe(chest, [[S.hipsW * 1.02, -.13], [S.waist * 1.2, -.02], [S.chest * 1.08, .12], [S.chest * 1.1, .22], [S.sw * 1.02, SH - .05], [S.sw * .78, SH + .01], [.066, SH + .04]], shade(SHIRT, SHIRT_SH, v => Math.max(0, Math.sin(v.x * 60 + v.y * 20)) * .25), 0, 0, 0, .8, 26);
-    lathe(chest, [[S.hipsW * 1.1, -.12], [S.waist * 1.3, -.02], [S.chest * 1.15, .12], [S.chest * 1.16, .2], [S.sw * 1.06, SH - .06], [S.sw * .82, SH - .01], [.1, SH + .01]], (v, c) => { c.set(VEST).lerp(C(0x563826), Math.max(0, Math.sin(v.y * 70)) * .2); if (Math.abs(v.x) < .025 + Math.max(0, v.y - .02) * .35 && v.z > 0) c.set(SHIRT); }, 0, 0, 0, .83, 26);
+    lathe(chest, [[S.hipsW * 1.1, -.12], [S.waist * 1.3, -.02], [S.chest * 1.15, .12], [S.chest * 1.16, .2], [S.sw * 1.06, SH - .06], [S.sw * .82, SH - .01], [.1, SH + .01]], (v, c) => c.set(VEST).lerp(C(0x563826), Math.max(0, Math.sin(v.y * 70)) * .2), 0, 0, 0, .83, 28, 0, 9, .42);   // open at the front
     for (const s of [-1, 1]) tube(chest, [[s * .02, SH + .035, .06], [s * .055, SH + .005, .1], [s * .07, SH + .012, .07]], .014, SHIRT_SH, .007, 6, 6);
     for (let i = 0; i < 3; i++) ell(chest, 0x2A1E1C, 0, SH - .05 - i * .035, S.chest * .88, .004, .004, .003, 5, 4);
     tube(chest, [[-S.sw * .8, SH, .02], [-.02, .12, S.chest * 1.02], [S.sw * .95, -.1, .05]], .012, 0x5A3E2A, .012, 6, 12);   // satchel strap
@@ -302,12 +306,13 @@ export default function (THREE, opts = {}) {
 
   // ---------------- merge one mesh per pivot ----------------
   for (const [pivot, list] of parts) {
-    const pos = [], nor = [], col = [], c = new T.Color(), v = new T.Vector3();
+    const pos = [], nor = [], col = [], glow = [], c = new T.Color(), v = new T.Vector3();
     for (const [geo, cl, m] of list) { const g = geo.index ? geo.toNonIndexed() : geo.clone(); const pre = g.attributes.color; g.applyMatrix4(m);
-      const p = g.attributes.position; pos.push(...p.array); nor.push(...g.attributes.normal.array);
+      const p = g.attributes.position; pos.push(...p.array); nor.push(...g.attributes.normal.array); for (let i = 0; i < p.count; i++) glow.push(skin.has(geo) ? 1 : 0);
       for (let i = 0; i < p.count; i++) { if (cl === null && pre) c.setRGB(pre.getX(i), pre.getY(i), pre.getZ(i)); else if (typeof cl === 'function') { v.fromBufferAttribute(p, i); cl(v, c); } else c.set(cl); col.push(c.r, c.g, c.b); } g.dispose(); geo.dispose?.(); }
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new T.Float32BufferAttribute(col, 3));
-    const o = new T.Mesh(g, paint); o.castShadow = true; o.receiveShadow = pivot !== head && pivot !== joints.eyes; o.name = pivot.name + '-mesh';
+    const lit = glow.some(x => x > 0); if (lit) g.setAttribute('skinGlow', new T.Float32BufferAttribute(glow, 1));
+    const o = new T.Mesh(g, lit ? skinPaint : paint); o.castShadow = true; o.receiveShadow = pivot !== head && pivot !== joints.eyes; o.name = pivot.name + '-mesh';
     if (/Hand|pinwheel|prop|pipe|stick|eyes/.test(pivot.name)) o.userData.noOutline = true;
     pivot.add(o);
   }
@@ -315,18 +320,24 @@ export default function (THREE, opts = {}) {
   const upright = (g, twist = 0) => { if (!g?.parent) return; g.parent.updateWorldMatrix(true, false); const pq = g.parent.getWorldQuaternion(new T.Quaternion()).invert(), rq = root.getWorldQuaternion(new T.Quaternion()); g.quaternion.copy(pq.multiply(rq).multiply(new T.Quaternion().setFromEuler(new T.Euler(0, twist, 0)))); };
   // ---------------- acting ----------------
   const J = joints, rest = new Map(); for (const [k, j] of Object.entries(J)) rest.set(k, j.quaternion.clone());
-  let lastT = null;
-  function setPose({ t = 0, act = 'idle', yaw = 0, pitch = 0, look = 0, gentle = false, motion = null } = {}) {
+  let lastT = null; const W = { worry: 0, cheer: 0, wave: 0, look: 0 }, qa = new T.Quaternion(), qb = new T.Quaternion(), eu = new T.Euler();
+  const ease = (k, target, dt, rate = 4) => (W[k] += (target - W[k]) * (1 - Math.exp(-dt * rate)));
+  // Acts are soft weights eased over time (never popped): worry (0..1, continuous from the host), cheer, wave.
+  function setPose({ t = 0, act = 'idle', worry = act === 'worried' ? 1 : 0, yaw = 0, pitch = 0, look = 0, gentle = false, motion = null } = {}) {
     const dt = lastT === null ? 0 : Math.max(0, Math.min(.1, t - lastT)); lastT = t;
     if (motion) { motion(dt); for (const k of ['leftUpperLeg', 'rightUpperLeg']) J[k].quaternion.slerp(rest.get(k), .45); } else for (const [k, q] of rest) J[k].quaternion.copy(q);
-    hold?.(J, t); upright(J.stick); upright(J.pinwheel, .5);
-    const m = gentle ? .5 : 1;
-    if (act === 'worried') { J.head.rotation.x -= .4; J.chest.rotation.x -= .06; }
-    if (act === 'cheer' || act === 'wave') { const b = Math.abs(Math.sin(t * 7)), side = cheer.left ? 'left' : cheer.right ? 'right' : null;
-      if (side) { const s = side === 'left' ? -1 : 1; J[side + 'UpperArm'].rotation.set(0, 0, s * (2.5 + .15 * b * m)); J[side + 'LowerArm'].rotation.set(0, 0, act === 'wave' ? s * (.3 + .35 * Math.sin(t * 9)) : 0); }
-      if (act === 'cheer') J.head.rotation.x -= .25; }
-    J.neck.rotation.set(-pitch * look * .4 + (S.child ? -.12 : who === 'elder' ? -.06 : 0), yaw * look * .4, 0);
-    J.head.rotation.x += -pitch * look * .6; J.head.rotation.y += yaw * look * .6;
+    hold?.(J, t);
+    const m = gentle ? .5 : 1, wW = ease('worry', worry, dt, 2.5), wC = ease('cheer', act === 'cheer' ? 1 : 0, dt, 5), wV = ease('wave', act === 'wave' ? 1 : 0, dt, 5), arm = Math.min(1, wC + wV);
+    J.head.rotation.x -= .4 * wW; J.chest.rotation.x -= .06 * wW;                                     // looking up at the silent bells
+    const b = Math.abs(Math.sin(t * 7)), side = cheer.left ? 'left' : cheer.right ? 'right' : null;
+    if (side && arm > .001) { const s = side === 'left' ? -1 : 1;
+      qa.setFromEuler(eu.set(0, 0, s * (2.5 + .15 * b * m * wC))); J[side + 'UpperArm'].quaternion.slerp(qa, arm);
+      qb.setFromEuler(eu.set(0, 0, s * (.3 + .35 * Math.sin(t * 9)) * wV / Math.max(arm, .001))); J[side + 'LowerArm'].quaternion.slerp(qb, arm); }
+    J.head.rotation.x -= .25 * wC; J.hips.position.y += .025 * b * m * wC;
+    const lk = ease('look', look * (1 - .7 * wC), dt, 3);
+    J.neck.rotation.set(-pitch * lk * .4 + (S.child ? -.12 : who === 'elder' ? -.06 : 0), yaw * lk * .4, 0);
+    J.head.rotation.x += -pitch * lk * .6; J.head.rotation.y += yaw * lk * .6;
+    upright(J.stick); upright(J.pinwheel, .5); upright(J.basketHang);
     const bl = (t + (who.length * .7)) % 4.3; J.eyes.scale.y = bl > 4.12 ? 1 - .9 * Math.sin((bl - 4.12) / .18 * Math.PI) : 1;
     if (J.prop) J.prop.rotation.z = -t * (gentle ? 3 : 7);
     root.updateMatrixWorld(true);
