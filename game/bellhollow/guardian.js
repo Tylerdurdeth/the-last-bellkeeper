@@ -263,8 +263,21 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     const last = beatsOf(phase).filter(b => b.lane).at(-1).lane; void until;
     if (lane.id === last) offerBreath(lane.end, L - .3);   // stays a whole cycle (>= 8 s), countdown ring shows it
   }
+  // Owner (25 Sep): the breath settles out on open floor on the hero's side, ~4 m in front of the skirt (r 6.5),
+  // never under the guardian, on a vane or on a grille.
+  function breathSpot(fallback) {
+    const h = heroV, ha = Math.atan2(h.z - C.z, h.x - C.x), R0 = W.rings[0]; let best = null;
+    for (const r of [6.5, 7.5, 5.5]) for (let i = 0; i <= 36; i++) { const a = ha + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * TAU / 36, q = at(a, r, R0.y);
+      if (ground(q.x, q.z, R0.y) === null) continue;
+      if ([0, 1, 2].some(k => Math.hypot(q.x - vaneOf(k).x, q.z - vaneOf(k).z) < 3)) continue;
+      if ((world.vents || []).some(v => Math.abs(v.y - R0.y) < 1 && Math.hypot(q.x - v.x, q.z - v.z) < (v.radius || 1) + 2)) continue;
+      if (world.blocked?.(q.x, q.z, .5, R0.y)) continue;
+      best = q; break; }
+    return best || fallback;
+  }
   function offerBreath(p, ttl) {
     if (!wind || wind.charged) return;
+    p = breathSpot(p); wind.petals?.({ x: p.x, y: p.y + 1, z: p.z }, { count: 30, spread: 1.2, up: 3 });
     const y = ground(p.x, p.z, p.y) ?? p.y;
     wind.addSource('guardianBreath', { x: p.x, y, z: p.z, radius: 1.3, repeat: false, ttl, kind: 'guardian' });
     breath = { x: p.x, y, z: p.z, opensAt: time, closesAt: time + ttl, ttl };
@@ -491,7 +504,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     for (let i = 0; i < 3; i++) wind.strip(34, (g, o) => { const a = i * TAU / 3 + t * 2.2 * spin + g * 4.6, r = .2 + g * 1.7; o.set(s.x + Math.cos(a) * r, s.y + .08 + g * .04, s.z + Math.sin(a) * r); }, { width: .42, alpha: 1, flat: true });
     wind.ring(s.x, s.y + .06, s.z, 2.05, { width: .34, alpha: .9, taper: false });
     wind.ring(s.x, s.y + .09, s.z, 2.55, { width: .24, alpha: .95 * warn, taper: false }, -Math.PI / 2, -Math.PI / 2 + TAU * left);
-    for (let i = 0; i < 2; i++) wind.helix(s.x, s.y + .2, s.z, s.y + 3.2, .55 + .15 * i, 1.4, t * 3 * spin + i * Math.PI, { width: .22, alpha: .75, n: 30 });
+    for (let i = 0; i < 3; i++) wind.helix(s.x, s.y + .2, s.z, s.y + 4.6, .55 + .2 * i, 1.6, t * 3 * spin + i * Math.PI, { width: .22, alpha: .75, n: 30 });
     for (let i = 0; i < 10; i++) { const ph = (t * (.7 + i * .07) + i * .37) % 1, a = i * 2.39 + t * .5, r = .6 + (i % 4) * .45, y = s.y + .3 + ph * 2.6, tw = Math.sin(ph * Math.PI);
       wind.strip(4, (g, o) => o.set(s.x + Math.cos(a) * r, y + (g - .5) * .28, s.z + Math.sin(a) * r), { width: .16 * tw + .04, alpha: .95 * tw, taper: false }); }
     bands.dot({ x: s.x, z: s.z, y: s.y, r: 2.1, t });

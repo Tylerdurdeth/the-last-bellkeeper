@@ -1147,7 +1147,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     guardianWell: {
       centre: new T.Vector3(0, H.low.y, 0), hover: new T.Vector3(0, H.low.y + 1, 0),
       rings: {
-        low: {y: H.low.y, centre: new T.Vector3(0, H.low.y, 0), r0: 0, r1: H.floorFront, safe: Pt(40, 8.5, H.low.y), vane: vanes.low, vent: ringVents.low, catchPoint: Pt(150, 2, H.low.y)},
+        low: {y: H.low.y, centre: new T.Vector3(0, H.low.y, 0), r0: 0, r1: H.floorFront, safe: Pt(23, 7.2, H.low.y), vane: vanes.low, vent: ringVents.low, catchPoint: Pt(150, 2, H.low.y)},
         mid: {y: H.mid.y, centre: new T.Vector3(0, H.mid.y, 0), r0: H.mid.r0, r1: H.mid.r1, safe: Pt(130, 5.6, H.mid.y), vane: vanes.mid, vent: ringVents.mid, catchPoint: Pt(245, 5.6, H.mid.y)},
         high: {y: H.high.y, centre: new T.Vector3(0, H.high.y, 0), r0: H.high.r0, r1: H.high.r1, safe: Pt(250, 8, H.high.y), vane: vanes.high, vent: ringVents.high, catchPoint: Pt(275, 8, H.high.y)},
         top: Object.assign(Pt(204, 8, .5), {safe: Pt(200, 8, .5), vane: vanes.top, vaneStand: G([vanes.top.stand.x, vanes.top.stand.y, vanes.top.stand.z]), vent: null, a0: 190, a1: 212, r0: 6.9, r1: 9.15}),

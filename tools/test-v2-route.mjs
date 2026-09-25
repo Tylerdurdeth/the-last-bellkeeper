@@ -186,6 +186,7 @@ if (FROM === 'guardian') {
   await page.reload({ waitUntil: 'load' }); await page.waitForFunction(() => window.__READY__ && !document.querySelector('#continueb').hidden, { timeout: 60000 });
   if (touch) await page.tap('#continueb'); else await page.click('#continueb');
   await sleep(800); t0 = Date.now(); if (touch) stick = await measure();
+  await sleep(700); await shot('reveal-start'); await sleep(2600); await shot('reveal-landing');
 } else {
 if (touch) await page.tap('#startb'); else await page.click('#startb');
 await sleep(800); t0 = Date.now();
@@ -276,7 +277,7 @@ async function dodgeWait(pred, label, timeout = 30000, arg) {
       const hx = g.pos[0] - C.x, hz = g.pos[1] - C.z, hr = Math.hypot(hx, hz), ha = Math.atan2(hz, hx), mid = (L.a0 + L.a1) / 2, half = Math.abs(L.a1 - L.a0) / 2 + .3, d = wrapA(ha - mid);
       if (Math.abs(d) < half && hr > L.lo - .6 && hr < L.hi + .6) {
         const planner = createPlanner(W, { maxDrop: 5.5 }); let tgt = null;
-        for (const side of [Math.sign(d) || 1, -(Math.sign(d) || 1)]) for (const r of [hr, 9, 6, 3.6]) { const a = mid + side * (half + .25), q = { x: C.x + Math.cos(a) * r, y: g.y, z: C.z + Math.sin(a) * r }; if (!tgt && planner.snap(q)) tgt = q; }
+        for (const side of [Math.sign(d) || 1, -(Math.sign(d) || 1)]) for (const r of [Math.max(hr, 6), 9, 7]) { const a = mid + side * (half + .25), q = { x: C.x + Math.cos(a) * r, y: g.y, z: C.z + Math.sin(a) * r }; if (!tgt && planner.snap(q)) tgt = q; }
         if (tgt) { await go(tgt.x, tgt.z, 'dodge the sweep', { tol: .6 }); await hold([]); continue; }
       }
     }
@@ -297,6 +298,7 @@ while ((await read()).quest.guardian.phase < 3) {
   if (!(await read()).charged) {
     await dodgeWait(() => window.__GAME__?.wind.sources.some(x => x.id === 'guardianBreath'), 'guardian breath', 40000); const s = (await read()).wind.sources.find(x => x.id === 'guardianBreath');
     if (!s) continue;
+    if (!shotPhase.has('b' + phase)) { shotPhase.add('b' + phase); await shot(`breath-settled-${phase + 1}`); }
     try { await travel(s, 'breath', { tol: .5 }); await press('guardianBreath'); await waitFor(() => window.__GAME__.charged, 'caught breath', 2500); }
     catch (e) { result.steps.push({ label: 'missed the breath window, waiting for the next', err: String(e.message).slice(0, 120) }); await waitFor(() => !window.__GAME__.wind.sources.some(x => x.id === 'guardianBreath'), 'breath gone', 15000).catch(() => {}); continue; }
     await burst(`guardian-catch-${phase + 1}`, 1);
