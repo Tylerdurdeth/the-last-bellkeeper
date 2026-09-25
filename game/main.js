@@ -123,7 +123,7 @@ function poseStaff(){
 function handover(){if(!mara)return;const f=new T.Vector3(Math.sin(mara.rotation.y),0,Math.cos(mara.rotation.y)),mark=mara.position.clone().addScaledVector(f,1.45);
  if(movement.isSafe(mark.toArray())){movement.reset(mark.toArray());movement.yaw=Math.atan2(mara.position.x-mark.x,mara.position.z-mark.z);}
  // Frame both of them from the side: the look sits between their chests, the lens a little in front of the pair.
- const mid=mara.position.clone().addScaledVector(f,.72).setY(mara.position.y+1.25),side=new T.Vector3(f.z,0,-f.x);startBeat(mid,{from:mid.clone().addScaledVector(side,4.2).addScaledVector(f,1.4).setY(mara.position.y+2.1),dur:2.4,kind:'handover',hold:1.2,subject:mara.position.clone()});}
+ const mid=mara.position.clone().addScaledVector(f,.72).setY(mara.position.y+1.25),side=new T.Vector3(f.z,0,-f.x);const port=camera.aspect<.85;startBeat(mid,{from:mid.clone().addScaledVector(side,port?1.3:4.2).addScaledVector(f,port?5.6:1.4).setY(mara.position.y+(port?4.4:2.1)),   /* portrait: over the hero's shoulder, both stacked in the narrow frame */dur:2.4,kind:'handover',hold:1.2,subject:mara.position.clone()});}
 // Mara acts through bh-mara.js hooks: throws the bypass lever, keeps a hand on it, looks at the
 // apprentice when near, opens her hands as she gives the staff, waves at the finale and ending.
 function actMara(dt,p){const set=mara.userData.setPose,to=mara.userData.headToward;if(!set)return;
@@ -297,7 +297,18 @@ function startBeat(look,{dur=2.6,dist=16,up=5,from=null,kind='',normal=null,hold
   const n=new T.Vector3(normal.x,0,normal.z).normalize();if(n.dot(tmpA.set(p.x-look.x,0,p.z-look.z))<0)n.negate();const base=Math.atan2(n.x,n.z);let best=null;
   search:for(const da of [0,.3,-.3,.6,-.6,.9,-.9])for(const u of [up,up+2.5,up-1.5]){const c=new T.Vector3(look.x+Math.sin(base+da)*dist,look.y+u,look.z+Math.cos(base+da)*dist);guardLens(c);if(beatClear(look,c)){best=c;break search;}}
   if(best)pos=best;else pos=new T.Vector3(look.x+n.x*dist,look.y+up,look.z+n.z*dist);}
- guardLens(pos);beat={t:0,dur:state.gentle?dur+.6:dur,pos,look:look.clone(),kind,hold:Math.min(hold,dur-.6),subject:subject?subject.clone():null};}
+ if(kind==='hint'){// hints: over the hero's shoulder toward the target, so the hero stays in the frame
+  const d=tmpA.set(p.x-look.x,0,p.z-look.z);const L=Math.max(.001,d.length());d.multiplyScalar(1/L);pos=new T.Vector3(p.x+d.x*5,p.y+4.2,p.z+d.z*5);}
+ guardLens(pos);
+ // Never jam a beat into a porch or wall (phone portrait showed this): rise, then pull toward the subject; else skip it.
+ const ok=c=>beatClear(look,c)&&!solidAt(c.x,c.z,c.y,.45)&&!tallCols.some(k=>colHit(k,c.x,c.z,c.y,.45))&&(kind==='mill'||kind==='cap'||kind==='bridge'||beatClear(tmpB.set(p.x,p.y+1.4,p.z).clone(),c));
+ let good=ok(pos)?pos:null;
+ for(const up2 of [2,4,6])if(!good){const c=pos.clone();c.y+=up2;guardLens(c);if(ok(c))good=c;}
+ for(const f of [.25,.45])if(!good){const c=pos.clone().lerp(look,f);c.y+=2;guardLens(c);if(ok(c))good=c;}
+ // Last resort: high on the hero's side of the subject (both usually visible) before giving the beat up.
+ for(const up2 of [5,8])if(!good){const c=new T.Vector3(p.x-look.x,0,p.z-look.z).normalize().multiplyScalar(Math.min(dist,9)).add(look);c.y=Math.max(look.y,p.y)+up2;guardLens(c);if(beatClear(look,c)&&!solidAt(c.x,c.z,c.y,.45))good=c;}
+ if(!good)return;pos=good;
+ beat={t:0,dur:state.gentle?dur+.6:dur,pos,look:look.clone(),kind,hold:Math.min(hold,dur-.6),subject:subject?subject.clone():null,from:p.clone()};}
 function skipBeat(){if(beat&&beat.t>=beat.hold&&beat.t<beat.dur-.6)beat.t=beat.dur-.6;}
 // A held arrow (key repeat) is steering, not a skip: only a fresh press skips, and never before the beat's hold.
 addEventListener('keydown',e=>{if(beat&&!e.repeat&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyA'].includes(e.code))skipBeat();},{capture:true});
@@ -345,7 +356,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
   if(pairedBells?.userData.phrase){const ph=pairedBells.userData.phrase,a=bellOutT===null?null:ph(state.t-bellOutT,{gentle:state.gentle}),b=bellRetT===null?null:ph(state.t-bellRetT+1.7,{gentle:state.gentle});pairedBells.userData.setSwing?.({out:a?.out??0,ret:b?.ret??0});}
   if(state.started){findContext();if((uiTimer-=dt)<=0){uiTimer=.2;updateUI();drawMap();}for(const foot of animator.footfalls)sound('step');if(wasGrounded&&!movement.grounded&&movement.verticalVelocity>0&&!movement.lifting)sound('jump');if(!wasGrounded&&movement.grounded)sound('land');}wasGrounded=movement.grounded;
   $('#skipIntro').hidden=!(introActive||quest.finaleActive);$('#skipIntro').textContent=quest.finaleActive?'Skip':'Skip · or move to begin';document.body.classList.toggle('cinematic',introActive||quest.finaleActive);document.body.classList.toggle('finale-cine',!!quest.finaleActive);
-  if(state.complete&&endingAt&&state.t>=endingAt){endingAt=0;$('#ending').hidden=false;{const q=quest.telemetry();$('#endingDetail').textContent=q.keepsake?'The little keeper’s bell rang the whole return phrase. 3/3 fragments.':`${q.fragments}/3 bell fragments found.`;}}
+  if(state.complete&&endingAt&&state.t>=endingAt){endingAt=0;$('#ending').hidden=false;{const q=quest.telemetry();$('#endingDetail').textContent='Mara: “Hear that? The far bell answered. You kept the wind, Bellkeeper.”'+(q.keepsake?' The little keeper’s bell rang the whole return phrase.':q.fragments>0?` ${q.fragments}/3 bell fragments found.`:'');}}
   if(state.t>captionEnd)$('#caption').style.opacity='0';
  }
  // ---- camera ----
@@ -371,11 +382,11 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
   // western mills over the terrace, then the far bell from the south-west (its sight line clears the trunk).
   if(!crane){const P=world.points,far=P.farBell||rise.lookAt,top=P.hollowGate?.y??4,az=(a,r,y)=>new T.Vector3(Math.sin(a*Math.PI/180)*r,y,Math.cos(a*Math.PI/180)*r);
    const hub=k=>P[k]?.mill?new T.Vector3(P[k].mill.x,P[k].mill.y,P[k].mill.z):null,west=[hub('sails'),hub('pipes')].filter(Boolean);
-   crane={pos:new T.CatmullRomCurve3([az(40,32,top+12),az(0,38,top+16),az(-60,50,top+30),az(-135,50,top+26)]),
-    looks:[hub('ladders')||az(28,20,top+10),west.length?west.reduce((a,v)=>a.add(v),new T.Vector3()).multiplyScalar(1/west.length):az(-100,38,top+8),new T.Vector3().copy(far)]};
+   crane={pos:new T.CatmullRomCurve3([az(40,32,top+12),az(0,38,top+16),az(-60,50,top+18),az(-135,50,top+16)]),   // gentle pitch: the far bell is framed across the valley, never a top-down void
+    looks:[hub('ladders')||az(28,20,top+10),(west.length?west.reduce((a,v)=>a.add(v),new T.Vector3()).multiplyScalar(1/west.length):az(-100,38,top+8)).add(new T.Vector3(0,9,0)),new T.Vector3().copy(far)]};
    scriptCam.copy(crane.pos.getPoint(0));finaleLook.copy(crane.looks[0]);}
   const e=ease((ft-2.3)/9.7);crane.pos.getPoint(e,finaleCam);guardLens(finaleCam);
-  const L=crane.looks;if(ft<7)tmpB.copy(L[0]);else if(ft<9.5)tmpB.lerpVectors(L[0],L[1],ease((ft-7)/2));else tmpB.lerpVectors(L[1],L[2],ease((ft-9.5)/2));
+  const L=crane.looks;if(ft<6.5)tmpB.copy(L[0]);else if(ft<8.3)tmpB.lerpVectors(L[0],L[1],ease((ft-6.5)/1.8));else tmpB.lerpVectors(L[1],L[2],ease((ft-8.3)/1.4));   // on the far bell before it answers (9.4 s)
   const k=1-Math.exp(-dt*3);scriptCam.lerp(finaleCam,k);camera.position.copy(scriptCam);finaleLook.lerp(tmpB,k);camera.lookAt(finaleLook);
  }else{crane=null;finaleLook.copy(camera.position).lerp(cameraTarget,1);
   const tv=world.points.terraceView;
@@ -386,7 +397,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  {const want=camera.aspect<.85&&state.started&&!introActive&&!quest.finaleActive&&!beat?.14:0;viewShift=T.MathUtils.damp(viewShift,want,3,dt);
   if(Math.abs(viewShift-appliedShift)>.002||(!viewShift&&appliedShift)){appliedShift=viewShift<.003?0:viewShift;if(appliedShift)camera.setViewOffset(innerWidth,innerHeight,0,appliedShift*innerHeight,innerWidth,innerHeight);else camera.clearViewOffset();}}
  // Short camera beats (mill payoffs, loft vista, Mara's handover): ease out of the arm, hold, ease back. Any input skips.
- if(beat&&!introActive&&!quest.finaleActive){beat.t+=dt;const inT=state.gentle?.9:.6,e=ease(Math.min(beat.t/inT,(beat.dur-beat.t)/inT,1));
+ if(beat&&!introActive&&!quest.finaleActive){beat.t+=dt;if(beat.from&&beat.kind!=='mill'&&beat.from.distanceTo(movement.position)>1.2)beat.t=Math.max(beat.t,beat.dur-.6);/* the hero walked off: hand the camera back */const inT=state.gentle?.9:.6,e=ease(Math.min(beat.t/inT,(beat.dur-beat.t)/inT,1));
   if(beat.t>=beat.dur)beat=null;else{tmpB.copy(camera.position);camera.position.lerpVectors(tmpB,beat.pos,e);camera.lookAt(tmpA.lerpVectors(cameraTarget,beat.look,e));}}
  // World-anchored intro shots (real world): cut between painted views rather than panning the arm.
  const ic=introActive&&!state.gentle?introCamera(shot):null;

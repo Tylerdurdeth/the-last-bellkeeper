@@ -108,3 +108,6 @@ body.finale-cine #stick{visibility:hidden!important}
 @media(pointer:coarse),(max-width:700px){#action{overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;width:auto;min-width:150px;max-width:min(230px,calc(100vw - 150px));font-size:13px;padding:8px 14px;min-height:54px}}
 /* Portrait phones: the caption sits above the hero (who is framed high), not on the feet. */
 @media(max-width:700px) and (orientation:portrait){body:not(.cinematic) #caption{bottom:auto;top:calc(max(16px,env(safe-area-inset-top)) + 142px)}}
+/* Ending: a proper panel centred low over the ringing bell, with Mara's line (not a small toast). */
+#ending.completion{width:min(620px,calc(100vw - 32px));padding:22px 28px 20px;border-top:3px solid var(--copper);border-radius:4px 14px 14px 4px;background:linear-gradient(120deg,#243e37fa,#243e37ec);box-shadow:0 14px 40px #142b3455}
+#ending.completion p:not(.eyebrow){font-size:17px;line-height:1.5}#ending.completion #endingDetail{display:block;margin-top:8px;font-style:italic;color:#eedfb8}

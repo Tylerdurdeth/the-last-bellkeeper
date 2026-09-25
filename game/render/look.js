@@ -510,7 +510,7 @@ void main() {
     }
     if (focus) {
       camera.updateMatrixWorld(); renderer.getDrawingBufferSize(size);
-      if (focusEllipse(focus.hero, 1, n)) n++;   // full strength: clean core, dithered rim only
+      if (focusEllipse(focus.hero, 1, n)) { n++; toon.uniforms.bkHeroXZ.value.set(focus.hero.x, focus.hero.z); }   // full strength: clean core, dithered rim only
       for (const e of focus.extra || []) { if (n >= 4) break; if (e && focusEllipse(e, 1, n)) n++; }   // full strength: partial strength left a stipple over Mara
     }
     toon.uniforms.bkFocusCount.value = fadeOn ? n : 0;

@@ -28,6 +28,7 @@ export function createToon(THREE) {
     bkFocusA: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) },
     bkFocusB: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) },
     bkFocusCount: { value: 0 },
+    bkHeroXZ: { value: new THREE.Vector2(1e5, 1e5) },   // hero feet x,z (focus 0): overhead roofs right above the hero may open
     bkMist: { value: new THREE.Color('#E6ECE4') },       // mist colour for the painted under-canopy
     bkTime: { value: 0 }, bkFlicker: { value: 1 }, bkDetail: { value: 1 },
     bkInterior: { value: new THREE.Vector4(0, 0, -1, 0) },   // x, z, radius (<0 off), top y: no aerial fog inside this volume
@@ -54,7 +55,7 @@ export function createToon(THREE) {
 uniform vec3 bkKeyColor; uniform vec4 bkBands; uniform vec3 bkShadowTint; uniform vec3 bkShade; uniform float bkShadeAmt;
 uniform vec4 bkHeight; uniform vec3 bkLowTint; uniform float bkAmbSteps; uniform vec3 bkRimColor; uniform vec3 bkSunDir;
 uniform vec3 bkFogSun; uniform vec3 bkFogHeight; uniform float bkGlow; uniform vec2 bkFogShape;
-uniform vec4 bkFocusA[ 4 ]; uniform vec4 bkFocusB[ 4 ]; uniform int bkFocusCount; uniform vec3 bkMist; uniform float bkTime, bkFlicker, bkDetail; uniform vec4 bkInterior; uniform vec3 bkAerial, bkAerialColor;
+uniform vec4 bkFocusA[ 4 ]; uniform vec4 bkFocusB[ 4 ]; uniform int bkFocusCount; uniform vec2 bkHeroXZ; uniform vec3 bkMist; uniform float bkTime, bkFlicker, bkDetail; uniform vec4 bkInterior; uniform vec3 bkAerial, bkAerialColor;
 varying vec3 vBkWorldPos;
 #ifndef BK_NOFADE
 varying float vBkBig;
@@ -124,7 +125,8 @@ float bkFadeAmt = 0.0;
   float bkNear = ( 1.0 - smoothstep( 0.9, 1.5, vViewPosition.z ) ) * ( 1.0 - bkNearFlat ) * step( vBkBig, 0.75 );
   if ( bkNear > 0.5 ) discard;   // crisp: no dither pattern
 }
-if ( vBkBig < 0.25 ) {
+{
+  // Large architecture: only a roof/eave right over the hero's head (> 2.2 m up, < 2.8 m away) may open; walls never.
   // The fade is a clean cut-out (full or nothing) with a crisp edge, never a stipple or dither pattern.
   // Floors, platforms, inlays, steps and low roofs never fade: flat surfaces fade only if > 1 m above the feet.
   vec3 bkFN = normalize( cross( dFdx( vBkWorldPos ), dFdy( vBkWorldPos ) ) );
@@ -136,7 +138,8 @@ if ( vBkBig < 0.25 ) {
     float inside = 1.0 - smoothstep( 0.94, 1.02, length( d ) );   // clean hole over the subject; ~4% feathered rim
     float nearer = smoothstep( 1.1, 1.3, A.z - vViewPosition.z );
     float allowed = max( 1.0 - bkFlatS, smoothstep( B.x + 1.0, B.x + 1.3, vBkWorldPos.y ) );
-    float f = smoothstep( 0.35, 0.65, inside * nearer * allowed ) * B.z;
+    float bigGate = vBkBig < 0.25 ? 1.0 : ( i == 0 ? step( B.x + 2.2, vBkWorldPos.y ) * step( length( vBkWorldPos.xz - bkHeroXZ ), 2.8 ) : 0.0 );
+    float f = smoothstep( 0.35, 0.65, inside * nearer * allowed ) * B.z * bigGate;
     bkFadeAmt = max( bkFadeAmt, f );
     if ( f > 0.5 ) discard;   // crisp cut-out edge: no stipple or diamond pattern
   }
