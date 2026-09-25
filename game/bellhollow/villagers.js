@@ -4,18 +4,28 @@
 // watch is restored, and turn their heads toward the hero when near. No benches, no gameplay.
 // createVillagers({THREE, scene, world, look}) -> {update(dt, t, {hero, restored, gentle}), list, root, telemetry()}
 import buildVillager from '../assets/bh-villager.js';
+import { loadNpcMotion, createNpcMotion } from '../npc-motion.js';
+// CC0 Quaternius idle per person (game/assets/quaternius/npc-motion.json); props' arms are posed over the clip.
+export const VILLAGER_CLIPS = { baker: { clip: 'Idle_Talking_Loop', phase: .1 }, elder: { clip: 'Idle_Loop', phase: .55, rate: .8 }, girl: { clip: 'Idle_Loop', phase: .3, rate: 1.1 }, seller: { clip: 'Idle_Loop', phase: .8, rate: .95 } };
 
 const DEG = Math.PI / 180, polar = (az, r) => [r * Math.sin(az * DEG), r * Math.cos(az * DEG)];
 // who, preferred spot (terrace azimuth / radius from the trunk), the mill (area) they watch
 const CAST = [
-  { who: 'baker', az: -36, r: 16.2, mill: 'terrace' },       // beside the bell-plaza steps, against the plaza wall
+  { who: 'baker', az: -12, r: 23.4, mill: 'terrace' },       // on the outer rim near the start, in the open (seen from the street)
   { who: 'elder', az: -55, r: 24, mill: 'sails' },           // on the market rim beside the planters, watching the street
   { who: 'girl', az: -38.5, r: 23.6, mill: 'ladders' },      // between the market stalls, pinwheel up
   { who: 'seller', az: -27, r: 22.9, mill: 'pipes' },        // in front of the market stalls (street side, not under the awning)
 ];
 const BOARDWALK = [18.5, 22.2];                               // the street ring (world.js 18.8..21.8, padded)
 
+// Shipping switch. The 25 Sep rebuild (Mara-method heads, CC0 Quaternius idles) is ON; if an independent review says they
+// are below the hero/Mara bar, set VILLAGERS_DEFAULT = false: nothing is then added (no people, no props, no colliders).
+// URL override for comparisons: ?villagers=0 / ?villagers=1.
+const VILLAGERS_DEFAULT = true;
+const villagerParam = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('villagers') : null;
+export const VILLAGERS_ENABLED = villagerParam === '1' ? true : villagerParam === '0' ? false : VILLAGERS_DEFAULT;
 export function createVillagers({ THREE: T, scene, world, look = null } = {}) {
+  if (!VILLAGERS_ENABLED) { const root = new T.Group(); root.name = 'villagers'; return { root, list: [], update() {}, telemetry: () => [] }; }
   const P = world.points || {}, root = new T.Group(); root.name = 'villagers'; scene.add(root);
   const ground = (x, z, y = 3) => { const g = world.ground?.(x, z, y); return typeof g === 'number' ? g : null; };
   // Everything a player walks to or through: anchors, gust/vent spots, wheels, sails (keep 2.5 m clear).
@@ -51,8 +61,9 @@ export function createVillagers({ THREE: T, scene, world, look = null } = {}) {
     v.position.set(s.x, s.y, s.z);
     const [fx, fz] = polar(Math.atan2(s.x, s.z) / DEG, 20.3); const yaw = Math.atan2(fx - s.x, fz - s.z);   // face the street
     v.rotation.y = yaw; root.add(v); look?.applyTo?.(v, 'character');
-    list.push({ v, s: c, id: c.who, x: s.x, y: s.y, z: s.z, yaw, cheer: 0, headYaw: 0, headPitch: 0, look: 0, seed: list.length * 1.7 });
+    list.push({ v, s: c, id: c.who, motion: null, x: s.x, y: s.y, z: s.z, yaw, cheer: 0, headYaw: 0, headPitch: 0, look: 0, seed: list.length * 1.7 });
   }
+  loadNpcMotion().then(data => { for (const o of list) o.motion = createNpcMotion(T, o.v, data, VILLAGER_CLIPS[o.id]); }).catch(e => console.warn('villager motion unavailable', e));
   const last = {};
   function update(dt, t, { hero = null, restored = {}, gentle = false } = {}) {
     for (const o of list) {
@@ -65,7 +76,7 @@ export function createVillagers({ THREE: T, scene, world, look = null } = {}) {
       if (hero) { const dx = hero.x - o.x, dz = hero.z - o.z, d = Math.hypot(dx, dz); if (d < 6) { want = 1; yaw = Math.atan2(Math.sin(Math.atan2(dx, dz) - o.yaw), Math.cos(Math.atan2(dx, dz) - o.yaw)); pitch = Math.atan2((hero.y ?? o.y) + 1.2 - (o.y + 1.5), d); } }
       yaw = Math.max(-1.1, Math.min(1.1, yaw));
       o.look += (want - o.look) * (1 - Math.exp(-dt * 3)); o.headYaw += (yaw - o.headYaw) * (1 - Math.exp(-dt * 4)); o.headPitch += (pitch - o.headPitch) * (1 - Math.exp(-dt * 4));
-      o.v.userData.setPose({ t: t + o.seed, act, yaw: o.headYaw, pitch: -o.headPitch, look: o.look * (act === 'cheer' ? .3 : 1), gentle });
+      o.v.userData.setPose({ t: t + o.seed, motion: o.motion, act, yaw: o.headYaw, pitch: -o.headPitch, look: o.look * (act === 'cheer' ? .3 : 1), gentle });
     }
   }
   return { root, list, update, telemetry: () => list.map(o => ({ id: o.id, at: [o.x, o.y, o.z].map(n => +n.toFixed(2)), r: +Math.hypot(o.x, o.z).toFixed(2), cheer: +o.cheer.toFixed(2) })) };

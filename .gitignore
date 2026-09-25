@@ -55,3 +55,5 @@ evidence/character-lab/motion-pass/*.png
 
 # Desktop anatomy iterations; selected evidence is versioned explicitly.
 evidence/character-lab/desktop-anatomy-*/
+experiments/ual-full/
+evidence/entry-2026-09-25/

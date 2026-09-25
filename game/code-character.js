@@ -45,7 +45,9 @@ export async function loadCodeCharacter(build){
  diffuseColor.rgb=mix(baseSkin,diffuseColor.rgb,faceMask*(1.0-eyeHole)*(1.0-(1.0-smoothstep(.075,.105,facePoint.y))*smoothstep(.035,.066,abs(facePoint.x))));
  float noseSoft=exp(-pow(facePoint.x/.024,4.0)-pow((facePoint.y-.129)/.022,4.0));
  diffuseColor.rgb=mix(diffuseColor.rgb,baseSkin,.78*noseSoft);
- `);shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance=diffuseColor.rgb*.10;');};return skin;}return mat;};n.material=Array.isArray(n.material)?n.material.map(convert):convert(n.material);}});
+ `);shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance=diffuseColor.rgb*.10;');};return skin;}return mat;};n.material=Array.isArray(n.material)?n.material.map(convert):convert(n.material);
+ // Thin double-sided cloth (coat tails, rear panel, cuffs) never receives shadows: self-shadow acne read as a dithered stipple.
+ if([].concat(n.material).some(m=>m.side===T.DoubleSide))n.receiveShadow=false;n.userData.character=true;}});
 
  // Preserve authored flight height while grounding the different-sized procedural boots.
  const sourceFeet=[nodes.get('foot_l'),nodes.get('foot_r')];

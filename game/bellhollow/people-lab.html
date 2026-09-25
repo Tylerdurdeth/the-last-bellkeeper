@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Bellkeeper · People lab</title><link rel="icon" href="data:,">
+<script type="importmap">{"imports":{"three":"../vendor/three.module.js","three/addons/utils/BufferGeometryUtils.js":"../vendor/BufferGeometryUtils.js"}}</script>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#20302e;font:13px/1.35 system-ui,sans-serif;color:#f2e6c9}
+canvas{display:block;width:100vw;height:100vh;touch-action:none}
+#hud{position:fixed;left:8px;top:8px;max-width:calc(100vw - 16px);display:flex;flex-direction:column;gap:4px;pointer-events:none}
+#hud .row{display:flex;flex-wrap:wrap;gap:4px;pointer-events:auto}
+#hud button{background:#2c4a45cc;color:#f2e6c9;border:1px solid #f2e6c955;border-radius:6px;padding:4px 7px;font:inherit}
+#tele{background:#2a1e1ccc;border-radius:6px;padding:4px 7px;white-space:pre;font:12px/1.3 ui-monospace,monospace}
+#prompt{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#2a1e1cdd;border:1px solid #e9b94988;border-radius:18px;padding:6px 14px;font-weight:600}
+#prompt:empty{display:none}
+body.shot #hud{display:none}
+</style>
+<body><canvas id="c"></canvas>
+<div id="hud"><div class="row" id="buttons"></div><div id="tele"></div></div><div id="prompt"></div>
+<script type="module" src="./people-lab.js"></script></body></html>
