@@ -567,8 +567,9 @@ function createBands(T, scene) {
         c=mix(c,vec3(1.,.93,.7),lead*.9); a=max(a,lead*.95);              // bright leading edge of the fill
         c=mix(c,hot*1.25,flash*fill*.35);
         float border=1.-smoothstep(.07,.11,e), soft=smoothstep(0.,.03,e); // dark ink border, soft outer edge
-        c=mix(c,uInk,border);
-        a=mix(a,.92,border)*soft;                                        // the ink edge carries the >=3:1 contrast
+        float bk=mix(.3,1.,fill);                                        // idle lanes: a soft deep edge, not long black lines across the floor
+        c=mix(c,mix(deep,uInk,fill),border*bk);
+        a=mix(a,mix(a,.92,bk),border)*soft;                              // the ink edge carries the >=3:1 contrast once the lane fills
         gl_FragColor=vec4(c,a*vS.x);
         #include <colorspace_fragment>
       }`,

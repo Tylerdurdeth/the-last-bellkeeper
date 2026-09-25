@@ -340,6 +340,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
         for (const w of Object.values(wheels)) wind.petals(V(w.hub || w).setY((w.hub || w).y + 1), { count: 40, spread: 2.5, up: 3.5 });
         wind.petals(V(pts.morningBell).setY(pts.morningBell.y + 2), { count: 60, spread: 5 });
         say('Wind floods up through the tree. Every mill, lantern and pinwheel in Bellhollow wakes.', 5);
+        wind.flood?.({ duration: 7, at: [pts.morningBell, pts.mara, pts.loft, pts.skyBridge, pts.millSails, pts.millPipes, pts.millLadders, ...Object.values(wheels).map(w => w.hub || w)].filter(Boolean) });   // visible wind flood (wind.js)
       }
       if (!farAnswered && finaleT >= 9.4) {
         farAnswered = true; sound('far-bell');

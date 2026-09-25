@@ -21,6 +21,11 @@ export const DISTORT_LAYER = 3;
 
 export function createWindFx({ THREE, scene }) {
   const time = { value: 0 };
+  // Premultiplied, additive-leaning blend: shaders output rgb*a and an occlusion alpha (a*occ, occ < 1 = mostly
+  // additive), so wisps brighten dark planks instead of reading as dirty smoke. The alpha channel of the scene target is
+  // left untouched (look.js's post pass reads it as a material marker: terrain .5, fading occluders .25; FX that
+  // rewrite it switch the ink/crease detection on or off under themselves).
+  const BLEND = { blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor };
 
   // ---------- A. stream material for the batched strips ----------
   const streamMaterial = new THREE.ShaderMaterial({
@@ -35,37 +40,63 @@ void main() { vUv = uv; vCol = color; vec4 mvPosition = modelViewMatrix * vec4( 
 #include <fog_pars_fragment>
 ${NOISE_GLSL}
 void main() {
-  float along = vUv.x, across = vUv.y, t = uTime;
-  // Thin wispy filaments whose centre lines wander across the stream, broken up by scrolling fbm (soft ends).
-  float fil = 0.0;
-  for ( int i = 0; i < 3; i ++ ) {
-    float fi = float( i );
-    float c = 0.5 + ( fxNoise( vec2( along * 0.55 - t * 0.9, fi * 3.7 ) ) - 0.5 ) * 0.75;
-    float w = 0.05 + 0.07 * fxNoise( vec2( along * 1.4 - t * 1.3, fi * 7.1 + 2.0 ) );
-    float line = exp( - pow( ( across - c ) / w, 2.0 ) );
-    float brk = smoothstep( 0.30, 0.72, fxFbm3( vec2( along * 1.25 - t * 2.4, fi * 5.3 + across * 1.7 ) ) );
-    fil += line * brk * ( 0.75 - 0.15 * fi );
+  // uv.y 0..1 = camera-facing stream (soft air); uv.y 2..3 = floor-flat band (catch / vent rings).
+  bool isFlat = vUv.y > 1.5;
+  float along = vUv.x, across = isFlat ? vUv.y - 2.0 : vUv.y, t = uTime;
+  vec3 tint = vCol.rgb; float a; vec3 col; float occ = 0.4;
+  // alpha + 2 flags "billow" strips (finale flood): broad soft glowing air with filaments inside.
+  float billow = step( 1.9, vCol.a ), va = vCol.a - 2.0 * billow;
+  occ = mix( 0.4, 0.12, billow );   // billows nearly additive: fogged far billows must not read as grey smoke
+  float lum = dot( tint, vec3( 0.3, 0.55, 0.15 ) );
+  if ( lum < 0.4 ) {
+    // Dark underlay (warm-dark shadow band under a catch ring): a soft, solid, feathered band so the
+    // ring reads on sunlit ivory cobbles; a faint noise keeps it from looking like a printed decal.
+    float band = exp( - pow( ( across - 0.5 ) / 0.3, 2.0 ) );
+    a = band * ( 0.88 + 0.12 * fxNoise( vec2( along * 1.7 - t * 0.6, 3.0 ) ) ) * vCol.a;
+    col = tint; occ = 1.0;   // the underlay must darken (normal blend)
+  } else if ( isFlat ) {
+    // Luminous floor ring: a continuous bright core (readable catch zone) breathing with slow air,
+    // with thin filaments drifting along it; feathered edges, never a hard strip.
+    float core = exp( - pow( ( across - 0.5 ) / 0.17, 2.0 ) );
+    float halo = exp( - pow( ( across - 0.5 ) / 0.36, 2.0 ) );
+    float c = 0.5 + ( fxNoise( vec2( along * 0.9 - t * 1.4, 1.3 ) ) - 0.5 ) * 0.6;
+    float fil = exp( - pow( ( across - c ) / 0.07, 2.0 ) ) * smoothstep( 0.35, 0.75, fxFbm3( vec2( along * 1.6 - t * 2.0, 2.0 ) ) );
+    float breathe = 0.72 + 0.28 * fxFbm3( vec2( along * 0.7 - t * 0.9, 6.0 ) );
+    a = clamp( core * 0.8 * breathe + halo * 0.22 + fil * 0.5, 0.0, 1.0 ) * vCol.a;
+    col = mix( tint * vec3( 0.7, 0.9, 0.95 ), vec3( 0.97, 1.0, 1.0 ), clamp( core * 0.75 + fil * 0.4, 0.0, 1.0 ) );
+    occ = 0.8;   // rings stay solid enough to read on pale stone
+  } else {
+    // Soft air: thin wispy filaments whose centre lines wander across the stream, broken by scrolling fbm
+    // (feathered, dissolving ends), over a very faint haze. No solid core: it must never read as a ribbon.
+    float fil = 0.0;
+    for ( int i = 0; i < 3; i ++ ) {
+      float fi = float( i );
+      float c = 0.5 + ( fxNoise( vec2( along * 0.55 - t * 0.9, fi * 3.7 ) ) - 0.5 ) * 0.8;
+      float w = 0.035 + 0.05 * fxNoise( vec2( along * 1.4 - t * 1.3, fi * 7.1 + 2.0 ) );
+      float line = exp( - pow( ( across - c ) / w, 2.0 ) );
+      float brk = smoothstep( 0.34, 0.74, fxFbm3( vec2( along * 1.25 - t * 2.4, fi * 5.3 + across * 1.7 ) ) );
+      fil += line * brk * ( 0.8 - 0.18 * fi );
+    }
+    float haze = exp( - pow( ( across - 0.5 ) / 0.26, 2.0 ) ) * smoothstep( 0.25, 0.8, fxFbm3( vec2( along * 0.45 - t * 1.1, 4.0 ) ) );
+    a = clamp( fil * 1.05 + haze * mix( 0.12, 0.6, billow ), 0.0, 1.0 ) * va;   // faint haze (a cyan veil reads as teal smoke on dark planks); billows glow
+    // Cool translucent air lit from within: slightly deeper cyan in the haze (reads over ivory stone),
+    // near-white only where filaments are dense.
+    col = mix( mix( tint, vec3( 1.0 ), 0.55 ), vec3( 0.97, 1.0, 1.0 ), clamp( fil * 0.7, 0.0, 1.0 ) );   // pale air, never a dark or saturated teal   // never darker than the wind tint
   }
-  float body = exp( - pow( ( across - 0.5 ) / 0.30, 2.0 ) ) * ( 0.55 + 0.45 * fxFbm3( vec2( along * 0.45 - t * 1.1, 4.0 ) ) );
-  float core = exp( - pow( ( across - 0.5 ) / 0.11, 2.0 ) );
-  float a = clamp( fil * 1.15 + body * 0.42 + core * 0.34, 0.0, 1.0 ) * vCol.a;
-  // Cool translucent mist lit from within: wind tint in the haze, near-white where filaments are dense.
-  vec3 tint = vCol.rgb;
-  // Slightly deeper cyan in the haze so streams still read over pale ivory stone.
-  vec3 col = mix( tint * vec3( 0.62, 0.86, 0.92 ), vec3( 0.95, 1.0, 1.0 ), clamp( fil * 0.55 + core * 0.3, 0.0, 1.0 ) );
   if ( a < 0.01 ) discard;
   gl_FragColor = vec4( col, a );
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
   #include <fog_fragment>
+  gl_FragColor = vec4( gl_FragColor.rgb * a, a * occ );
 }`,
-    transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true, ...BLEND,
   });
   streamMaterial.uniforms.uTime = time;
   streamMaterial.name = 'fx-wind-stream'; streamMaterial.userData.look = false;
 
   // ---------- B. carried particulates (one Points draw) ----------
-  const MAX = 480;
+  const MAX = 2200;
   const pos = new Float32Array(MAX * 3), vel = new Float32Array(MAX * 3), life = new Float32Array(MAX), maxLife = new Float32Array(MAX);
   const kind = new Float32Array(MAX), size = new Float32Array(MAX), seed = new Float32Array(MAX), fade = new Float32Array(MAX);
   const geo = new THREE.BufferGeometry();
@@ -90,11 +121,11 @@ void main() {
   vec2 p = gl_PointCoord - 0.5; float c = cos( vSpin ), s = sin( vSpin ); p = vec2( c * p.x - s * p.y, s * p.x + c * p.y );
   vec3 col; float a;
   if ( vKind < 0.5 ) {            // dust mote: tiny warm-lit speck with soft falloff
-    float d = length( p ); a = smoothstep( 0.5, 0.0, d ); a *= a; col = vec3( 1.0, 0.96, 0.86 );
+    float d = length( p ); a = smoothstep( 0.5, 0.0, d ); a *= a * a * 1.4; col = vec3( 1.0, 0.97, 0.9 );   // fine glinting speck, not a puff
   } else if ( vKind < 1.5 ) {     // seed fluff: soft white star of filaments
     float d = length( p ), ang = atan( p.y, p.x );
-    float rays = 0.5 + 0.5 * cos( ang * 6.0 );
-    a = smoothstep( 0.5, 0.05, d ) * ( 0.35 + 0.65 * rays * smoothstep( 0.5, 0.15, d ) ) + smoothstep( 0.12, 0.0, d );
+    float rays = 0.5 + 0.5 * cos( ang * 5.0 );
+    a = ( smoothstep( 0.5, 0.05, d ) * ( 0.45 + 0.3 * rays ) * 0.6 + smoothstep( 0.14, 0.0, d ) ) * 0.85;   // soft thistledown, not a snowflake
     col = vec3( 0.98, 0.97, 0.92 );
   } else {                        // leaf / petal: small ellipse, palette colour by seed, lit edge
     float d = length( p * vec2( 1.0, 2.2 ) ); a = smoothstep( 0.5, 0.42, d );
@@ -106,8 +137,9 @@ void main() {
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
   #include <fog_fragment>
+  a = min( a, 1.0 ); gl_FragColor = vec4( gl_FragColor.rgb * a, a * 0.6 );
 }`,
-    transparent: true, depthWrite: false, fog: true,
+    transparent: true, depthWrite: false, fog: true, ...BLEND,
   });
   particleMaterial.uniforms.uTime = time; particleMaterial.userData.look = false; particleMaterial.name = 'fx-wind-particles';
   const points = new THREE.Points(geo, particleMaterial); points.frustumCulled = false; points.name = 'fx-wind-particles'; points.renderOrder = 6;
@@ -117,7 +149,7 @@ void main() {
     const i = next; next = (next + 1) % MAX;
     pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z; vel[i * 3] = vx; vel[i * 3 + 1] = vy; vel[i * 3 + 2] = vz;
     kind[i] = k; seed[i] = Math.random(); life[i] = maxLife[i] = lifeS;
-    size[i] = k === 0 ? .03 + Math.random() * .03 : k === 1 ? .08 + Math.random() * .06 : .09 + Math.random() * .06;
+    size[i] = k === 0 ? .025 + Math.random() * .025 : k === 1 ? .045 + Math.random() * .035 : .09 + Math.random() * .06;
   }
   const pickKind = () => { const r = Math.random(); return r < .68 ? 0 : r < .9 ? 1 : 2; };
 
@@ -128,37 +160,62 @@ void main() {
     traces.push({ p: Float32Array.from(pts.subarray ? pts.subarray(0, n * 3) : pts.slice(0, n * 3)), n, alpha, flat });
   }
 
+  // Gust swirl: motes, seed fluff and the odd leaf lifted in a loose spiral out of a catch ring (natural air made
+  // visible by what it carries). rate = particles/s; call every frame for each visible gust source.
+  const swirlAcc = new Map();
+  function swirl(id, x, y, z, r, dt, rate = 9) {
+    let acc = (swirlAcc.get(id) || 0) + dt * rate;
+    while (acc >= 1) {
+      acc--; const a = Math.random() * Math.PI * 2, rr = r * (.35 + .6 * Math.random()), k = Math.random() < .55 ? 0 : Math.random() < .7 ? 1 : 2;
+      const sp = 1.2 + Math.random() * 1.2;
+      spawn(x + Math.cos(a) * rr, y + .1 + Math.random() * .5, z + Math.sin(a) * rr, -Math.sin(a) * sp, 1.1 + Math.random() * 1.3, Math.cos(a) * sp, k, 1.3 + Math.random() * 1.2);
+    }
+    swirlAcc.set(id, acc);
+  }
+
   // ---------- C. updraft mist columns ----------
-  const colGeo = new THREE.CylinderGeometry(1, 1, 1, 28, 1, true); colGeo.translate(0, .5, 0);
+  // 40 sides x 10 rings so the vertex shader can breathe the silhouette (no straight glass edges).
+  const colGeo = new THREE.CylinderGeometry(1, 1, 1, 40, 10, true); colGeo.translate(0, .5, 0);
   const columnMaterial = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 }, uStrength: { value: 1 }, uTint: { value: new THREE.Color('#8FD3E0') } }]),
-    vertexShader: `varying vec2 vUv; varying vec3 vN, vV;
+    vertexShader: `uniform float uTime; varying vec2 vUv; varying vec3 vN, vV; varying float vDist;
 #include <fog_pars_vertex>
-void main() { vUv = uv; vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 ); vN = normalize( normalMatrix * normal ); vV = normalize( - mvPosition.xyz );
+void main() { vUv = uv; vec3 p = position; float ang = uv.x * 6.2832, y = uv.y;
+  // Billowing radius: slow waves travelling up and around; narrow at the grille, blooming and loosening on top.
+  float wob = 0.1 * sin( y * 7.0 - uTime * 2.3 + ang * 2.0 ) + 0.06 * sin( y * 11.0 - uTime * 3.1 - ang * 3.0 + 1.7 );
+  p.xz *= ( 0.72 + 0.2 * smoothstep( 0.0, 1.0, y ) ) * ( 1.0 + wob );   // stays inside the vent's ledge gap
+  vec4 mvPosition = modelViewMatrix * vec4( p, 1.0 ); vN = normalize( normalMatrix * normal ); vV = normalize( - mvPosition.xyz ); vDist = - mvPosition.z;
   gl_Position = projectionMatrix * mvPosition;
 #include <fog_vertex>
 }`,
-    fragmentShader: `uniform float uTime, uStrength; uniform vec3 uTint; varying vec2 vUv; varying vec3 vN, vV;
+    fragmentShader: `uniform float uTime, uStrength; uniform vec3 uTint; varying vec2 vUv; varying vec3 vN, vV; varying float vDist;
 #include <common>
 #include <fog_pars_fragment>
 ${NOISE_GLSL}
 void main() {
   float y = vUv.y, ang = vUv.x, t = uTime;
   // Rising spiralling mist: fbm scrolled upward and twisted around the axis (no hard helix).
-  vec2 q = vec2( ang * 6.0 + y * 2.2 - t * 0.35, y * 3.2 - t * 1.6 );
-  float m = fxFbm( q ), wisps = smoothstep( 0.42, 0.78, fxFbm( q * 1.9 + 5.0 ) );
+  // Seamless around the axis: blend the noise sampled at ang and ang - 1 (identical at the uv seam).
+  vec2 q = vec2( ang * 6.0 + y * 2.2 - t * 0.35, y * 3.2 - t * 1.6 ), q2 = q - vec2( 6.0, 0.0 );
+  float m = mix( fxFbm( q ), fxFbm( q2 ), ang );
+  float wisps = smoothstep( 0.45, 0.8, mix( fxFbm( q * 1.9 + 5.0 ), fxFbm( q2 * 1.9 + 5.0 ), ang ) );
   float facing = abs( dot( normalize( vN ), normalize( vV ) ) );
-  float edge = ( 1.0 - facing ) * ( 1.0 - smoothstep( 0.72, 0.98, 1.0 - facing ) );   // soft: no crisp glass silhouette
-  float a = ( 0.10 + 0.55 * smoothstep( 0.35, 0.8, m ) * ( 0.35 + 0.65 * edge ) + 0.35 * wisps * edge ) * uStrength;
-  a *= smoothstep( 0.0, 0.12, y ) * ( 1.0 - smoothstep( 0.62, 1.0, y ) );          // born at the grille, dissolves on top
-  vec3 col = mix( uTint * 0.85, vec3( 0.96, 1.0, 1.0 ), clamp( wisps * 0.8 + facing * 0.35, 0.0, 1.0 ) );   // brighter core
+  // Volume-like density: thickest through the middle of the column, fading fully to nothing at the silhouette
+  // (a real mist column has no edge). Wisps add streaks that also vanish toward the rim.
+  // Seen from above (desktop gameplay angle) the side walls face away, so the rim fade is looser and there is a
+  // denser core; the base fade starts the mist above the grille lip (no noisy mist over the bars).
+  float body = smoothstep( 0.02, 0.55, facing );
+  float a = ( 0.1 + 0.3 * smoothstep( 0.3, 0.85, m ) + 0.32 * wisps ) * body * uStrength;   // premultiplied/additive-leaning (front + back face add up)
+  a *= smoothstep( 0.0, 0.3, y ) * ( 1.0 - smoothstep( 0.8, 1.0, y ) ) * smoothstep( 1.2, 4.0, vDist );   // near-camera fade: a close phone camera inside the column must not tint the screen   // still dense around the hero near the top           // born at the grille, dissolves on top
+  vec3 col = mix( uTint * 0.9, vec3( 0.96, 1.0, 1.0 ), clamp( wisps * 0.8 + m * 0.2, 0.0, 1.0 ) );
   if ( a < 0.01 ) discard;
   gl_FragColor = vec4( col, a );
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
   #include <fog_fragment>
+  gl_FragColor = vec4( gl_FragColor.rgb * a * 0.75, a * 0.5 );   // linear-space add is strong: keep the hero readable inside
 }`,
-    transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true, ...BLEND,
   });
   columnMaterial.uniforms.uTime = time; columnMaterial.userData.look = false; columnMaterial.name = 'fx-updraft';
   const updrafts = new Map();
@@ -167,9 +224,9 @@ void main() {
     if (!u) {
       const mat = columnMaterial.clone(); mat.uniforms.uTime = time; mat.userData.look = false;
       const mesh = new THREE.Mesh(colGeo, mat); mesh.name = 'fx-updraft-' + id; mesh.renderOrder = 4; mesh.frustumCulled = false;
-      mesh.layers.enable(DISTORT_LAYER); scene.add(mesh); u = { mesh, acc: 0 }; updrafts.set(id, u);
+      scene.add(mesh); u = { mesh, acc: 0 }; updrafts.set(id, u);   // not on DISTORT_LAYER: shimmer made the grille bars jitter
     }
-    const h = Math.max(.5, (top ?? y + 5) - y + 1.2);
+    const h = Math.max(.5, (top ?? y + 5) - y + 3);   // mist continues ~3 m past the ledge so the hero rises inside it
     u.mesh.position.set(x, y, z); u.mesh.scale.set(radius * .95, h, radius * .95);
     u.mesh.material.uniforms.uStrength.value = strength; u.mesh.visible = strength > .01;
     u.x = x; u.y = y; u.z = z; u.h = h; u.r = radius; u.k = strength; u.seen = true;
@@ -233,10 +290,10 @@ void main() {
     for (const [id, u] of updrafts) {
       if (!u.seen) { u.mesh.visible = false; } u.seen = false;
       if (!u.mesh.visible) continue;
-      u.acc += dt * (gentle ? 6 : 14) * u.k;
+      u.acc += dt * (gentle ? 12 : 36) * u.k;
       while (u.acc >= 1) {
         u.acc--; const a = Math.random() * Math.PI * 2, r = u.r * Math.sqrt(Math.random()) * .8;
-        spawn(u.x + Math.cos(a) * r, u.y + .2, u.z + Math.sin(a) * r, -Math.sin(a) * 1.2, 3 + Math.random() * 2.5, Math.cos(a) * 1.2, pickKind(), u.h / 4.5);
+        spawn(u.x + Math.cos(a) * r, u.y + .2, u.z + Math.sin(a) * r, -Math.sin(a) * 1.2, 3 + Math.random() * 2.5, Math.cos(a) * 1.2, Math.random() < .4 ? 0 : Math.random() < .6 ? 1 : 2, u.h / 4.5);   // more fluff and leaves: readable lift
       }
     }
     // Integrate: drag toward a slow curl-ish swirl, leaves feel gravity, fade in/out.
@@ -254,6 +311,6 @@ void main() {
     for (const n of ['position', 'aFade', 'aKind', 'aSize', 'aSeed']) geo.attributes[n].needsUpdate = true;
   }
 
-  return { streamMaterial, particleMaterial, columnMaterial, points, trace, setUpdraft, removeUpdraft, attach, update, updrafts, attached,
+  return { streamMaterial, particleMaterial, columnMaterial, points, trace, swirl, setUpdraft, removeUpdraft, attach, update, updrafts, attached,
     stats: () => ({ particles: life.reduce((n, l) => n + (l > 0 ? 1 : 0), 0), updrafts: updrafts.size }) };
 }

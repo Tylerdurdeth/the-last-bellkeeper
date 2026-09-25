@@ -4,7 +4,8 @@
 // strips in the wind colour #8FD3E0 with a white core and a darker rim, so they read against
 // ivory stone and pale sky on a phone.
 export const WIND = 0x8fd3e0;
-const SHADE = { r: .17, g: .29, b: .27, isColor: true };
+const FLOOD_TINT = { r: 1, g: .9, b: .72, isColor: true }; // warm late-light air for the finale flood
+const SHADE = { r: .025, g: .045, b: .05, isColor: true }; // soft dark band under catch rings: strong on sunlit ivory, invisible on dark planks (no teal smoke)
 const TAU = Math.PI * 2;
 const ease = f => f * f * (3 - 2 * f);
 const clamp01 = v => Math.max(0, Math.min(1, v));
@@ -26,7 +27,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
     vertexShader: `attribute vec4 color;varying vec2 vUv;varying vec4 vCol;
       void main(){vUv=uv;vCol=color;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
     fragmentShader: `uniform float uTime;varying vec2 vUv;varying vec4 vCol;
-      void main(){float across=abs(vUv.y-.5)*2.;float core=1.-smoothstep(.0,.42,across);float rim=smoothstep(.5,.82,across);
+      void main(){float across=abs((vUv.y>1.5?vUv.y-2.:vUv.y)-.5)*2.;float core=1.-smoothstep(.0,.42,across);float rim=smoothstep(.5,.82,across);
        float flow=.8+.2*sin(vUv.x*5.5-uTime*9.);
        vec3 c=mix(vCol.rgb*1.05,vec3(1.),core*.78);c=mix(c,vCol.rgb*.34,rim);
        float a=vCol.a*(1.-smoothstep(.88,1.,across))*mix(1.,flow,.5);if(a<.01)discard;gl_FragColor=vec4(c,min(1.,a*1.1));}`,
@@ -57,7 +58,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
       const v = vCount + i * 2;
       pos[v * 3] = P.x - side.x; pos[v * 3 + 1] = P.y - side.y; pos[v * 3 + 2] = P.z - side.z;
       pos[v * 3 + 3] = P.x + side.x; pos[v * 3 + 4] = P.y + side.y; pos[v * 3 + 5] = P.z + side.z;
-      uv[v * 2] = length * flow; uv[v * 2 + 1] = 0; uv[v * 2 + 2] = length * flow; uv[v * 2 + 3] = 1;
+      uv[v * 2] = length * flow; uv[v * 2 + 1] = flat ? 2 : 0; uv[v * 2 + 2] = length * flow; uv[v * 2 + 3] = flat ? 3 : 1; // flat bands: uv.y 2..3
       for (const k of [v, v + 1]) { col[k * 4] = c.r; col[k * 4 + 1] = c.g; col[k * 4 + 2] = c.b; col[k * 4 + 3] = alpha; }
       if (i < n - 1) { index[iCount++] = v; index[iCount++] = v + 1; index[iCount++] = v + 2; index[iCount++] = v + 1; index[iCount++] = v + 3; index[iCount++] = v + 2; }
     }
@@ -113,6 +114,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
   const push = new Map();      // id -> {value,from,to,t,duration,hold,holdLeft,wobble}
   const wheels = new Map();    // id -> {spin,target,outlet,delay,chain,flowAge}
   let charge = null;           // {origin, since}
+  let flood = null;            // finale wind flood {age, duration, at[]}
   let time = 0;
 
   function addSource(id, { x, y, z, radius = 1.6, active = true, repeat = true, ttl = Infinity, kind = 'gust', label = null } = {}) {
@@ -159,6 +161,9 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
     sound('capture');
     return true;
   }
+  // Finale: wind floods up through the tree for `duration` s — soft wisps spiralling up around the trunk and rising
+  // out of every mill and wheel (the `at` anchors), with motes and leaves carried up and out over the village.
+  function startFlood({ duration = 7, at = [] } = {}) { flood = { age: 0, duration, at: at.map(p => ({ x: p.x, y: p.y, z: p.z })) }; }
   function setCharge(origin, kind = 'gust') { charge = origin ? { origin, kind, since: time } : null; }
   // Release the held charge toward a target. kind: 'give' | 'vent' | 'push' | 'chain' | 'spill'.
   // onArrive fires once the ribbon reaches the target (about 0.45 s), with an impact burst.
@@ -208,29 +213,57 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
     if (camera) eye.copy(camera.position);
     vCount = 0; iCount = 0;
     const spin = gentle ? .45 : 1;
-    // Sources: floor ring (the catch zone), a bright pulsing inner ring, three thick helices.
+    // Sources: floor ring (the catch zone) over a soft dark underlay, a pulsing inner arc, and soft air: thin wisps
+    // that rise and dissolve in a loose spiral (the look renders them as feathered filaments) plus carried motes.
+    const FX = fx?.();
     for (const s of [...sources.values()]) {
       s.age += dt; s.cool = Math.max(0, s.cool - dt); s.spawn = Math.min(1, s.spawn + dt * 2.5);
       if (Number.isFinite(s.ttl) && (s.ttl -= dt) <= 0) { sources.delete(s.id); continue; }
       if (!s.active) continue;
       const ready = s.cool <= 0 ? 1 : .35, k = s.spawn * ready, pulse = .5 + .5 * Math.sin(t * 4 + s.x);
-      ring(s.x, s.y + .03, s.z, s.radius, { width: .5, alpha: .5 * k, color: SHADE }); // dark underlay: reads on pale cobbles
-      ring(s.x, s.y + .04, s.z, s.radius, { width: .26, alpha: .95 * k });
-      ring(s.x, s.y + .05, s.z, s.radius * (.55 + .12 * pulse), { width: .16, alpha: .75 * k }, t * 1.3 * spin, t * 1.3 * spin + TAU * .72);
-      for (let i = 0; i < 3; i++) {
-        const ph = i * TAU / 3 + t * 2.4 * spin, r = .45 + .12 * Math.sin(t * 2 + i);
-        helix(s.x, s.y + .15, s.z, s.y + 2.1 + .2 * i, r, 1.15, ph, { width: .3, alpha: .95 * k, n: 30 });
+      ring(s.x, s.y + .03, s.z, s.radius, { width: .9, alpha: .9 * k, color: SHADE }); // soft dark underlay: reads on sunlit pale cobbles
+      ring(s.x, s.y + .04, s.z, s.radius, { width: .3, alpha: .95 * k });
+      ring(s.x, s.y + .05, s.z, s.radius * (.55 + .12 * pulse), { width: .18, alpha: .55 * k }, t * 1.3 * spin, t * 1.3 * spin + TAU * .72);
+      for (let i = 0; i < 6; i++) {
+        // Each wisp is a short window sliding up its own spiral: born low, rising, thinning out on top.
+        const cyc = (t * .42 * spin + i / 6 + s.x * .13) % 1, ph = i * TAU / 6 + t * 1.5 * spin + s.z;
+        const r = s.radius * (.3 + .28 * ((i * 5) % 6) / 5) + .08 * Math.sin(t * 1.7 + i), top = s.y + 1.7 + .35 * (i % 3);
+        helix(s.x, s.y + .1, s.z, top, r, .9 + .15 * (i % 2), ph, { width: .46, alpha: .8 * k * Math.sin(Math.PI * cyc), n: 26, from: Math.max(0, cyc * 1.5 - .5), to: Math.min(1, cyc * 1.5 + .05) });
       }
+      if (FX?.swirl && Math.hypot(s.x - eye.x, s.y - eye.y, s.z - eye.z) < 32) FX.swirl(s.id, s.x, s.y, s.z, s.radius, dt * k, gentle ? 4 : 9);
       if (Number.isFinite(s.ttl) && s.ttl < 1.5) ring(s.x, s.y + .06, s.z, s.radius * .9, { width: .09, alpha: .8 }, 0, TAU * s.ttl / 1.5);
+    }
+    if (flood) {
+      // A big warm gust rising through the tree: billowing soft air (alpha + 2 = the look's "billow" mode: broad glowing
+      // haze with filaments inside, never a ribbon), curling plumes out of every mill, wheel and square, and a lot of
+      // carried motes and fluff. Envelope: swells in ~.6 s, full for most of the beat, dissolves over the last 1.5 s.
+      flood.age += dt; const fa = flood.age, env = Math.min(1, fa / .6) * Math.min(1, (flood.duration - fa) / 1.5);
+      if (fa >= flood.duration) flood = null;
+      else {
+        const warm = FLOOD_TINT;
+        // Around the trunk (axis x=z=0): short, broad, curling billows at every height, so any camera sees some.
+        for (let i = 0; i < 30; i++) {
+          const cyc = (fa * .45 + i * .173) % 1, r = 13.5 + 4.5 * Math.sin(i * 2.3), y0 = -3 + (i % 6) * 4.2 + cyc * 3;
+          helix(0, y0, 0, y0 + 7, r, .55, i * TAU / 30 + fa * .5, { width: 3.2, alpha: 2 + .9 * env * Math.sin(Math.PI * cyc), color: warm, n: 30, from: Math.max(0, cyc * 1.5 - .5), to: Math.min(1, cyc * 1.5) });
+        }
+        // Out of each spot: a dense curling plume.
+        flood.at.forEach((q, j) => {
+          for (let i = 0; i < 9; i++) {
+            const cyc = (fa * .6 + i / 9 + j * .31) % 1, r = 1 + .45 * i;
+            helix(q.x, q.y - .3, q.z, q.y + 4.5 + .6 * i, r, .9, i * TAU / 9 + fa * 1.4 + j, { width: 1.6, alpha: 2 + .9 * env * Math.sin(Math.PI * cyc), color: warm, n: 26, from: Math.max(0, cyc * 1.4 - .4), to: Math.min(1, cyc * 1.4) });
+          }
+          if (FX?.swirl && Math.hypot(q.x - eye.x, q.y - eye.y, q.z - eye.z) < 50) FX.swirl('flood' + j, q.x, q.y, q.z, 3, dt * env, 50);
+        });
+      }
     }
     // Held charge: two ribbons orbit the staff bell, one trails back to the hero's shoulders.
     if (charge && staffTip) {
       for (let i = 0; i < 2; i++) {
         const ph = t * 5 * spin + i * Math.PI;
-        strip(22, (f, o) => { const a = ph + f * TAU * .8; o.set(staffTip.x + Math.cos(a) * (.28 + .06 * i), staffTip.y - .1 + f * .35 + .06 * Math.sin(a * 2), staffTip.z + Math.sin(a) * (.28 + .06 * i)); }, { width: .2, alpha: 1 });
+        strip(22, (f, o) => { const a = ph + f * TAU * .8; o.set(staffTip.x + Math.cos(a) * (.28 + .06 * i), staffTip.y - .1 + f * .35 + .06 * Math.sin(a * 2), staffTip.z + Math.sin(a) * (.28 + .06 * i)); }, { width: .26, alpha: .6 });
       }
       if (hero) ring(hero.x, hero.y + .05, hero.z, .62 + .05 * Math.sin(t * 5), { width: .12, alpha: .8 }, t * 2 * spin, t * 2 * spin + TAU * .8);
-      if (hero) strip(16, (f, o) => { const a = t * 3 * spin + f * 5; o.set(staffTip.x + (hero.x - staffTip.x) * f + Math.cos(a) * .25 * f, staffTip.y + (hero.y + 1.1 - staffTip.y) * f, staffTip.z + (hero.z - staffTip.z) * f + Math.sin(a) * .25 * f); }, { width: .13, alpha: .8 });
+      if (hero) strip(16, (f, o) => { const a = t * 3 * spin + f * 5; o.set(staffTip.x + (hero.x - staffTip.x) * f + Math.cos(a) * .25 * f, staffTip.y + (hero.y + 1.1 - staffTip.y) * f, staffTip.z + (hero.z - staffTip.z) * f + Math.sin(a) * .25 * f); }, { width: .2, alpha: .45 });
     }
     // Flights: captures spiral in; releases arc out with a thick head and a long tail.
     for (let i = flights.length - 1; i >= 0; i--) {
@@ -240,14 +273,14 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
       if (fl.type === 'capture') {
         for (let k = 0; k < 4; k++) {
           const ph = k * TAU / 4;
-          strip(28, (g, o) => { const e = ease(g), r = (fl.radius || 1.4) * (1 - e) * .9; o.lerpVectors(fl.from, fl.to, e); o.x += Math.cos(ph + g * 5) * r; o.z += Math.sin(ph + g * 5) * r; o.y += Math.sin(Math.PI * g) * .5; }, { width: .3, alpha: 1, from: Math.max(0, f * 1.35 - .55), to: Math.min(1, f * 1.35 + .02) });
+          strip(28, (g, o) => { const e = ease(g), r = (fl.radius || 1.4) * (1 - e) * .9; o.lerpVectors(fl.from, fl.to, e); o.x += Math.cos(ph + g * 5) * r; o.z += Math.sin(ph + g * 5) * r; o.y += Math.sin(Math.PI * g) * .5; }, { width: .36, alpha: .55, from: Math.max(0, f * 1.35 - .55), to: Math.min(1, f * 1.35 + .02) });
         }
       } else {
-        const from = fl.from, to = fl.to, lift = fl.lift ?? 1.2, w = fl.type === 'push' ? .75 : .5;
+        const from = fl.from, to = fl.to, lift = fl.lift ?? 1.2, w = fl.type === 'push' ? .85 : .6;
         const tail = Math.max(0, f * 1.5 - .75), head = Math.min(1, f * 1.5);
-        arc(from, to, lift, { width: w, alpha: 1, from: tail, to: head, n: 34 });
+        arc(from, to, lift, { width: w, alpha: .62, from: tail, to: head, n: 34 });
         for (const off of fl.type === 'push' ? [-.7, 0, .7] : [-.3, .3]) {
-          strip(24, (g, o) => { o.lerpVectors(from, to, g); o.y += Math.sin(Math.PI * g) * lift + off * .5; const s2 = Math.sin(g * 9 + t * 8) * .12; o.x += s2 * (off > 0 ? 1 : -1); }, { width: w * .5, alpha: .85, from: Math.max(0, tail - .05), to: Math.max(0, head - .08) });
+          strip(24, (g, o) => { o.lerpVectors(from, to, g); o.y += Math.sin(Math.PI * g) * lift + off * .5; const s2 = Math.sin(g * 9 + t * 8) * .12; o.x += s2 * (off > 0 ? 1 : -1); }, { width: w * .6, alpha: .45, from: Math.max(0, tail - .05), to: Math.max(0, head - .08) });
         }
       }
       if (f >= 1) {
@@ -258,7 +291,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
     }
     // Bursts: an expanding camera-facing ring plus radial streaks.
     for (let i = bursts.length - 1; i >= 0; i--) {
-      const b = bursts[i]; b.age += dt; const f = clamp01(b.age / b.duration), r = b.radius * ease(f), a = (1 - f) * .95;
+      const b = bursts[i]; b.age += dt; const f = clamp01(b.age / b.duration), r = b.radius * ease(f), a = (1 - f) * .6;
       if (f >= 1) { bursts.splice(i, 1); continue; }
       strip(36, (g, o) => { const q = g * TAU; o.set(b.x + Math.cos(q) * r, b.y + .9 + Math.sin(q) * r * .55, b.z + Math.sin(q) * r * .45); }, { width: (.32 * (1 - f) + .08) * (b.radius > 4 ? b.radius / 3 : 1), alpha: a, taper: false, color: b.color });
       for (let k = 0; k < b.rays; k++) {
@@ -267,12 +300,11 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
       }
     }
     // Vent columns: grille ring with a countdown arc, four rising helices, vertical streaks, top ring.
-    const FX = fx?.();
     if (FX && !FX.attached?.has?.(mesh)) FX.attach(mesh);
     for (const [id, v] of vents) {
       v.age += dt; if (v.age >= v.duration) { vents.delete(id); FX?.removeUpdraft(id); continue; }
       const k = clamp01(Math.min(v.age / .25, (v.duration - v.age) / .6)), h = v.top - v.y, left = 1 - v.age / v.duration;
-      ring(v.x, v.y + .06, v.z, v.radius, { width: .3, alpha: 1 * k });
+      ring(v.x, v.y + .06, v.z, v.radius, { width: .36, alpha: .9 * k });
       ring(v.x, v.y + .08, v.z, v.radius + .4, { width: .2, alpha: .95 * k }, -Math.PI / 2, -Math.PI / 2 + TAU * left);
       if (FX) { FX.setUpdraft(id, { x: v.x, y: v.y, z: v.z, top: v.top, radius: v.radius, strength: k }); continue; } // the look draws the mist column
       for (let i = 0; i < 4; i++) {
@@ -308,8 +340,8 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
       if (w.from) {
         // A visible stream from hub to outlet: grows in, then keeps pulsing along the route.
         const f = Math.min(1, w.flowAge / Math.max(.2, w.delay)), to = C.set(src.x, src.y + .9, src.z);
-        arc(w.from, to, 1.4, { width: .32, alpha: .9, from: 0, to: f, n: 34 });
-        for (let i = 0; i < 3; i++) { const h = ((t * .9 + i / 3) % 1); if (h < f) arc(w.from, to, 1.4, { width: .5, alpha: .95, from: Math.max(0, h - .12), to: h, n: 10 }); }
+        arc(w.from, to, 1.4, { width: .4, alpha: .55, from: 0, to: f, n: 34 });
+        for (let i = 0; i < 3; i++) { const h = ((t * .9 + i / 3) % 1); if (h < f) arc(w.from, to, 1.4, { width: .55, alpha: .5, from: Math.max(0, h - .12), to: h, n: 10 }); }
       }
     }
   }
@@ -322,13 +354,13 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
   }
   // A chain wheel's flow is drawn from its hub to the outlet; set `from` when powering.
   function chainFrom(id, from) { const w = wheels.get(id); if (w) w.from = from.isVector3 ? from.clone() : new T.Vector3(from.x, from.y, from.z); }
-  function reset() { for (const id of vents.keys()) fx?.()?.removeUpdraft(id); pLife.fill(0); sources.clear(); flights.length = 0; bursts.length = 0; vents.clear(); push.clear(); wheels.clear(); charge = null; }
+  function reset() { flood = null; for (const id of vents.keys()) fx?.()?.removeUpdraft(id); pLife.fill(0); sources.clear(); flights.length = 0; bursts.length = 0; vents.clear(); push.clear(); wheels.clear(); charge = null; }
   function telemetry() { return { charge: charge?.origin ?? null, sources: [...sources.values()].filter(catchable).map(s => ({ id: s.id, x: +s.x.toFixed(2), y: +s.y.toFixed(2), z: +s.z.toFixed(2) })), vents: [...vents.keys()], push: Object.fromEntries([...push].map(([k, v]) => [k, +v.value.toFixed(2)])), wheels: Object.fromEntries([...wheels].map(([k, v]) => [k, +v.spin.toFixed(2)])), flights: flights.length, strips: iCount / 6 }; }
   return {
     mesh, strip, ring, helix, arc, burst, petals,
     addSource, setSource, removeSource, sourceAt, sources, pickTarget,
     catchFrom, setCharge, release, get charge() { return charge; }, get charged() { return !!charge; },
-    openVent, setPush, pushValue, pushHoldLeft, powerWheel, chainFrom, wheelSpin, state, update, flush, reset, telemetry,
+    openVent, flood: startFlood, setPush, pushValue, pushHoldLeft, powerWheel, chainFrom, wheelSpin, state, update, flush, reset, telemetry,
     get busy() { return flights.length > 0; },
   };
 }

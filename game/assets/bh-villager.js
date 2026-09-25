@@ -60,7 +60,7 @@ export default function (THREE, opts = {}) {
     baker: { hip: .74, thigh: .36, shin: .34, sh: .47, sw: .185, ua: .26, fa: .23, hs: 1.02, lr: 1.18, waist: .16, chest: .2, hipsW: .22, skin: 0xE8B48E, skinSh: 0xCB9270, iris: 0x5A3A22, brow: 0x2E2320, lips: 0xC8766A, blush: .9, age: .15, cheeks: 1.25, jaw: 1.05, smile: 1 },
     elder: { hip: .79, thigh: .386, shin: .368, sh: .46, sw: .175, ua: .3, fa: .27, hs: .98, lr: .92, waist: .12, chest: .15, hipsW: .15, skin: 0xE2AA86, skinSh: 0xC48A66, iris: 0x4F6E78, brow: 0xECECE6, lips: 0xB07466, blush: .55, age: 1, cheeks: .85, jaw: .92, smile: .8 },
     girl: { hip: .56, thigh: .27, shin: .26, sh: .33, sw: .125, ua: .19, fa: .17, hs: .92, lr: .78, waist: .1, chest: .11, hipsW: .12, skin: 0xF0C6A2, skinSh: 0xD6A07E, iris: 0x5A3A22, brow: 0x4A3222, lips: 0xD27A6C, blush: 1, age: 0, cheeks: 1.3, jaw: .88, smile: 1.1, child: 1 },
-    seller: { hip: .88, thigh: .43, shin: .41, sh: .5, sw: .195, ua: .3, fa: .27, hs: 1, lr: 1, waist: .14, chest: .17, hipsW: .16, skin: 0xB07A52, skinSh: 0x8F5E3E, iris: 0x3A2618, brow: 0x241812, lips: 0x9A5A4A, blush: .35, age: 0, cheeks: .95, jaw: 1, smile: 1 },
+    seller: { hip: .82, thigh: .4, shin: .38, sh: .51, sw: .215, ua: .29, fa: .26, hs: 1, lr: 1.1, waist: .16, chest: .195, hipsW: .17, skin: 0xB07A52, skinSh: 0x8F5E3E, iris: 0x3A2618, brow: 0x241812, lips: 0x9A5A4A, blush: .35, age: 0, cheeks: .95, jaw: 1, smile: 1 },
   }[who];
   const R = .05 * S.lr;                                   // base limb radius
 
@@ -86,7 +86,7 @@ export default function (THREE, opts = {}) {
     }
   }
   // ---------------- arms: upper / lower / hand pivots, soft hands with a thumb and grouped fingers ----------------
-  function arms({ sleeve, cuff = null, sleeveTo = 1, rolledAt = null, stripes = null } = {}) {
+  function arms({ sleeve, cuff = null, sleeveTo = 1, rolledAt = null, stripes = null, fist = null } = {}) {
     const A = {};
     for (const s of [-1, 1]) {
       const side = s < 0 ? 'left' : 'right';
@@ -104,6 +104,7 @@ export default function (THREE, opts = {}) {
       const k = S.lr * .95, sk = S.skin, skd = (v, c) => c.set(sk).lerp(C(S.skinSh), .18);
       slab(hd, sk, 0, -.038 * k, .004, .062 * k, .08 * k, .03 * k, 3.2);
       for (let f = 0; f < 4; f++) { const fx = (-.021 + f * .014) * k, L = [.05, .058, .055, .044][f] * k;
+        if (fist === side) { tube(hd, [[fx, -.07 * k, .006], [fx, -.094 * k, .02 * k], [fx, -.086 * k, .04 * k], [fx, -.066 * k, .038 * k]], .0088 * k, skd, .0072 * k, 6, 8); continue; }   // curled round a handle
         tube(hd, [[fx, -.07 * k, .004], [fx * 1.04, -.07 * k - L * .55, .012 * k], [fx * 1.06, -.07 * k - L, .024 * k]], .0082 * k, skd, .0064 * k, 6, 6); }
       tube(hd, [[-s * .026 * k, -.03 * k, .012], [-s * .04 * k, -.056 * k, .026 * k], [-s * .036 * k, -.078 * k, .036 * k]], .0098 * k, sk, .0074 * k, 6, 6);
       A[side] = { ua, fa, hd };
@@ -235,15 +236,16 @@ export default function (THREE, opts = {}) {
     ell(head, 0x5E5238, 0, HY + .07, .098, .075, .01, .045, 14, 6, -.1, 0, 0);
     ell(head, 0x5E5238, 0, HY + .122, .02, .012, .008, .012, 6, 4);
     // arms: jumper sleeves with a purple elbow patch; walking stick (right) and pipe (left)
-    const A = arms({ sleeve: rib, cuff: JUMPER_SH, sleeveTo: 1 });
+    const A = arms({ sleeve: rib, cuff: JUMPER_SH, sleeveTo: 1, fist: 'right' });
     ell(A.left.ua, 0x7A5A8A, -.01, -S.ua * .9, -.03, .03, .035, .018, 8, 6);
     const pipe = group('pipe', 0, -.07, .03, A.left.hd);
     put(pipe, new T.CylinderGeometry(.018, .014, .045, 12), 0x5A3220, 0, .02, .03); tube(pipe, [[0, .0, .03], [0, -.02, -.02], [0, -.02, -.08]], .006, 0x2E221C, .005, 6, 6);
-    const stick = group('stick', 0, -.06, .02, A.right.hd);
-    tube(stick, [[0, .02, .06], [0, .05, 0], [0, 0, -.03]], .016, 0x7A5436, .016, 8, 8);
-    tube(stick, [[0, 0, 0], [0, -.4, .006], [0, -.86, 0]], .015, shade(0x8A6240, 0x6A4A30, v => Math.max(0, Math.sin(v.y * 30)) * .4), .012, 8, 10);
+    // walking stick: the crook handle runs through the closed fingers; the shaft reaches the ground (scaled each frame)
+    const stick = group('stick', 0, -.082, .022, A.right.hd), shaft = group('shaft', 0, 0, 0, stick);
+    tube(stick, [[-.05, -.012, 0], [-.02, .004, 0], [.03, .004, 0], [.06, -.01, 0]], .015, 0x7A5436, .014, 8, 10);   // derby handle across the palm
+    tube(shaft, [[-.042, -.01, 0], [-.043, -.5, 0], [-.044, -1, 0]], .015, shade(0x8A6240, 0x6A4A30, v => Math.max(0, Math.sin(v.y * 26)) * .4), .012, 8, 10);
     hold = (J, t) => { const puff = Math.max(0, Math.sin(t * .5)) ** 4;
-      J.rightUpperArm.rotation.set(-.12, 0, .1); J.rightLowerArm.rotation.set(-.25, 0, 0); J.rightHand.rotation.set(0, 0, 0);
+      J.rightUpperArm.rotation.set(-.12, 0, .1); J.rightLowerArm.rotation.set(-.3, 0, 0); J.rightHand.rotation.set(-.15, 0, 0);
       J.leftUpperArm.rotation.set(-.45 - .3 * puff, .25, -.22); J.leftLowerArm.rotation.set(-1.9 - .35 * puff, .35, 0); J.leftHand.rotation.set(0, 0, .2);
     };
     cheer.right = false;
@@ -283,7 +285,7 @@ export default function (THREE, opts = {}) {
     for (const s of [-1, 1]) tube(chest, [[s * .02, SH + .035, .06], [s * .055, SH + .005, .1], [s * .07, SH + .012, .07]], .014, SHIRT_SH, .007, 6, 6);
     for (let i = 0; i < 3; i++) ell(chest, 0x2A1E1C, 0, SH - .05 - i * .035, S.chest * .88, .004, .004, .003, 5, 4);
     tube(chest, [[-S.sw * .8, SH, .02], [-.02, .12, S.chest * 1.02], [S.sw * .95, -.1, .05]], .012, 0x5A3E2A, .012, 6, 12);   // satchel strap
-    slab(hips, 0x7A6040, S.hipsW * 1.25, -.08, .02, .08, .2, .22, 4); slab(hips, 0x6A5236, S.hipsW * 1.32, -.02, .02, .03, .1, .23, 4);
+    slab(hips, 0x9A7A50, S.hipsW * 1.22, -.01, .01, .075, .14, .2, 4); slab(hips, 0x8A6A44, S.hipsW * 1.3, .03, .01, .03, .08, .21, 4); ell(hips, 0xD9A441, S.hipsW * 1.36, .0, .01, .008, .012, .012, 6, 4);   // satchel: short, sits on the hip
     // short curly hair
     hairCap(head, HAIR, { front: .06, side: .02, back: -.055, y0: HY });
     for (let i = 0; i < 90; i++) { const a = i * 2.39996, e = .1 + .78 * Math.sqrt((i + .5) / 90), x = Math.cos(a) * Math.sin(e * 1.35), z = Math.sin(a) * Math.sin(e * 1.35), y = Math.cos(e * 1.35); if (z > .3 && y < .72) continue;
@@ -338,6 +340,7 @@ export default function (THREE, opts = {}) {
     J.neck.rotation.set(-pitch * lk * .4 + (S.child ? -.12 : who === 'elder' ? -.06 : 0), yaw * lk * .4, 0);
     J.head.rotation.x += -pitch * lk * .6; J.head.rotation.y += yaw * lk * .6;
     upright(J.stick); upright(J.pinwheel, .5); upright(J.basketHang);
+    if (J.shaft) { J.stick.updateWorldMatrix(true, false); root.updateWorldMatrix(true, false); const sy = J.stick.getWorldPosition(new T.Vector3()).y - root.getWorldPosition(new T.Vector3()).y; J.shaft.scale.y = Math.max(.3, sy); }
     const bl = (t + (who.length * .7)) % 4.3; J.eyes.scale.y = bl > 4.12 ? 1 - .9 * Math.sin((bl - 4.12) / .18 * Math.PI) : 1;
     if (J.prop) J.prop.rotation.z = -t * (gentle ? 3 : 7);
     root.updateMatrixWorld(true);

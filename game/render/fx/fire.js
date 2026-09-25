@@ -64,7 +64,7 @@ void main() {
   #include <colorspace_fragment>
   #include <fog_fragment>
 }`,
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: true,
+    transparent: true, depthWrite: false, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,   // additive; keep target alpha (post-pass material marker) fog: true,
   });
   material.uniforms.uTime = time; material.userData.look = false; material.name = 'fx-fire';
   const mesh = new THREE.Mesh(geo, material); mesh.frustumCulled = false; mesh.name = 'fx-fire'; mesh.renderOrder = 7;

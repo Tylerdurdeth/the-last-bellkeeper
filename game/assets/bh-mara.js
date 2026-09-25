@@ -23,7 +23,7 @@ export default function (THREE, opts = {}) {
   const metal = Object.assign(new T.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .42, metalness: .35 }), { name: 'metal' });
   const shiny = Object.assign(new T.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .22, metalness: .75, emissive: 0x3a1c08, emissiveIntensity: .35 }), { name: 'metal' });
   const C = h => new T.Color(h);
-  const SKIN = C(0xE3AC86), SKIN_SH = C(0xC98C69), BLUSH = C(0xE58F7A), LINE = C(0xB5785C), LIP = C(0xD08070), HAIR = C(0xDCDDD8), HAIR_SH = C(0xB2A99C),
+  const SKIN = C(0xE3AC86), SKIN_SH = C(0xC98C69), BLUSH = C(0xE58F7A), LINE = C(0xB5785C), LIP = C(0xD08070), HAIR = C(0xE4DBC8), HAIR_SH = C(0xB2A99C),
     BLOUSE = C(0xF2E6C9), BLOUSE_SH = C(0xD8C7A4), APRON = C(0xC49A4C), APRON_SH = C(0x9C7536), STITCH = C(0x7A5A2A), SKIRT = C(0x5E4130), SKIRT_SH = C(0x46301F),
     BOOT = C(0x6E4830), BOOT_SH = C(0x4B3021), LEATHER = C(0x7A4E33), CORAL = C(0xD96956), CORAL_SH = C(0xB14E3F), COPPER = C(0xB8733F), VERD = C(0x3E9C8C),
     WHITE = C(0xF6EFE2), IRIS = C(0x5C4028), IRIS_L = C(0x7F6A3A), INK = C(0x2A1E1C);
@@ -193,9 +193,9 @@ export default function (THREE, opts = {}) {
   {
     const g = new T.SphereGeometry(1, 36, 22, 0, Math.PI * 2, 0, Math.PI * .56), p = g.attributes.position;
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), front = Math.max(0, z) ** 1.5, az = Math.atan2(x, z), wv = 1 + .035 * Math.sin(az * 16 + y * 4) * (1 - y * .6); p.setXYZ(i, x * .096 * wv, y * .122 + .006 + front * .062 * (1 - y), (z * .103 - .004) * wv); }
-    g.computeVertexNormals(); mesh(colorize(g, (v, o) => o.copy(HAIR).lerp(HAIR_SH, .5 + .5 * Math.sin(Math.atan2(v.x, v.z) * 16 + v.y * 40)).lerp(C(0xF2F2EE), smooth(.06, .12, v.y) * .5)), head, 0, HY + .012, 0);
+    g.computeVertexNormals(); mesh(colorize(g, (v, o) => o.copy(HAIR).lerp(HAIR_SH, .5 + .5 * Math.sin(Math.atan2(v.x, v.z) * 16 + v.y * 40)).lerp(C(0xF1E8D6), smooth(.06, .12, v.y) * .5)), head, 0, HY + .012, 0);
     for (let i = 0; i < 9; i++) { const a = -1 + i * .25, x = Math.sin(a) * .09, z = Math.cos(a) * .09;
-      tube(head, [[x * .88, HY + .072, z * .9], [x * 1.04, HY + .105, z * .58], [x * .7, HY + .126, z * .1 - .02], [0, HY + .12, -.05]], .009, .005, i % 2 ? C(0xEDEDE8) : HAIR_SH, paint, 6, 10); }
+      tube(head, [[x * .88, HY + .072, z * .9], [x * 1.04, HY + .105, z * .58], [x * .7, HY + .126, z * .1 - .02], [0, HY + .12, -.05]], .009, .005, i % 2 ? C(0xF0E6D4) : HAIR_SH, paint, 6, 10); }
     for (const s of [-1, 1]) tube(head, [[s * .07, HY + .07, .07], [s * .082, HY + .03, .075], [s * .078, HY - .005, .07]], .0022, .0012, HAIR, paint, 5, 8);   // loose strands at the temples
     for (const s of [-1, 1]) tube(head, [[s * .075, HY + .065, .05], [s * .092, HY + .045, .012], [s * .09, HY + .055, -.035], [s * .06, HY + .095, -.07]], .012, .008, HAIR, paint, 6, 10);
     lathe(head, [[.001, -.024], [.05, -.014], [.06, .014], [.046, .042], [.001, .052]], (v, o) => o.copy(HAIR).lerp(HAIR_SH, Math.max(0, Math.sin(Math.atan2(v.x, v.z) * 5 + v.y * 80) * .5)), 0, HY + .122, -.05, 1, 18);
