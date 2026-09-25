@@ -282,7 +282,8 @@ function hudSafe(){const s={l:12,t:12,r:innerWidth-12,b:innerHeight-12},top=$('#
 // The carved gallery (outer ring walkway, r > ~9 m, above the high ring) is not the fight: no encounter framing there.
 // Inside the Hollow (gate, gallery, ramps and stairs, down to the arena floor) but not in the arena fight and not in the
 // reveal: the forced open-side camera. The fight = after the reveal (or a saved phase), with the hero on the floor ring.
-const inGallery=p=>{if(!p||quest?.area?.(p)!=='hollow')return false;if(revealT>=0&&revealT<REVEAL_END)return false;
+const inGallery=p=>{if(!p||!(quest?.area?.(p)==='hollow'||(Math.hypot(p.x,p.z)<12.5&&p.y<5.5&&p.y>-16)))return false;   /* by position too: the gate end of the gallery still reads as 'terrace' */
+ if(revealT>=0&&revealT<REVEAL_END)return false;
  const R=world?.points?.guardianWell?.rings,G=quest?.guardian,fought=revealDone||(G?.phase|0)>0||!!quest?.progress?.guardian;
  return !(fought&&R&&p.y<R.low.y+2.5&&!quest?.progress?.guardian);};
 function encounterSubject(){return state.started&&!introActive&&!inGallery(movement?.position)?quest?.subject()||null:null;}
@@ -407,7 +408,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
   if(G?.setReveal&&R){const pending=quest.progress.hollow&&!quest.progress.guardian&&!revealDone&&(G.phase|0)===0;
    if(!pending){if(revealT>=0||revealWasSet){G.setReveal({held:false,hidden:false,off:0});revealWasSet=false;}revealT=-1;}
    else if(revealT<0){G.setReveal({held:true,hidden:true,off:REVEAL_H});revealWasSet=true;const p=movement.position;
-    if(movement.grounded&&p.y<R.low.y+1.2&&Math.hypot(p.x,p.z)<Math.hypot(R.low.safe.x,R.low.safe.z)+2.5){revealT=0;revealLanded=false;fightYaw=null;revealCut=true;galK=0;armPitch=armLength=null;{const c0=G.object.position;if(Math.hypot(p.x-c0.x,p.z-c0.z)<5){movement.reset([R.low.safe.x,R.low.safe.y,R.low.safe.z]);movement.yaw=Math.atan2(c0.x-R.low.safe.x,c0.z-R.low.safe.z);}}   /* never under the landing guardian */
+    if(movement.grounded&&p.y<R.low.y+1.2&&Math.hypot(p.x,p.z)<Math.hypot(R.low.safe.x,R.low.safe.z)+2.5){revealT=0;revealLanded=false;fightYaw=null;revealCut=true;galK=0;armPitch=armLength=null;{const c0=G.object.position;movement.reset([R.low.safe.x,R.low.safe.y,R.low.safe.z]);movement.yaw=Math.atan2(c0.x-R.low.safe.x,c0.z-R.low.safe.z);}   /* always from the clear arena entry, facing the guardian (nothing between lens and guardian) */
      const c=G.object.position;movement.yaw=Math.atan2(c.x-p.x,c.z-p.z);bossAudio.event?.('rage',{d:1.6});}}
    else{revealT+=dt;const t=revealT,e=v=>{v=Math.max(0,Math.min(1,v));return 1-Math.pow(1-v,3);};
     const off=t<.8?REVEAL_H:t<3.2?REVEAL_H*(1-e((t-.8)/2.4)):t<3.7?-.35*Math.sin(Math.PI*(t-3.2)/.5):0;
@@ -427,8 +428,8 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  // up to ~30 deg; it springs back. Phone and desktop alike, stick held or not.
  {const inG=!introActive&&!quest.finaleActive&&!beat&&inGallery(pos);galK=T.MathUtils.damp(galK,inG?1:0,2.5,dt);
   if(inG&&Math.hypot(pos.x,pos.z)>1.5){const r=Math.hypot(pos.x,pos.z),ix=-pos.x/r,iz=-pos.z/r,tx=-iz,tz=ix,fy=movement.yaw,ft=Math.sin(fy)*tx+Math.cos(fy)*tz;
-   if(Math.abs(ft)>.3)galSgn=Math.sign(ft);const want=Math.atan2(ix-galSgn*tx*.4,iz-galSgn*tz*.4);
-   if(galYaw===null){galYaw=cameraYaw;galSet=cameraYaw;galNudge=0;}
+   if(Math.abs(ft)>.3)galSgn=Math.sign(ft);const want=Math.atan2(ix-galSgn*tx*.12,iz-galSgn*tz*.12);   /* almost straight across the well: no swing when the walk reverses */
+   if(galYaw===null){galYaw=want;galSet=want;galNudge=0;}   /* entering: cut straight to the open side, never swing round through the wall */
    const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a)),nowS=performance.now()/1000;
    galNudge=T.MathUtils.clamp(galNudge+wrap(cameraYaw-galSet),-.52,.52);if(nowS-lastCameraInput>1.2&&!cameraDrag)galNudge*=Math.exp(-dt*1.5);
    galYaw+=T.MathUtils.clamp(wrap(want-galYaw),-1.4*dt,1.4*dt);cameraYaw=galYaw+galNudge;galSet=cameraYaw;sx=Math.sin(cameraYaw);sz=Math.cos(cameraYaw);}
