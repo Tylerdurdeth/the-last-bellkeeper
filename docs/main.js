@@ -31,7 +31,7 @@ const DEFAULT_YAW=Math.atan2(.615,.788);let cameraYaw=DEFAULT_YAW,cameraDrag=nul
 let hero,movement,animator,world,wind,quest,look=null,staff,staffHand,mara,captionEnd=0,context=null,travel=0,fps=60,start3=[0,0,0];
 let saveTimer=0,introTime=0,introActive=false,lastShot=-1,queued=null,uiTimer=0,endingAt=0,liftLead=0;
 // Game feel: hit-stop (sim frozen, render continues), camera kick, finale arrival blend; Mara acting.
-let beat=null,villagers=null,map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
+let stickReleasedAt=-9,beat=null,villagers=null,map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
 // Camera spring arm, subject framing and chart tucking state (see frame()).
 let armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
@@ -80,6 +80,7 @@ function questEvent(_progress,e={}){
  if(e.bells==='out')bellOutT=state.t;if(e.bells==='return'){bellRetT=state.t;bellOutT??=state.t-1.7;}
  if(e.mara==='lever')maraAct.leverT=0;if(e.mara==='gesture'){maraAct.gesture=1.6;handover();}
  if(['sails','pipes','ladders'].includes(e.restored)){const h=world.points[e.restored]?.mill;if(h){const port=camera.aspect<.85;startBeat(new T.Vector3(h.x,h.y,h.z),{dist:port?22:17,up:3,dur:2.6,kind:'mill'});}}
+ if(e.look){startBeat(new T.Vector3(...e.look),{dist:9,up:5,dur:1.8,kind:'hint'});}
  if(e.vista==='mills'){const m=millHubs().filter((v,i)=>i<2);/* the western Sails and Pipes mills are the ones seen from the loft */if(m.length){const c=m.reduce((a,v)=>a.add(v),new T.Vector3()).multiplyScalar(1/m.length),p=movement.position;const from=new T.Vector3(p.x-c.x,0,p.z-c.z).normalize().multiplyScalar(6).add(p).setY(p.y+6);startBeat(c,{from,dur:3.4,kind:'vista'});}}if(e.mara==='wave')maraAct.waveUntil=state.t+(state.complete||e.complete?9:5);
  if(e.teleport){movement.reset(e.teleport);animator?.reset();snapCamera();if(world.points.terraceView)arrival=2.6;const ms=world.points.terraceView?.maraStand;if(ms&&mara){mara.position.set(ms.x,ms.y,ms.z);}}
  if(e.complete){state.complete=true;endingAt=state.t+7;later(1.6,'',0,()=>sound('chime'));}
@@ -166,21 +167,28 @@ function floorUnder(x,z,y){const g=world?.ground(x,z,y);return typeof g==='numbe
 // The great trunk (bark shell, Hollow walls and ceiling) is solid for the lens too: world kit's trunkSolid, padded.
 const inTrunk=(x,z,h)=>!world?.stub&&[[0,0],[.35,0],[-.35,0],[0,.35],[0,-.35]].some(([a,b])=>trunkSolid(x+a,z+b,h));
 function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch),layered=!!world?.layers;for(let i=1;i<=20;i++){const d=length*i/20;if(d<=1.2)continue;const x=o.x+sx*c*d,z=o.z+sz*c*d,h=o.y+s*d,pad=.35+.03*i;
- if(inTrunk(x,z,h))return d;if(d<=2)continue;
- if(layered){for(const L of world.layers(x,z))if(L.h>h-pad&&L.h<h+1.1)return d;}else if(h<viewGround(x,z)+pad)return d;}return 0;}
+ if(inTrunk(x,z,h)){armHitId='trunk';return d;}if(d<=2)continue;
+ // Low things (balustrades, barrels, kerbs: tops under ~1.5 m above the hero's feet) never shorten the arm: the camera goes over them.
+ if(layered){for(const L of world.layers(x,z))if(L.h>armLow&&L.h>h-pad&&L.h<h+1.1){armHitId=L.id;return d;}}else{const g=viewGround(x,z);if(g>armLow&&h<g+pad)return d;}}return 0;}
+let armLow=-Infinity,armHitId=null;
 function placeCamera(dt,sx,sz,pitch,length){// Test the arm from a point kept above the floor: framing may pan the look target below a descending deck.
  armOrigin.copy(cameraTarget);armOrigin.y=Math.max(armOrigin.y,floorUnder(armOrigin.x,armOrigin.z,armOrigin.y)+.9);let p=pitch,l=length;
  // Raise first (the usual fix); under an overhang, also try lowering the arm beneath it.
  // Blocked: raise the arm a little first, then pull it in (never through walls), then try lower pitches.
- if(armHit(armOrigin,sx,sz,p,l)){let found=false;
-  for(let k=1;k<=6&&!found;k++){const q=pitch+k*.05;if(q<=1.05&&!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;}}
-  if(!found){const hit=armHit(armOrigin,sx,sz,pitch,l);if(hit&&hit-.7>=3.2&&!armHit(armOrigin,sx,sz,pitch,hit-.7)){l=hit-.7;found=true;}}
-  for(let k=1;k<=18&&!found;k++){for(const q of [pitch+(k+6)*.05,pitch-k*.05]){if(q>1.05||q<.1)continue;if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;break;}}}
-  if(!found){p=Math.min(1.05,pitch+.3);const hit=armHit(armOrigin,sx,sz,p,l);if(hit)l=Math.max(2.2,hit-.8);}}
+ armLow=(movement?.position.y??armOrigin.y-1)+1.5;
+ // Blocked: rise first (up to 60° at full length), then lower angles at full length, then shorten — but keep the
+ // arm >= 5.5 m, then >= 4.5 m; only as a last resort shorter. Never through the trunk or a wall above head height.
+ if(armHit(armOrigin,sx,sz,p,l)){let found=false;const MAXP=1.05;
+  for(let q=pitch+.05;q<=MAXP+1e-6&&!found;q+=.05)if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;}
+  for(let q=pitch-.05;q>=.12&&!found;q-=.05)if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;}
+  for(const minL of [5.5,4.5])for(let q=pitch;q<=MAXP+1e-6&&!found;q+=.1){const hit=armHit(armOrigin,sx,sz,q,l);const l2=Math.max(minL,hit-.6);if(l2<l&&!armHit(armOrigin,sx,sz,q,l2)){p=q;l=l2;found=true;}}
+  if(!found){p=MAXP;const hit=armHit(armOrigin,sx,sz,p,l);if(hit)l=Math.max(2.5,hit-.6);}}
  armPitch??=p;armLength??=l;armPitch=T.MathUtils.damp(armPitch,p,p>armPitch?12:2.4,dt);armLength=T.MathUtils.damp(armLength,l,l<armLength?12:2,dt);
  const c=Math.cos(armPitch)*armLength;camera.position.set(cameraTarget.x+sx*c,cameraTarget.y+Math.sin(armPitch)*armLength,cameraTarget.z+sz*c);
  let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));camera.position.y=Math.max(camera.position.y,floor+1.1);
- for(let i=0;i<12&&inTrunk(camera.position.x,camera.position.z,camera.position.y);i++)camera.position.lerp(cameraTarget,.18);}
+ // Lens touching the trunk: rise first; pull in only while the arm stays >= 4.5 m.
+ for(let i=0;i<12&&inTrunk(camera.position.x,camera.position.z,camera.position.y);i++)camera.position.y+=.5;
+ for(let i=0;i<8&&inTrunk(camera.position.x,camera.position.z,camera.position.y)&&camera.position.distanceTo(cameraTarget)>4.6;i++)camera.position.lerp(cameraTarget,.12);}
 function screenBox(box){let l=1e9,t=1e9,r=-1e9,b=-1e9;for(let i=0;i<8;i++){ndc.set(i&1?box.max.x:box.min.x,i&2?box.max.y:box.min.y,i&4?box.max.z:box.min.z).project(camera);if(ndc.z>1)return null;const x=(ndc.x+1)/2*innerWidth,y=(1-ndc.y)/2*innerHeight;l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}return {l,t,r,b};}
 // Play area left by the HUD: below the objective panel, above caption/buttons, left of an open chart.
 function hudSafe(){const s={l:12,t:12,r:innerWidth-12,b:innerHeight-12},top=$('#hud>div')?.getBoundingClientRect();if(top?.height)s.t=Math.max(s.t,top.bottom+10);
@@ -195,7 +203,9 @@ function frameSubject(subject,pos,dt){
  const l=Math.min(a.l,b.l),r=Math.max(a.r,b.r),t=Math.min(a.t,b.t),bottom=Math.max(a.b,b.b),ppm=innerHeight/(2*Math.tan(T.MathUtils.degToRad(camera.fov/2))*(armLength||11)),k=Math.min(1,dt*2.5),sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw);
  const ex=(l+r-s.l-s.r)/2/ppm,ey=(t+bottom-s.t-s.b-16)/2/ppm;frameOffset.x+=sz*ex*k;frameOffset.z-=sx*ex*k;frameOffset.y-=ey*k/Math.max(.4,Math.cos(armPitch||.45));frameOffset.y=T.MathUtils.clamp(frameOffset.y,-1.2,1.2);if(frameOffset.length()>4.5)frameOffset.setLength(4.5);
  const wide=(r-l)/(s.r-s.l),fit=Math.max(wide,(bottom-t)/(s.b-s.t-16))/.82;frameDist=T.MathUtils.clamp(frameDist+(fit-1)*(armLength||11)*Math.min(1,dt*1.5),0,9);
- if(!state.gentle&&wide>.9&&frameDist>3&&performance.now()/1000-lastCameraInput>2.5){const c=subject.getCenter(tmpA),want=Math.atan2(pos.x-c.x,pos.z-c.z);cameraYaw+=T.MathUtils.clamp(Math.atan2(Math.sin(want-cameraYaw),Math.cos(want-cameraYaw)),-.35*dt,.35*dt);}
+ // Never auto-turn while the touch stick is held (screen-relative steering would swim); ease back in over ~1 s after release.
+ const nowS=performance.now()/1000;if(movement?.stickHeld)stickReleasedAt=nowS;const yawK=Math.max(0,Math.min(1,(nowS-stickReleasedAt-1)/1));
+ if(!state.gentle&&yawK>0&&wide>.9&&frameDist>3&&nowS-lastCameraInput>2.5){const c=subject.getCenter(tmpA),want=Math.atan2(pos.x-c.x,pos.z-c.z);cameraYaw+=T.MathUtils.clamp(Math.atan2(Math.sin(want-cameraYaw),Math.cos(want-cameraYaw)),-.35*dt*yawK,.35*dt*yawK);}
 }
 function updateChart(pos){
  // The chart stays tucked unless the player opens it; the intro and encounters tuck it again.
@@ -328,11 +338,11 @@ try{
  window.__CAMERA_PROBE__=()=>{const p=movement.position,ray=new T.Raycaster(),blockers=[],vis=o=>{for(let n=o;n;n=n.parent){if(!n.visible||n===hero)return false;}return true;};let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));
   for(const h of [1.55,1.0]){const target=new T.Vector3(p.x,p.y+h,p.z),dir=target.clone().sub(camera.position),dist=dir.length();ray.set(camera.position,dir.normalize());ray.far=dist-.3;for(const hit of ray.intersectObject(scene,true)){const o=hit.object,m=Array.isArray(o.material)?o.material[0]:o.material;if(!o.isMesh||!vis(o)||m?.transparent&&m.opacity<.5||m?.isMeshBasicMaterial&&!m.depthWrite||m?.isShaderMaterial)continue;blockers.push({name:o.name||o.parent?.name||'mesh',h,at:+hit.distance.toFixed(2),of:+dist.toFixed(2)});}}
   const head=new T.Vector3(p.x,p.y+1.55,p.z).project(camera);heroBox.min.set(p.x-.35,p.y,p.z-.35);heroBox.max.set(p.x+.35,p.y+1.75,p.z+.35);const g=quest.subject();
-  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe,insideTrunk:inTrunk(camera.position.x,camera.position.z,camera.position.y)};};
+  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe,insideTrunk:inTrunk(camera.position.x,camera.position.z,camera.position.y),insideSolid:!!world.blocked?.(camera.position.x,camera.position.z,.25,camera.position.y-.75),hitBy:(armHitId=null,armHit(armOrigin,Math.sin(cameraYaw),Math.cos(cameraYaw),Math.atan(.48),10.8)&&armHitId)};};
  // Lazy-load the prologue illustrations once the game is ready (not counted against start-up).
  (window.requestIdleCallback||setTimeout)(()=>{for(const n of [1,2,3]){const i=new Image();i.src=new URL(`./textures/v2/card${n}.webp`,import.meta.url).href;}});
  // After ready (never blocking it): villagers, then the chart bake from the live scene.
- const afterReady=import('./bellhollow/villagers.js').then(m=>{villagers=m.createVillagers({THREE:T,scene,world,look});}).catch(e=>console.warn('villagers unavailable',e));
+ const afterReady=(world.stub?Promise.resolve(null):import('./bellhollow/villagers.js')).then(m=>{if(m)villagers=m.createVillagers({THREE:T,scene,world,look});}).catch(e=>console.warn('villagers unavailable',e));
  afterReady.then(()=>requestAnimationFrame(()=>{try{map=createMap({THREE:T,renderer,scene,world,canvas:mapCanvas,look,hide:[hero,mara,staff,pairedBells,quest.guardian?.object,villagers?.root].filter(Boolean)});requestAnimationFrame(()=>{try{map.bake();}catch(e){console.warn('map bake failed',e);}});}catch(e){console.warn('map unavailable',e);map=null;}}));
  $('#startb').disabled=false;$('#startb').textContent=loadedSave?'Start a new adventure':'Start adventure';$('#continueb').hidden=!loadedSave;updateUI();window.__START__=()=>start(true);
 }catch(e){console.error(e);$('#error').hidden=false;$('#error').textContent='Bellhollow could not load. '+e.message;}

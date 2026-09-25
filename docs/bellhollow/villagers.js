@@ -1,70 +1,72 @@
-// Villagers of Bellhollow: 7 seeded folk with idle vignettes on the terrace and market, reacting to the
-// silent bells (worried, looking up) and to each restored mill (a short cheer, then back to work, happier).
-// No gameplay. createVillagers({THREE, scene, world, look}) -> {update(dt, t, {hero, restored, gentle}), list, telemetry()}
-//   restored: quest.restoration ({terrace, sails, pipes, ladders, village ...} 0..1).
-// Budget: each villager <= 6 draws with outlines (body + head hulls; arms/props no hull), ~4k tris; + one bench.
+// Villagers of Bellhollow (rebuild): four bespoke people from references-v2/R-villagers.png, placed OFF every walkable
+// route (never on the boardwalk ring, the bell-plaza steps or any gust/vent/anchor inlay), each against a wall or at the
+// market, facing the street. They glance up worried at the silent bells before restoration, cheer when a mill they
+// watch is restored, and turn their heads toward the hero when near. No benches, no gameplay.
+// createVillagers({THREE, scene, world, look}) -> {update(dt, t, {hero, restored, gentle}), list, root, telemetry()}
 import buildVillager from '../assets/bh-villager.js';
 
-const SPOTS = [
-  // role, anchor (world.points key or [x,z]), offset [dx,dz], facing target (key or [x,z]), act, mill it watches
-  { role: 'sweeper', at: 'morningBell', off: [2.6, 2.2], face: 'morningBell', act: 'sweep', mill: 'terrace', seed: 3 },
-  { role: 'worried', at: 'morningBell', off: [-.6, 2.9], face: 'morningBellObject', act: 'worried', mill: 'terrace', seed: 11 },
-  { role: 'sitter', at: 'start', off: [-3.4, -1.2], face: 'morningBell', act: 'sit', mill: 'ladders', seed: 5, bench: true },
-  { role: 'chat', at: 'seedWheel', off: [4.2, 4.6], face: 'pairB', act: 'chat', mill: 'sails', seed: 21, id: 'pairA' },
-  { role: 'chat', at: 'seedWheel', off: [5.4, 5.4], face: 'pairA', act: 'chat', mill: 'sails', seed: 34, id: 'pairB' },
-  { role: 'child', at: 'start', off: [-1.6, -3.2], face: 'morningBell', act: 'pinwheel', mill: 'ladders', seed: 8 },
-  { role: 'keeper', at: [-9.5, 24.9], off: [0, 0], face: [0, 0], act: 'keeper', mill: 'pipes', seed: 17 },   // behind the first market stall
+const DEG = Math.PI / 180, polar = (az, r) => [r * Math.sin(az * DEG), r * Math.cos(az * DEG)];
+// who, preferred spot (terrace azimuth / radius from the trunk), the mill (area) they watch
+const CAST = [
+  { who: 'baker', az: -36, r: 16.2, mill: 'terrace' },       // beside the bell-plaza steps, against the plaza wall
+  { who: 'elder', az: -55, r: 24, mill: 'sails' },           // on the market rim beside the planters, watching the street
+  { who: 'girl', az: -38.5, r: 23.6, mill: 'ladders' },      // between the market stalls, pinwheel up
+  { who: 'seller', az: -27, r: 22.9, mill: 'pipes' },        // in front of the market stalls (street side, not under the awning)
 ];
+const BOARDWALK = [18.5, 22.2];                               // the street ring (world.js 18.8..21.8, padded)
 
 export function createVillagers({ THREE: T, scene, world, look = null } = {}) {
   const P = world.points || {}, root = new T.Group(); root.name = 'villagers'; scene.add(root);
-  const xz = a => Array.isArray(a) ? { x: a[0], z: a[1], y: 0 } : P[a] || null;
-  const ground = (x, z, y = 2) => { const g = world.ground?.(x, z, y); return typeof g === 'number' ? g : null; };
-  const free = (x, z, y) => ground(x, z, y + 1) !== null && Math.abs(ground(x, z, y + 1) - y) < .6 && !world.blocked?.(x, z, .35, y);
-  const list = [];
-  for (const s of SPOTS) {
-    const a = xz(s.at); if (!a) continue;
-    let x = a.x + s.off[0], z = a.z + s.off[1], y = ground(x, z, (a.y || 0) + 1) ?? a.y ?? 0;
-    // Nudge onto open floor (spiral) if the authored spot is blocked or off the deck.
-    if (!free(x, z, y)) { outer: for (let r = .5; r <= 3; r += .5) for (let k = 0; k < 12; k++) { const nx = x + Math.cos(k / 12 * Math.PI * 2) * r, nz = z + Math.sin(k / 12 * Math.PI * 2) * r, ny = ground(nx, nz, y + 1); if (ny !== null && free(nx, nz, ny)) { x = nx; z = nz; y = ny; break outer; } } }
-    const v = buildVillager(T, { role: s.role, seed: s.seed }); v.name = 'villager-' + (s.id || s.role);
-    v.position.set(x, y, z); root.add(v);
-    let bench = null;
-    if (s.bench) { // one merged timber mesh (seat + two legs): 1 draw
-      const wood = new T.MeshStandardMaterial({ color: 0xC8894A, roughness: .85 }); wood.name = 'timber';
-      const parts = [new T.BoxGeometry(1.3, .08, .42).translate(0, .43, 0), new T.BoxGeometry(.1, .4, .36).translate(-.55, .2, 0), new T.BoxGeometry(.1, .4, .36).translate(.55, .2, 0)].map(g => g.toNonIndexed());
-      const g = new T.BufferGeometry(); for (const k of ['position', 'normal']) g.setAttribute(k, new T.Float32BufferAttribute(parts.flatMap(q => [...q.attributes[k].array]), 3));
-      bench = new T.Mesh(g, wood); bench.castShadow = bench.receiveShadow = true;
-      bench.position.set(x, y, z); root.add(bench); }
-    look?.applyTo?.(v, 'character');
-    list.push({ v, s, x, y, z, yaw: 0, baseYaw: 0, cheer: 0, seen: 0, headYaw: 0, headPitch: 0, look: 0, id: s.id || s.role });
+  const ground = (x, z, y = 3) => { const g = world.ground?.(x, z, y); return typeof g === 'number' ? g : null; };
+  // Everything a player walks to or through: anchors, gust/vent spots, wheels, sails (keep 2.5 m clear).
+  const keepOut = [];
+  const walk = (o, d = 0) => { if (!o || d > 2) return; if (Number.isFinite(o.x) && Number.isFinite(o.z)) keepOut.push({ x: o.x, z: o.z, y: o.y ?? 0, r: 2.5 }); else if (typeof o === 'object') for (const v of Object.values(o)) walk(v, d + 1); };
+  walk(P); for (const v of world.vents || []) keepOut.push({ x: v.x, z: v.z, y: v.y, r: (v.radius || 1) + 2 }); for (const w of [...(world.wheels || []), ...(world.sails || [])]) keepOut.push({ x: w.x, z: w.z, y: w.y ?? 0, r: 2.5 });
+  const ray = new T.Raycaster(), down = new T.Vector3(0, -1, 0);
+  function surfaceOk(x, y, z) { // no standing on inlays/medallions (emissive inlay materials) or the timber deck
+    if (!world.root) return true; ray.set(new T.Vector3(x, y + 1.5, z), down); ray.far = 2.5;
+    const hit = ray.intersectObject(world.root, true)[0]; if (!hit) return true;
+    const m = [].concat(hit.object.material)[0] || {}, k = m.userData?.bhKey || '';
+    return !/inlay|deck/i.test(k) && !(m.emissive && m.emissiveIntensity > .1 && m.name === 'glass');
   }
-  // Facing: toward the authored target (partners face each other).
-  for (const o of list) {
-    const f = o.s.face, t = typeof f === 'string' && f.startsWith('pair') ? list.find(q => q.id === f) : null;
-    const p = t ? { x: t.x, z: t.z } : xz(f) || { x: 0, z: 0 };
-    o.baseYaw = o.yaw = Math.atan2(p.x - o.x, p.z - o.z); if (o.s.role === 'sitter') o.baseYaw = o.yaw = o.baseYaw; o.v.rotation.y = o.yaw;
-    const bench = o.s.bench && root.children.find(c => c !== o.v && c.position.x === o.x && c.position.z === o.z); if (bench) bench.rotation.y = o.yaw;
-    o.bellTarget = P.morningBellObject || P.morningBell || null;
+  function spot(c) {
+    const [tx, tz] = polar(c.az, c.r), cands = [];
+    for (let dx = -3.5; dx <= 3.5; dx += .35) for (let dz = -3.5; dz <= 3.5; dz += .35) {
+      const x = tx + dx, z = tz + dz, r = Math.hypot(x, z), az = Math.atan2(x, z) / DEG, y = ground(x, z);
+      if (y === null || y < -.3 || y > 1.3 || az < -99 || az > -9) continue;
+      if (r > BOARDWALK[0] && r < BOARDWALK[1]) continue;                                       // never on the street
+      if (az > -72 && az < -39 && r < 20.5) continue;                                          // nor on the bell plaza or its steps
+      if (keepOut.some(k => Math.abs(k.y - y) < 2 && Math.hypot(k.x - x, k.z - z) < k.r)) continue;
+      if (world.blocked?.(x, z, .45, y)) continue;
+      if ([.5, -.5].some(d => Math.abs((ground(x + d, z, y + .5) ?? -9) - y) > .3 || Math.abs((ground(x, z + d, y + .5) ?? -9) - y) > .3)) continue;   // not at a step/edge
+      let wall = 0; for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; if (world.blocked?.(x + Math.cos(a) * 1.2, z + Math.sin(a) * 1.2, .2, y)) wall++; }
+      cands.push({ x, y, z, score: Math.hypot(dx, dz) - (wall ? 1.5 : 0) });                  // prefer backing onto a wall or prop
+    }
+    cands.sort((a, b) => a.score - b.score);
+    return cands.find(q => surfaceOk(q.x, q.y, q.z)) || cands[0] || { x: tx, y: ground(tx, tz) ?? 0, z: tz };
+  }
+  const list = [];
+  for (const c of CAST) {
+    const s = spot(c), v = buildVillager(T, { who: c.who }); v.name = 'villager-' + c.who;
+    v.position.set(s.x, s.y, s.z);
+    const [fx, fz] = polar(Math.atan2(s.x, s.z) / DEG, 20.3); const yaw = Math.atan2(fx - s.x, fz - s.z);   // face the street
+    v.rotation.y = yaw; root.add(v); look?.applyTo?.(v, 'character');
+    list.push({ v, s: c, id: c.who, x: s.x, y: s.y, z: s.z, yaw, cheer: 0, headYaw: 0, headPitch: 0, look: 0, seed: list.length * 1.7 });
   }
   const last = {};
   function update(dt, t, { hero = null, restored = {}, gentle = false } = {}) {
     for (const o of list) {
-      // A mill (or area) this villager watches just got restored: cheer for ~3 s, then work happily.
       const r = restored[o.s.mill] ?? 0; if (r > (last[o.id] ?? r) + .2) o.cheer = 3.2; last[o.id] = r;
-      const village = Math.max(r, restored.village ?? 0, restored.terrace ?? 0) > .45;
-      let act = o.s.act;
+      const village = Math.max(r, restored.village ?? 0) > .45;
+      let act = 'idle';
       if (o.cheer > 0) { o.cheer -= dt; act = o.cheer > .9 ? 'cheer' : 'wave'; }
-      else if (!village && o.s.role !== 'sitter' && o.s.role !== 'child' && Math.sin(t * .23 + o.s.seed) > .55) act = 'worried';   // glances up at the silent bells now and then
-      if (village && o.s.act === 'worried') act = o.cheer > 0 ? act : 'chat';
-      // Heads turn toward the hero when near (and the worried one looks up at the bell otherwise).
+      else if (!village && Math.sin(t * .21 + o.seed * 2.1) > .7) act = 'worried';                 // glances up at the silent bells now and then
       let want = 0, yaw = 0, pitch = 0;
-      if (hero) { const dx = hero.x - o.x, dz = hero.z - o.z, d = Math.hypot(dx, dz); if (d < 5.5) { want = 1; yaw = Math.atan2(Math.sin(Math.atan2(dx, dz) - o.yaw), Math.cos(Math.atan2(dx, dz) - o.yaw)); pitch = Math.atan2((hero.y ?? o.y) + 1.2 - (o.y + 1.5), d) ; } }
-      if (Math.abs(yaw) > 1.4) yaw = Math.sign(yaw) * 1.4;
+      if (hero) { const dx = hero.x - o.x, dz = hero.z - o.z, d = Math.hypot(dx, dz); if (d < 6) { want = 1; yaw = Math.atan2(Math.sin(Math.atan2(dx, dz) - o.yaw), Math.cos(Math.atan2(dx, dz) - o.yaw)); pitch = Math.atan2((hero.y ?? o.y) + 1.2 - (o.y + 1.5), d); } }
+      yaw = Math.max(-1.1, Math.min(1.1, yaw));
       o.look += (want - o.look) * (1 - Math.exp(-dt * 3)); o.headYaw += (yaw - o.headYaw) * (1 - Math.exp(-dt * 4)); o.headPitch += (pitch - o.headPitch) * (1 - Math.exp(-dt * 4));
-      o.v.userData.setPose({ t: t + o.s.seed, act, yaw: o.headYaw, pitch: -o.headPitch, look: o.look * (act === 'cheer' ? .3 : 1), gentle });
-      if (o.s.role === 'child' && o.v.userData.joints.prop) o.v.userData.joints.prop.rotation.z = -(t * (gentle ? 2 : 3 + 9 * Math.max(restored.ladders ?? 0, restored.village ?? 0)));
+      o.v.userData.setPose({ t: t + o.seed, act, yaw: o.headYaw, pitch: -o.headPitch, look: o.look * (act === 'cheer' ? .3 : 1), gentle });
     }
   }
-  return { root, list, update, telemetry: () => list.map(o => ({ id: o.id, role: o.s.role, at: [o.x, o.y, o.z].map(n => +n.toFixed(2)), cheer: +o.cheer.toFixed(2) })) };
+  return { root, list, update, telemetry: () => list.map(o => ({ id: o.id, at: [o.x, o.y, o.z].map(n => +n.toFixed(2)), r: +Math.hypot(o.x, o.z).toFixed(2), cheer: +o.cheer.toFixed(2) })) };
 }

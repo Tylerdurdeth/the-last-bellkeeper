@@ -4,6 +4,7 @@
 // strips in the wind colour #8FD3E0 with a white core and a darker rim, so they read against
 // ivory stone and pale sky on a phone.
 export const WIND = 0x8fd3e0;
+const SHADE = { r: .17, g: .29, b: .27, isColor: true };
 const TAU = Math.PI * 2;
 const ease = f => f * f * (3 - 2 * f);
 const clamp01 = v => Math.max(0, Math.min(1, v));
@@ -123,7 +124,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
   function removeSource(id) { sources.delete(id); }
   const catchable = s => s && s.active && s.cool <= 0;
   // Catch zone = the painted floor ring plus the hero's radius, generous in height.
-  function sourceAt(p, extra = .35) {
+  function sourceAt(p, extra = .6) { // catch zone reaches .6 m past the painted ring (playtest: arrivals missed the prompt)
     let best = null, bestD = Infinity;
     for (const s of sources.values()) {
       if (!catchable(s)) continue;
@@ -174,7 +175,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
   function openVent(v, { duration = 4 } = {}) {
     const radius = v.radius ?? 1.1, rec = { id: v.id, x: v.x, y: v.y, z: v.z, top: v.top, radius, age: 0, duration };
     vents.set(v.id, rec);
-    const handle = movement?.lift({ id: 'vent:' + v.id, x: v.x, z: v.z, radius: radius + .25, top: v.top, base: v.y, duration });
+    const handle = movement?.lift({ id: 'vent:' + v.id, x: v.x, z: v.z, radius: radius + .25, top: v.top, base: v.y, duration, ledge: v.ledge || null });
     burst({ x: v.x, y: v.y + .05, z: v.z }, { radius: radius * 1.8, duration: .6 });
     sound('vent');
     return handle;
@@ -213,6 +214,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
       if (Number.isFinite(s.ttl) && (s.ttl -= dt) <= 0) { sources.delete(s.id); continue; }
       if (!s.active) continue;
       const ready = s.cool <= 0 ? 1 : .35, k = s.spawn * ready, pulse = .5 + .5 * Math.sin(t * 4 + s.x);
+      ring(s.x, s.y + .03, s.z, s.radius, { width: .5, alpha: .5 * k, color: SHADE }); // dark underlay: reads on pale cobbles
       ring(s.x, s.y + .04, s.z, s.radius, { width: .26, alpha: .95 * k });
       ring(s.x, s.y + .05, s.z, s.radius * (.55 + .12 * pulse), { width: .16, alpha: .75 * k }, t * 1.3 * spin, t * 1.3 * spin + TAU * .72);
       for (let i = 0; i < 3; i++) {

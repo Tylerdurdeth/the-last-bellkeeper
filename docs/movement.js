@@ -83,7 +83,13 @@ export function createMovement(THREE, {
   function columnAt(x, z, y) {
     for (let i = columns.length - 1; i >= 0; i--) {
       const c = columns[i];
-      if (Math.hypot(x - c.x, z - c.z) <= c.radius && y >= c.base - .6 && y <= c.top + c.bonus + .9) return c;
+      if (Math.hypot(x - c.x, z - c.z) <= c.radius && y >= c.base - .6 && y <= c.top + c.bonus + .9) { c.inCorridor = false; return c; }
+      // Exit corridor: near the top, a 1.3 m-wide lane from the grille to its named ledge keeps holding the
+      // hero up (then lowers him onto the ledge), so steering toward the ledge never drops him back down.
+      if (c.ledge && y >= c.ledge.y - .25 && y <= c.top + c.bonus + .9 && c.fade > 0) {
+        const ax = c.ledge.x - c.x, az = c.ledge.z - c.z, L2 = ax * ax + az * az || 1, f = ((x - c.x) * ax + (z - c.z) * az) / L2;
+        if (f > 0 && f < 1.35 && Math.hypot(x - (c.x + ax * f), z - (c.z + az * f)) <= Math.max(1.3, c.radius)) { c.inCorridor = true; return c; }
+      }
     }
     return null;
   }
@@ -139,9 +145,19 @@ export function createMovement(THREE, {
     const angle=cameraYaw?.(),cx=angle===undefined?.788:Math.cos(angle),cz=angle===undefined?.615:Math.sin(angle);
     const tx = (cx * x - cz * y) * scale, tz = (-cz * x - cx * y) * scale;
     const column = columnAt(position.x, position.z, position.y);
+    // A late entrant still gets the whole rise plus ~1.2 s of hover at the top before the column fades.
+    if (column && !column.entered && !column.inCorridor) { column.entered = true; if (column.ledge) column.duration = Math.max(column.duration, column.age + Math.max(0, column.top - position.y) / Math.max(1, column.rise) * 1.4 + 3.2); }
     // Air control is firmer inside a column so the player can steer out onto a ledge.
     const blend = 1 - Math.exp(-(grounded ? intent ? acceleration : deceleration : stunned ? 1.5 : column ? 10 : 8) * dt);
     velocity.x += (tx - velocity.x) * blend; velocity.z += (tz - velocity.z) * blend;
+    // Updraft exit assist: at or above the ledge, any input roughly toward the named ledge is pulled onto it.
+    if (column?.ledge && intent && position.y >= column.ledge.y - .25) {
+      const lx = column.ledge.x - position.x, lz = column.ledge.z - position.z, ld = Math.hypot(lx, lz), tv = Math.hypot(tx, tz) || 1;
+      if (ld > .2 && (tx * lx + tz * lz) / (tv * ld) > .15) {
+        const sp = Math.max(2.2, Math.hypot(velocity.x, velocity.z)), k = 1 - Math.exp(-9 * dt);
+        velocity.x += (lx / ld * sp - velocity.x) * k; velocity.z += (lz / ld * sp - velocity.z) * k;
+      }
+    }
     const facingX = faceTarget?.x - position.x, facingZ = faceTarget?.z - position.z;
     const facingAction = Number.isFinite(facingX) && Number.isFinite(facingZ) && Math.hypot(facingX, facingZ) > .03;
     if (facingAction || intent) {
@@ -177,7 +193,8 @@ export function createMovement(THREE, {
     const lifting = column && column.fade > 0 && position.y < column.top + column.bonus - .02;
     if (column && column.fade > 0) {
       // Gravity is countered: ease vertical speed toward a rise that settles at the hover ceiling.
-      const ceiling = column.top + column.bonus, rise = column.rise * column.fade;
+      const overLedge = column.inCorridor || (column.ledge && ground !== null && Math.abs(ground - column.ledge.y) < .3 && Math.hypot(position.x - column.x, position.z - column.z) > column.radius * .6);
+      const ceiling = overLedge ? column.ledge.y - .3 : column.top + column.bonus, rise = column.rise * column.fade;
       const want = Math.max(-1.4, Math.min(rise, (ceiling - position.y) * 2.4 + Math.sin(column.age * 3.1) * .25));
       velocity.y += (want - velocity.y) * (1 - Math.exp(-(velocity.y > want ? 3.5 : 6) * dt));
       if (lifting || grounded && (ground === null || Math.abs(ground - previousY) > stepHeight)) grounded = false;
@@ -229,6 +246,7 @@ export function createMovement(THREE, {
     for (let i = 0; i < steps; i++) {
       const h = elapsed / steps;
       for (const c of columns) {
+        if (c === inColumn && c.inCorridor) c.duration = Math.max(c.duration, c.age + .8); // never fade under a hero crossing to the ledge
         c.age += h; c.bonusTime = Math.max(0, c.bonusTime - h); if (!c.bonusTime) c.bonus = Math.max(0, c.bonus - h * 1.5);
         c.fade = Math.max(0, Math.min(1, (c.duration - c.age) / .6));
       }
@@ -244,9 +262,9 @@ export function createMovement(THREE, {
   // Updraft column. While inside (horizontal radius, from base up to top) gravity is countered and
   // the hero rises smoothly to `top`, hovering there so they can steer out onto a ledge. Jumping
   // inside adds lift. The column lasts `duration` seconds (fading over the last 0.6 s).
-  function lift({ x, z, radius = 1.3, top, base = null, duration = 4, rise = 5.2, id = null } = {}) {
+  function lift({ x, z, radius = 1.3, top, base = null, duration = 4, rise = 5.2, id = null, ledge = null } = {}) {
     if (disposed || ![x, z, top].every(Number.isFinite)) return null;
-    const c = { id: id ?? 'column-' + (++columnSerial), x, z, radius, top, base: Number.isFinite(base) ? base : Math.min(top, position.y) - .5, duration, rise, age: 0, fade: 1, bonus: 0, bonusTime: 0 };
+    const c = { id: id ?? 'column-' + (++columnSerial), x, z, radius, top, base: Number.isFinite(base) ? base : Math.min(top, position.y) - .5, duration, rise, age: 0, fade: 1, bonus: 0, bonusTime: 0, ledge: ledge && [ledge.x, ledge.y, ledge.z].every(Number.isFinite) ? { x: ledge.x, y: ledge.y, z: ledge.z } : null };
     const old = columns.findIndex(o => o.id === c.id); if (old >= 0) columns.splice(old, 1);
     columns.push(c);
     return { id: c.id, get remaining() { return Math.max(0, c.duration - c.age); }, get active() { return columns.includes(c); }, cancel() { const i = columns.indexOf(c); if (i >= 0) columns.splice(i, 1); } };
@@ -275,7 +293,7 @@ export function createMovement(THREE, {
   reset();
   return { position, velocity, checkpoint, get yaw() { return yaw; }, set yaw(v) { if (Number.isFinite(v)) yaw = v; }, get speed() { return speed; }, get recovered() { return recovered; }, get landed() { return landed; }, get grounded() { return grounded; }, get mode() { return mode; }, get verticalVelocity() { return velocity.y; },
     get lifting() { return !!inColumn && !grounded; }, get column() { return inColumn ? inColumn.id : null; }, get columns() { return columns.map(c => ({ id: c.id, x: c.x, z: c.z, radius: c.radius, top: c.top, base: c.base, remaining: c.duration - c.age, fade: c.fade })); },
-    get knocked() { return !!hop || stun > 0; },
+    get knocked() { return !!hop || stun > 0; }, get stickHeld() { return stickId !== null; },
     get freed() { return freed; }, isSafe, returnToSafety() { recover(); },
     update, reset, jump, impulse, lift, knockback, setCheckpoint, dispose };
 }
