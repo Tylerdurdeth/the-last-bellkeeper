@@ -546,11 +546,18 @@ void main() {
     return { rays: pts.length, blockedRaw: raw, blockedAfterFade: after, headVisible: after <= 2, blockers: [...new Set(names)].slice(0, 3) };
   }
 
+  const snapF = new THREE.Vector3(), snapR = new THREE.Vector3(), snapU = new THREE.Vector3(), snapX = new THREE.Vector3(1, 0, 0), snapY = new THREE.Vector3(0, 1, 0);
   function render() {
     toon.uniforms.bkDetail.value = beauty && (tier === 'high' || tier === 'low') ? 1 : 0;
     updateFocus();
     shafts.update(windClock, focus?.hero ?? sun.target.position);
     // Key direction is owned by the rig; the host keeps choosing the shadow focus via sun.target.
+    // Snap the shadow focus to whole shadow-map texels in light space: a focus that slides with the hero makes every
+    // shadow edge (deck rims, curbs, thin trim) crawl and flicker from frame to frame.
+    { const sc = sun.shadow.camera, tx = (sc.right - sc.left) / sun.shadow.mapSize.x, tp = sun.target.position;
+      snapF.copy(cur.keyDir).normalize(); snapR.crossVectors(Math.abs(snapF.y) > .99 ? snapX : snapY, snapF).normalize(); snapU.crossVectors(snapF, snapR);
+      const a = Math.round(tp.dot(snapR) / tx) * tx, b = Math.round(tp.dot(snapU) / tx) * tx, c = tp.dot(snapF);
+      tp.set(0, 0, 0).addScaledVector(snapR, a).addScaledVector(snapU, b).addScaledVector(snapF, c); }
     sun.position.copy(sun.target.position).addScaledVector(cur.keyDir, 30);
     sun.target.updateMatrixWorld();
     // Directional key normaliser for the band shader (sum of all directional lights).

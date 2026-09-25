@@ -122,7 +122,10 @@ float bkFadeAmt = 0.0;
   // Right at the lens (< ~1.5 m), small props and cloth are simply not drawn (feathered over 0.6 m): nothing smears
   // across the frame. Large architecture never reaches here (the camera arm keeps its distance); floors stay.
   float bkNearFlat = smoothstep( 0.45, 0.6, abs( normalize( cross( dFdx( vBkWorldPos ), dFdy( vBkWorldPos ) ) ).y ) );
-  float bkNear = ( 1.0 - smoothstep( 1.6, 2.2, vViewPosition.z ) ) * ( 1.0 - bkNearFlat ) * step( vBkBig, 0.75 );
+  // Low trim (deck rims, curbs, steps, low rails: < 0.6 m above the hero's feet) is never cut: its per-pixel normal is
+  // noisy on thin faces, which punched flickering patches into platform edges.
+  float bkLowNear = bkFocusCount > 0 ? step( vBkWorldPos.y, bkFocusB[ 0 ].x + 0.6 ) : 0.0;
+  float bkNear = ( 1.0 - smoothstep( 1.6, 2.2, vViewPosition.z ) ) * ( 1.0 - bkNearFlat ) * step( vBkBig, 0.75 ) * ( 1.0 - bkLowNear );
   if ( bkNear > 0.5 ) discard;   // crisp: no dither pattern
 }
 {
@@ -137,7 +140,7 @@ float bkFadeAmt = 0.0;
     vec2 d = ( gl_FragCoord.xy - A.xy ) / vec2( A.w * B.y, A.w );
     float inside = 1.0 - smoothstep( 0.94, 1.02, length( d ) );   // clean hole over the subject; ~4% feathered rim
     float nearer = smoothstep( 1.1, 1.3, A.z - vViewPosition.z );
-    float allowed = max( 1.0 - bkFlatS, smoothstep( B.x + 1.0, B.x + 1.3, vBkWorldPos.y ) );
+    float allowed = max( 1.0 - bkFlatS, smoothstep( B.x + 1.0, B.x + 1.3, vBkWorldPos.y ) ) * step( B.x + 0.6, vBkWorldPos.y );   // low trim never fades
     float bigGate = vBkBig < 0.25 ? 1.0 : ( i == 0 ? step( B.x + 2.2, vBkWorldPos.y ) * step( length( vBkWorldPos.xz - bkHeroXZ ), 2.8 ) : 0.0 );
     float f = smoothstep( 0.35, 0.65, inside * nearer * allowed ) * B.z * bigGate;
     bkFadeAmt = max( bkFadeAmt, f );

@@ -26,7 +26,7 @@ const mapCanvas=$('#map'),mapCtx=mapCanvas?.getContext('2d');
 const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 const scene=new T.Scene();scene.background=new T.Color('#bfe1ea');scene.fog=new T.FogExp2('#d9dccb',.016);
 const camera=new T.PerspectiveCamera(42,1,.1,400);const hemi=new T.HemisphereLight(0xffefcd,0x2c4a45,1.8);scene.add(hemi);
-const sun=new T.DirectionalLight(0xffe1ae,2.4);sun.position.set(-9,20,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,near:.5,far:70});sun.shadow.bias=-.0003;sun.shadow.normalBias=.025;scene.add(sun,sun.target);
+const sun=new T.DirectionalLight(0xffe1ae,2.4);sun.position.set(-9,20,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,near:.5,far:70});sun.shadow.bias=-.0004;sun.shadow.normalBias=.04;scene.add(sun,sun.target);
 const state={started:false,paused:false,t:0,complete:false,action:null,actionTime:0,actionTarget:null,actionCallback:null,muted:localStorage.getItem('bellkeeper-muted')==='1',gentle:localStorage.getItem('bellkeeper-gentle')==='1'};
 const DEFAULT_YAW=Math.atan2(.615,.788);let cameraYaw=DEFAULT_YAW,cameraDrag=null;
 let hero,movement,animator,world,wind,quest,look=null,staff,staffHand,mara,captionEnd=0,context=null,travel=0,fps=60,start3=[0,0,0];
