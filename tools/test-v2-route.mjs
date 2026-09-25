@@ -105,7 +105,12 @@ async function travel(p, label, { tol = .6 } = {}) {
       }
       const res = prev.kind === 'jump'
         ? await go(w.x, w.z, label + ' (jump)', { tol: .7, keep: !last, jumpWhen: () => true })
-        : await go(w.x, w.z, label, { tol: last ? tol : .55, keep: !last && prev.kind !== 'drop', walk: false, slow: prev.kind === 'drop' }); // step off drops gently, like a player
+        : prev.kind === 'drop' && !last && (await read()).y > w.y + 1
+          // Drop: go() only checks x/z, and the lip can sit inside its tolerance (overhanging perch), so aim ~0.7 m past the
+          // landing point along the drop and stop as soon as the hero is actually below the lip.
+          ? await (async () => { const L = Math.hypot(w.x - prev.x, w.z - prev.z) || 1, tx = w.x + (w.x - prev.x) / L * .7, tz = w.z + (w.z - prev.z) / L * .7;
+              for (let k = 0; k < 3; k++) { const r2 = await go(tx, tz, label + ' (drop)', { tol: .3, walk: false, slow: true }); if (r2.recovered) return r2; if (await page.waitForFunction(y => window.__GAME__.y < y, { timeout: 1500, polling: 50 }, prev.y - 1).then(() => true, () => false)) { await waitFor(() => window.__GAME__.grounded, 'landed after drop', 4000).catch(() => {}); return r2; } } return { recovered: true }; })()
+          : await go(w.x, w.z, label, { tol: last ? tol : .55, keep: !last && prev.kind !== 'drop', walk: false, slow: prev.kind === 'drop' }); // step off drops gently, like a player
       if (res.recovered) { fell = true; const e = await read(); console.log(`  ${label}: re-plan at [${e.pos.map(v => v.toFixed(1))}] y=${e.y.toFixed(1)} heading to wp ${i}/${wps.length - 1} [${w.x},${w.y},${w.z}] ${prev.kind}->`); await shot('replan-' + label.replace(/\W+/g, '-')); result.steps.push({ label: label + ': recovered, re-planning' }); await hold([]); await sleep(900); break; }
     }
     if (!fell) { const e = await read(); result.steps.push({ label, pos: e.pos, y: +e.y.toFixed(2) }); return e; }
@@ -249,6 +254,20 @@ await travel(P.ring1, 'down into the well', { tol: 1 }); beat('guardian');
 // ---- Guardian: dodge, catch its spent breath, turn the vanes ----
 // Vane per phase; the last one is on the top perch (the guardian's rings.top.vane when present).
 const vaneFor = k => { const r = P.guardianWell?.rings, lv = r && !Array.isArray(r) && r[['low', 'mid', 'top'][k]] || null, alt = k === 2 && r && !Array.isArray(r) && !r.top ? r.high : null, q = (lv || alt) && ((lv || alt).vaneStand || (lv || alt).vane); return q ? { x: q.x, y: q.y, z: q.z } : P['vane' + (k + 1)]; };
+// Phase 3: (re)climb to the perch from wherever the hero is. A fall on the way (high -> mid, mid -> low) is not a
+// trap in the real game: the floor grille (ring1) breathes every 6.2 s after vane 1 and the pulse grille (ring2)
+// opens every phase-3 cycle, so ride back up ring by ring like a player would, then retry the perch grille.
+async function climbToPerch() {
+  for (let tries = 0; tries < 5; tries++) {
+    let y = (await read()).y;
+    if (y < vent('ring2').y - .5) { await travel(vent('ring1'), 'floor grille', { tol: .4 }); await ride(vent('ring1'), 'ride-floor-again'); y = (await read()).y; }
+    if (y < vent('ring3').y - .5) { await travel(vent('ring2'), 'pulse grille', { tol: .4 }); await ride(vent('ring2'), 'ride-pulse-again'); }
+    try { await travel(vent('ring3'), 'perch grille', { tol: .4 }); } catch (e) { if (!/No path|Kept falling/.test(e.message)) throw e; result.steps.push({ label: 'fell on the way to the perch grille, climbing again' }); continue; }
+    if ((await read()).y < vent('ring3').y - .5) continue;
+    await ride(vent('ring3'), 'ride-perch'); if ((await read()).y >= vent('ring3').ledge.y - .5) return;
+  }
+  throw Error('could not climb back to the perch');
+}
 for (let phase = 0; phase < 3; phase++) {
   if (phase === 1) await ride(vent('ring1'), 'ride-ring1');
   if (phase === 2) { await travel(vent('ring2'), 'pulse grille', { tol: .4 }); await ride(vent('ring2'), 'ride-pulse'); }
@@ -257,9 +276,7 @@ for (let phase = 0; phase < 3; phase++) {
   if ((await read()).knocked) { result.steps.push({ label: 'knocked back by the breath (safe, no progress lost)' }); await shot(`guardian-knock-${phase + 1}`); }
   await waitFor(() => !window.__GAME__.knocked, 'knock settled', 6000);
   for (let feed = 0; feed < 3 && (await read()).quest.guardian.phase < phase + 1; feed++) {
-    if (phase === 2 && vent('ring3') && (await read()).y < vent('ring3').ledge.y - .5) { // not on the perch: (re)climb, riding ring 2 first if knocked below the high ring
-      if ((await read()).y < vent('ring3').y - .5) { await travel(vent('ring2'), 'pulse grille', { tol: .4 }); await ride(vent('ring2'), 'ride-pulse-again'); }
-      await travel(vent('ring3'), 'perch grille', { tol: .4 }); await ride(vent('ring3'), 'ride-perch'); }
+    if (phase === 2 && vent('ring3') && (await read()).y < vent('ring3').ledge.y - .5) await climbToPerch();
     for (let tries = 0; tries < 4; tries++) {
       const s = await waitSource('guardianBreath', 30000);
       try { await travel(s, 'breath', { tol: .5 }); await press('guardianBreath'); await waitFor(() => window.__GAME__.charged, 'caught breath', 2500); break; }

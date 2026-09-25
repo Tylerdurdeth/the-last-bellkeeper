@@ -57,7 +57,7 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
   const carvingsLive = () => !!gallerySource; // carvings need wind only when the world has a gallery source
 
   const progress = Object.fromEntries(FLAGS.map(k => [k, false]));
-  const reached = {}; const fragments = new Set(); const seen = new Set();
+  const reached = {}; const fragments = new Set(); const seen = new Set(); const glints = {};
   let bypassAt = Infinity, time = 0, finaleT = -1, last = null, pendingCaption = null, farAnswered = false;
   const FINALE = 16; // s: 0-2 resonance, 2-9 rise over the village, 9-13 the far bell answers, 13-16 back to Mara
   const guardian = createGuardian({ THREE: T, scene, world, wind, movement, sound, caption, onEvent: e => guardianEvent(e) });
@@ -310,6 +310,8 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     time += dt;
     if (pendingCaption && time >= pendingCaption.at) { const q = pendingCaption; pendingCaption = null; q.fn(); }
     syncSources();
+    // World-owned glint sprites (e.g. 'bh-frag2-glint') hide once their fragment is collected (pickup, restore, reset).
+    for (const k of ['fragment1', 'fragment2', 'fragment3']) { const g = glints[k] ??= scene?.getObjectByName?.('bh-' + k.replace('ment', '') + '-glint') || false; if (g) g.visible = !fragments.has(k); }
     for (const k of ['fragment1', 'fragment2', 'fragment3']) if (pts[k] && !fragments.has(k)) { const f = pts[k]; for (let i = 0; i < 4; i++) { const a = t * 1.7 + i * Math.PI / 2, tw = .5 + .5 * Math.sin(t * 5 + i * 2); wind.strip(4, (g, o) => o.set(f.x + Math.cos(a) * .35, f.y + .8 + (g - .5) * .5 * tw, f.z + Math.sin(a) * .35), { width: .09 + .06 * tw, alpha: .9 * tw, taper: false, color: GOLD }); } }
     if (!started) return;
     // Reaching a ledge above a grille marks it (checkpoint + unlocks the next gust source).
@@ -367,7 +369,8 @@ export function createQuest({ THREE: T, scene, world, wind, movement, caption = 
     if (!pr.bypass) return 'Watch Mara’s bypass lever';
     if (!pr.staff) return 'Take the bell staff from Mara';
     if (!pr.seed) return wind.charged || inFlight ? 'Give the gust to the seed wheel' : 'Catch the gust at Mara’s copper outlet';
-    if (!pr.loft) return wind.charged ? 'Release the gust into the copper grille' : 'Catch the seed wheel’s gust past the gate';
+    // Released into the grille and riding (or about to): don't tell the player to catch again mid-rise.
+    if (!pr.loft) return wind.charged ? 'Release the gust into the copper grille' : inFlight || movement?.column === 'vent:loft' ? 'Ride the updraft up to the loft' : 'Catch the seed wheel’s gust past the gate';
     const branch = branchNear(movement?.position);
     if (branch === 'sails') return !pr.sailsBridge ? (wind.charged ? 'Push the hanging bridge with the gust' : 'Catch the branch gust, then push the bridge') : cap && !pr.sailsCap ? (wind.charged ? 'Push the tail sail to turn the cap' : 'Catch the gust by the mill; turn its cap') : wind.charged ? 'Give the gust to the Mill of Sails' : 'Catch the gust spilling by the mill';
     if (branch === 'pipes') return seen.has('wrongOutlet') && !pr.pipesValve && !pr[valveWheel] ? 'Turn the valve by the wheel' : !pr.pipesA ? 'Power the pipe wheel with a gust' : !pr.pipesB ? 'Catch its gust over the gap; power wheel two' : wind.charged ? 'Give the gust to the Mill of Pipes' : 'Catch the gust at wheel two’s outlet';
