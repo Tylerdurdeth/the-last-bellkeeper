@@ -453,7 +453,9 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   frag2Carry();
   // Vines up a tower and a grounded clump at its foot.
   // Ivy climbing the tower: leafy, wandering stems hugging the tapered octagon (not strings of beads), a low bush at the foot.
-  const millR = (yy) => Math.max(1.5, 2.1 - Math.max(0, yy - .5) * .095) * .93 + .03;
+  const millR = (yy) => { const ty = yy + .45; let r = Math.max(1.5, 2.1 - Math.max(0, ty - .5) * .095);
+    for (const yb of [1.6, 3.2, 4.8]) if (Math.abs(ty - (.5 + yb)) < .16) r = Math.max(r, 2.1 - yb * .075 + .08);   // leaves ride over the stone belt bands
+    return r * .93 + .04; };
   const vines = (x, y, z, h, seed, faces = [0, 140, 250]) => { for (const a of faces) { const [dx, dz] = polar(a + seed * 13, 2.05); ivyClimb(T, B, x, y + .45, z, h, millR, a + seed * 13, seed * 7 + a); leafClump(T, B, x + dx * 1.08, y + .45, z + dz * 1.08, .5, seed * 3 + a, 9); } };
   const sailsMill = placeMill('sails', sailsMillC, sailsMillY, -116.6);
   carryDisc(sailsMillC, 4.3, sailsMillY, [sailsB.at(-4)[0], sailsB.at(-4)[1] - 2.2, sailsB.at(-4)[2]], {seed: 2});
@@ -1196,11 +1198,16 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     for (let k = 0; k < Math.floor(L / .42); k++) bins.add(bevelBox(T, w - .1, .14, .36, .03).translate(0, -.07, .25 + k * .42), 'deck');
     for (const sx of [-1, 1]) { bins.add(beam(T, [sx * (w / 2 - .05), -.12, 0], [sx * (w / 2 - .05), -.12, L], .12, .12), 'timberDark'); bins.add(beam(T, [sx * (w / 2 - .05), .85, 0], [sx * (w / 2 - .05), .85, L], .05, .05), 'timber'); for (let z = .6; z < L; z += 1.2) bins.add(rod(T, [sx * (w / 2 - .05), -.1, z], [sx * (w / 2 - .05), .85, z], .025, 4), 'timber'); }
     // mast + coral sail (the push target) mid-span
-    bins.add(rod(T, [w / 2 - .1, 0, L * .5], [w / 2 - .1, mast, L * .5], .07, 6), 'timberDark');
-    const sailG = new T.PlaneGeometry(1.4, 1.8, 2, 2); const sp = sailG.attributes.position; for (let i = 0; i < sp.count; i++) sp.setX(i, sp.getX(i) + .15 * Math.cos(sp.getY(i) * 1.6)); sailG.computeVertexNormals(); sailG.rotateY(Math.PI / 2); sailG.translate(w / 2 - .1, 2.1, L * .5 + .02);
+    bins.add(rod(T, [w / 2 - .1, 0, L * .5], [w / 2 - .1, Math.max(mast, 3.2), L * .5], .07, 6), 'timberDark');
+    // square cloth sail bent to a top yard and a bottom boom (timber trim), bellied between them, with a darker hem
+    const sx0 = w / 2 - .1, sz = L * .5, sy0 = 1.2, sy1 = 3.0;
+    const sailG = new T.PlaneGeometry(1.4, sy1 - sy0, 6, 6); { const sp = sailG.attributes.position;
+      for (let i = 0; i < sp.count; i++) { const fx = sp.getX(i) / 1.4 + .5, fy = sp.getY(i) / (sy1 - sy0) + .5; sp.setZ(i, Math.sin(fy * Math.PI) * (.12 + .2 * Math.sin(fx * Math.PI)) + .05 * Math.sin(fx * 7 + fy * 3)); } }
+    sailG.computeVertexNormals(); sailG.rotateY(Math.PI / 2); sailG.translate(sx0, (sy0 + sy1) / 2, sz + .02);
     bins.add(sailG, 'cloth');
-    // copy for the back face (fabric material is single-sided)
-    const back = sailG.clone(); back.scale(-1, 1, 1); back.translate(2 * (w / 2 - .1), 0, 0); bins.add(back, 'cloth');
+    const back = sailG.clone(); back.scale(-1, 1, 1); back.translate(2 * sx0, 0, 0); { const ix = back.index; if (ix) { const a = ix.array; for (let i = 0; i < a.length; i += 3) { const t = a[i + 1]; a[i + 1] = a[i + 2]; a[i + 2] = t; } } } back.computeVertexNormals(); bins.add(back, 'cloth');
+    for (const y of [sy0, sy1]) bins.add(rod(T, [sx0, y, sz - .78], [sx0, y, sz + .78], y === sy1 ? .055 : .045, 6), 'timberDark');   // yard + boom
+    for (const y of [sy0 + .06, sy1 - .06]) bins.add(new T.BoxGeometry(.03, .08, 1.4).translate(sx0 + .06, y, sz + .02), 'timber');   // hem bands
     const baked = bins.bake(pivot); void baked;
     // gantry at the A end (static): two posts and a beam; chains down to the deck ends (visual)
     const gl = at(0, 0, 0); void gl;
@@ -1291,17 +1298,17 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     p = at(az, carvingRecessR() - .02, carvingCentreY(az) - .05);
     const inward = [-Math.sin(az * DEG) * .06, 0, -Math.cos(az * DEG) * .06];   // toward the viewer: relief half-sunk into the recess floor
     const bellG = new T.LatheGeometry([[0, 0], [.12, -.02], [.15, -.14], [.18, -.3], [.26, -.44], [0, -.42]].reverse().map(([u, v]) => new T.Vector2(u, v)), 8);
-    bellG.scale(1.45, 1.45, .55); bellG.rotateY(ry); bellG.translate(p[0] + inward[0], p[1] + .5, p[2] + inward[2]); B.add(bellG, 'plaster');   // warm ivory inlay: reads on the dark bark
+    bellG.scale(1.3, 1.3, .55); bellG.rotateY(ry); bellG.translate(p[0] + inward[0], p[1] + .45, p[2] + inward[2]); B.add(bellG, 'plaster');   // warm ivory inlay: reads on the dark bark
     // Channel reliefs as their own mesh: they glow wind-cyan in sequence when the carving is
     // fed through its copper intake (state.restored['carving' + i], 0..1).
     const mat = Object.assign(new T.MeshStandardMaterial({color: 0xE2C58E, roughness: .7, emissive: PAL.wind, emissiveIntensity: 0}), {name: 'stone'});   // honey-ivory inlay until fed, then wind-cyan
     const geos = [];
     const lp = (lx, ly) => new T.Vector3(lx * Math.cos(ry) + p[0] + inward[0], p[1] + ly, -lx * Math.sin(ry) + p[2] + inward[2]);
     // the feed channel: from the intake mouth up the slab into the bell
-    geos.push(new T.TubeGeometry(new T.CatmullRomCurve3([lp(0, -1.2), lp(.08, -.8), lp(-.05, -.35), lp(0, .05)]), 10, .075, 5));
+    geos.push(new T.TubeGeometry(new T.CatmullRomCurve3([lp(0, -.82), lp(.07, -.6), lp(-.04, -.3), lp(0, .05)]), 10, .075, 5));
     for (const s of [-1, 1]) {
       const pts = [];
-      for (let k = 0; k <= 10; k++) { const f = k / 10, ang = f * Math.PI * 1.4 * s; const lx = s * (.25 + f * .7), ly = .2 - f * .35 + Math.sin(ang) * .12; pts.push(lp(lx, ly)); }
+      for (let k = 0; k <= 10; k++) { const f = k / 10, ang = f * Math.PI * 1.4 * s; const lx = s * (.22 + f * .55), ly = .2 - f * .35 + Math.sin(ang) * .12; pts.push(lp(lx, ly)); }   // stays inside the panel
       // outward phrase: both channels leave the bell; returning phrase: the second one comes back
       if (i % 2 && s > 0) pts.reverse();
       geos.push(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 12, .07, 5));

@@ -511,7 +511,7 @@ void main() {
     if (focus) {
       camera.updateMatrixWorld(); renderer.getDrawingBufferSize(size);
       if (focusEllipse(focus.hero, 1, n)) n++;   // full strength: clean core, dithered rim only
-      for (const e of focus.extra || []) { if (n >= 4) break; if (e && focusEllipse(e, .8, n)) n++; }
+      for (const e of focus.extra || []) { if (n >= 4) break; if (e && focusEllipse(e, 1, n)) n++; }   // full strength: partial strength left a stipple over Mara
     }
     toon.uniforms.bkFocusCount.value = fadeOn ? n : 0;
   }
@@ -539,7 +539,8 @@ void main() {
       const m = Array.isArray(h.object.material) ? h.object.material[0] : h.object.material;
       const fn = h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : new THREE.Vector3(0, 1, 0);
       const allowed = Math.max(1 - ss(.45, .6, Math.abs(fn.y)), ss(feet.y + 1, feet.y + 1.3, h.point.y));
-      const fade = m?.userData && toon.isPatched(m) && !toon.isNoFade?.(m) ? ss(1, 1.6, heroDepth - hitDepth) * allowed * .92 : 0;
+      const bigA = h.face && h.object.geometry?.attributes?.bkBig, big = bigA ? bigA.getX(h.face.a) > .25 : false;   // large architecture never fades
+      const fade = !big && m?.userData && toon.isPatched(m) && !toon.isNoFade?.(m) ? ss(.35, .65, ss(1.1, 1.3, heroDepth - hitDepth) * allowed) : 0;
       if (fade < .6) { after++; names.push(`${h.object.name || h.object.type}:${(heroDepth - hitDepth).toFixed(1)}m`); }
     }
     return { rays: pts.length, blockedRaw: raw, blockedAfterFade: after, headVisible: after <= 2, blockers: [...new Set(names)].slice(0, 3) };

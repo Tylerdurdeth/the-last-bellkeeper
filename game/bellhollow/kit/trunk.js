@@ -57,8 +57,8 @@ const at3 = (a, r, y) => [r * Math.sin(a * DEG), y, r * Math.cos(a * DEG)];
 const recMats = new WeakMap();
 function recessMats(T) {
   if (!recMats.has(T)) {
-    // flat, dark, double-sided (no stretched bark, never see-through from a grazing angle) + a thin ink rim
-    const floor = new T.MeshStandardMaterial({color: 0x2F2219, roughness: .95, metalness: 0, side: T.DoubleSide}); floor.name = 'timber'; floor.userData.bhKey = 'recessDark';
+    // the inset panel: the wall's own bark on the same cylindrical UVs, one step darker (reads as carved-in, not a board)
+    const floor = paintedWood(T, [0x52, 0x42, 0x32], 'bark', 'barkRecess', .7); floor.side = T.DoubleSide;
     recMats.set(T, {floor});
   }
   return recMats.get(T);
@@ -197,13 +197,13 @@ export function buildTrunk(T, B, seed = 11) {
         const qa = inset(pa, c, cy, .86), qb = inset(pb, c, cy, .86);   // sloped (chiselled) sides, slightly narrowing inward
         const mid = [(pa[0] + qb[0]) / 2, (pa[1] + qb[1]) / 2, (pa[2] + qb[2]) / 2], rr = Math.hypot(mid[0], mid[2]);
         // visible side: toward the panel centre and toward the trunk axis (the viewer)
-        face(pa, pb, qb, qa, [c[0] - mid[0] - mid[0] / rr, c[1] - mid[1], c[2] - mid[2] - mid[2] / rr]);   // chiselled side (same bark, darker)
+        face(pa, pb, qb, qa, [c[0] - mid[0] - mid[0] / rr, c[1] - mid[1], c[2] - mid[2] - mid[2] / rr], cham, chamUV);   // chiselled side: pale sawn wood (lit)
       }
       // ink rim: straight thin bars along the opening's edge (a drawn cut line, not a frame)
       for (let k = 0; k < ring.length; k++) {
         const p0 = vtx(...ring[k]), p1 = vtx(...ring[(k + 1) % ring.length]), sh = (p) => { const r = Math.hypot(p[0], p[2]), f = (r - .015) / r; return new T.Vector3(p[0] * f, p[1], p[2] * f); };
         const A3 = sh(p0), B3 = sh(p1), len = A3.distanceTo(B3); if (len < 1e-3) continue;
-        const bar = new T.CylinderGeometry(.03, .03, len + .06, 4, 1); bar.applyQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), B3.clone().sub(A3).normalize())); bar.translate((A3.x + B3.x) / 2, (A3.y + B3.y) / 2, (A3.z + B3.z) / 2);
+        const bar = new T.CylinderGeometry(.055, .055, len + .1, 5, 1); bar.applyQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), B3.clone().sub(A3).normalize())); bar.translate((A3.x + B3.x) / 2, (A3.y + B3.y) / 2, (A3.z + B3.z) / 2);
         wall.ink.push(bar);
       }
       // the panel floor of the recess (sawn heartwood; world.js sets the carved relief on it)
@@ -230,7 +230,7 @@ export function buildTrunk(T, B, seed = 11) {
   { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(wall.pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(wall.uv, 2)); g.setIndex(wall.idx); g.computeVertexNormals();
     // the wall faces inward: make sure the normals point at the trunk axis
     const n = g.attributes.normal, p = g.attributes.position; if (n.getX(0) * p.getX(0) + n.getZ(0) * p.getZ(0) > 0) { const ix = g.index.array; for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; } g.computeVertexNormals(); }
-    B.add(g, barkWallMaterial(T)); if (wall.recess) B.add(wall.recess, recessMats(T).floor); for (const g of wall.ink) B.add(g, 'ink'); }
+    B.add(g, barkWallMaterial(T)); if (wall.recess) B.add(wall.recess, recessMats(T).floor); if (cham.length) B.add(mk(cham, chamUV), 'heartwoodLight'); for (const g of wall.ink) B.add(g, 'ink'); }
 
   // Root buttresses flaring into the mist (kept below walk levels near the terrace).
   let s = seed;

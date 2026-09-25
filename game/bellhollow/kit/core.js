@@ -13,7 +13,7 @@ export const PAL = {
 // Material catalogue: [palette colour, recipe name, roughness, metalness].
 // `bark` and `deck` are world surfaces the renderer may texture; the others are flat.
 const MAT_DEFS = {
-  plaster: [PAL.ivory, 'plaster', .92, 0], stone: [PAL.ivory, 'stone', .9, 0], stoneShade: [PAL.ivoryShade, 'stone', .92, 0],
+  plaster: [PAL.ivory, 'plaster', .92, 0], stone: [PAL.ivory, 'stone', .9, 0], stoneShade: [PAL.ivoryShade, 'stone', .92, 0], stoneWarm: [0xE2C9A0, 'stone', .92, 0],   // parapet body: warm (never teal in shade)
   // Beauty pass: large timber surfaces are weathered (honey pulled towards ivory-shade / deep shade);
   // saturated honey is kept for small accents only.
   timber: [0xAD8A63, 'timber', .88, 0], timberDark: [PAL.timberDark, 'timber', .88, 0],
@@ -162,7 +162,10 @@ export class Bins {
       const key = mats[0].userData.bhKey || keyFor(this.mats, mats[0]);
       if (/^bark/.test(key)) organic = true;   // trees (bark) are handled by the bark ray; ivy/planters do not exempt a tower
       const own = !this.mats[key] && mats[0].userData.bhKey ? mats[0] : null;   // an asset's own keyed material (e.g. a textured sail) is kept
-      const push = (m) => { const g = n.geometry.clone(); g.applyMatrix4(m); this.add(g, own || key, null, big); };
+      // Small parts of a large asset (window boxes, posts, signs) may still fade; walls and roofs keep the asset's class.
+      if (!n.geometry.boundingBox) n.geometry.computeBoundingBox();
+      const nb = n.geometry.boundingBox, nd = Math.max(nb.max.x - nb.min.x, nb.max.y - nb.min.y, nb.max.z - nb.min.z) * n.matrixWorld.getMaxScaleOnAxis(), pb = big && (nd >= 1.3 || /^tile/.test(key)) ? 1 : 0;
+      const push = (m) => { const g = n.geometry.clone(); g.applyMatrix4(m); this.add(g, own || key, null, pb); };
       if (n.isInstancedMesh) { const im = new T.Matrix4(); for (let i = 0; i < n.count; i++) { n.getMatrixAt(i, im); push(new T.Matrix4().multiplyMatrices(base, new T.Matrix4().multiplyMatrices(n.matrixWorld, im))); } }
       else push(new T.Matrix4().multiplyMatrices(base, n.matrixWorld));
     });
@@ -325,16 +328,17 @@ export function leafClump(THREE, B, x, y, z, r, seed = 1, lobes = 0, seg = 10) {
 export function leafCards(THREE, B) {
   const bins = {ivy: [], ivyLight: [], ivyShade: []}, nrm = {ivy: [], ivyLight: [], ivyShade: []}, t = new THREE.Vector3(), v = new THREE.Vector3(), N = new THREE.Vector3(), L2 = new THREE.Vector3();
   const KEY = {leaf: 'ivy', leafLight: 'ivyLight', leafShade: 'ivyShade'};
-  // a rounded leaf (6-point fan: broad oval with a soft tip), one double-sided face
-  const SHAPE = [[0, 0], [-.42, .22], [-.36, .62], [0, 1], [.36, .62], [.42, .22]];
+  // a rounded leaf: 12-point oval outline with a pointed tip (fan from the base), one double-sided face
+  const SHAPE = [[0, .45]];   // fan centre
+  for (let i = 0; i <= 12; i++) { const th = -Math.PI / 2 + Math.PI * 2 * i / 12; SHAPE.push(i === 6 ? [0, 1.1] : [Math.cos(th) * .42, .5 + Math.sin(th) * .5]); }   // oval, pointed tip at i = 6
   const add = (p, n, up, size, rot = 0, key = 'leaf', lift = .03) => {
     N.copy(n).normalize(); t.copy(up).cross(N).normalize(); v.copy(N).cross(t).normalize();
     // shading normal lifted toward the sky/sun so a leaf never goes near-black
     L2.copy(N).multiplyScalar(.55).add(new THREE.Vector3(0, .75, 0)).normalize();
     const c = Math.cos(rot), s = Math.sin(rot), Lf = size, W = size * .9;
-    const P = ([x0, y0]) => { const x = x0 * W, y = y0 * Lf, cup = (1 - Math.abs(x0) * 2) * .03 * size * 4; return [p.x + (t.x * (x * c - y * s) + v.x * (x * s + y * c)) + N.x * (lift + cup), p.y + (t.y * (x * c - y * s) + v.y * (x * s + y * c)) + N.y * (lift + cup), p.z + (t.z * (x * c - y * s) + v.z * (x * s + y * c)) + N.z * (lift + cup)]; };
+    const P = ([x0, y0]) => { const x = x0 * W, y = y0 * Lf, cup = (1 - Math.abs(x0) * 2.2) * .025 * size * 4; return [p.x + (t.x * (x * c - y * s) + v.x * (x * s + y * c)) + N.x * (lift + cup), p.y + (t.y * (x * c - y * s) + v.y * (x * s + y * c)) + N.y * (lift + cup), p.z + (t.z * (x * c - y * s) + v.z * (x * s + y * c)) + N.z * (lift + cup)]; };
     const q = SHAPE.map(P), k = KEY[key] || key, arr = bins[k], na = nrm[k];
-    for (let i = 1; i < 5; i++) { arr.push(...q[0], ...q[i], ...q[i + 1]); for (let j = 0; j < 3; j++) na.push(L2.x, L2.y, L2.z); }
+    for (let i = 1; i < q.length - 1; i++) { arr.push(...q[0], ...q[i], ...q[i + 1]); for (let j = 0; j < 3; j++) na.push(L2.x, L2.y, L2.z); }
   };
   const flush = () => { for (const [k, a] of Object.entries(bins)) if (a.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(a, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm[k], 3)); B.add(g, k); a.length = 0; nrm[k].length = 0; } };
   return {add, flush};
@@ -378,7 +382,7 @@ export function ivyClimb(THREE, B, cx, y0, cz, h, rAt, faceAz, seed = 1, spread 
       }
     }
     // a trailing runner falling away from the stem's top, off the wall
-    { const ar = a * DEG, r = rAt(yy); for (let j = 1; j <= 4; j++) { n.set(Math.sin(ar), .3, Math.cos(ar)); p.set(cx + Math.sin(ar) * (r + j * .06), y0 + yy - j * .16, cz + Math.cos(ar) * (r + j * .06)); cards.add(p, n, up, .17, Math.PI + (rnd() - .5), j % 2 ? 'leaf' : 'leafShade', .04); } }
+    { const ar = a * DEG, r = rAt(yy); for (let j = 1; j <= 4; j++) { n.set(Math.sin(ar), .3, Math.cos(ar)); p.set(cx + Math.sin(ar) * (r + .02), y0 + yy - j * .16, cz + Math.cos(ar) * (r + .02)); cards.add(p, n, up, .17, Math.PI + (rnd() - .5), j % 2 ? 'leaf' : 'leafShade', .04); } }
   }
   cards.flush();
 }

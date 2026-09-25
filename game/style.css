@@ -97,3 +97,14 @@ body.caption-high #caption{bottom:auto;top:max(130px,17vh)}
  #hint{bottom:6px;padding:4px 10px;font-size:10px}
  #caption{bottom:92px}
 }
+/* Round 2 HUD. The finale letterbox is a film moment: no joystick. */
+body.finale-cine #stick{visibility:hidden!important}
+/* Action button: one or two lines at most, never three; an idle ("Look around") button disappears instead of ghosting;
+   a busy button (mid-action) is a clear, solid muted state. */
+#action{line-height:1.2;text-wrap:balance}
+@media(min-width:701px){#action{width:220px;font-size:13px}}
+#action[data-idle=true]{visibility:hidden}
+#action:disabled{opacity:1;background:#243e37f2;color:#d9cba6;border-color:#ae795188;box-shadow:none}
+@media(pointer:coarse),(max-width:700px){#action{overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;width:auto;min-width:150px;max-width:min(230px,calc(100vw - 150px));font-size:13px;padding:8px 14px;min-height:54px}}
+/* Portrait phones: the caption sits above the hero (who is framed high), not on the feet. */
+@media(max-width:700px) and (orientation:portrait){body:not(.cinematic) #caption{bottom:auto;top:calc(max(16px,env(safe-area-inset-top)) + 142px)}}

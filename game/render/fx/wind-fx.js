@@ -41,12 +41,13 @@ void main() { vUv = uv; vCol = color; vec4 mvPosition = modelViewMatrix * vec4( 
 ${NOISE_GLSL}
 void main() {
   // uv.y 0..1 = camera-facing stream (soft air); uv.y 2..3 = floor-flat band (catch / vent rings).
-  bool isFlat = vUv.y > 1.5;
-  float along = vUv.x, across = isFlat ? vUv.y - 2.0 : vUv.y, t = uTime;
+  // uv.y 4..5 = billow (finale flood): broad glowing warm air, fully additive, feathered on every edge.
+  float billow = step( 3.5, vUv.y );
+  bool isFlat = vUv.y > 1.5 && billow < 0.5;
+  float along = vUv.x, across = vUv.y - ( billow > 0.5 ? 4.0 : isFlat ? 2.0 : 0.0 ), t = uTime;
   vec3 tint = vCol.rgb; float a; vec3 col; float occ = 0.4;
-  // alpha + 2 flags "billow" strips (finale flood): broad soft glowing air with filaments inside.
-  float billow = step( 1.9, vCol.a ), va = vCol.a - 2.0 * billow;
-  occ = mix( 0.4, 0.12, billow );   // billows nearly additive: fogged far billows must not read as grey smoke
+  float va = vCol.a;
+  occ = mix( 0.4, 0.0, billow );   // billows fully additive: never a grey sheet over dark bark
   float lum = dot( tint, vec3( 0.3, 0.55, 0.15 ) );
   if ( lum < 0.4 ) {
     // Dark underlay (warm-dark shadow band under a catch ring): a soft, solid, feathered band so the
@@ -57,13 +58,17 @@ void main() {
   } else if ( isFlat ) {
     // Luminous floor ring: a continuous bright core (readable catch zone) breathing with slow air,
     // with thin filaments drifting along it; feathered edges, never a hard strip.
-    float core = exp( - pow( ( across - 0.5 ) / 0.17, 2.0 ) );
-    float halo = exp( - pow( ( across - 0.5 ) / 0.36, 2.0 ) );
+    // Wandering centre line and a broken, breathing stroke: a ring of moving air, not a neon tube.
+    float cw = 0.5 + ( fxNoise( vec2( along * 0.6 - t * 0.5, 8.0 ) ) - 0.5 ) * 0.3;
+    float core = exp( - pow( ( across - cw ) / 0.22, 2.0 ) );
+    float halo = exp( - pow( ( across - 0.5 ) / 0.4, 2.0 ) );
+    float brk = 0.35 + 0.65 * smoothstep( 0.25, 0.7, fxFbm3( vec2( along * 1.1 - t * 0.8, 9.0 + across * 0.8 ) ) );
+    core *= brk;
     float c = 0.5 + ( fxNoise( vec2( along * 0.9 - t * 1.4, 1.3 ) ) - 0.5 ) * 0.6;
     float fil = exp( - pow( ( across - c ) / 0.07, 2.0 ) ) * smoothstep( 0.35, 0.75, fxFbm3( vec2( along * 1.6 - t * 2.0, 2.0 ) ) );
     float breathe = 0.72 + 0.28 * fxFbm3( vec2( along * 0.7 - t * 0.9, 6.0 ) );
-    a = clamp( core * 0.8 * breathe + halo * 0.22 + fil * 0.5, 0.0, 1.0 ) * vCol.a;
-    col = mix( tint * vec3( 0.7, 0.9, 0.95 ), vec3( 0.97, 1.0, 1.0 ), clamp( core * 0.75 + fil * 0.4, 0.0, 1.0 ) );
+    a = clamp( core * 0.7 * breathe + halo * 0.2 + fil * 0.35, 0.0, 1.0 ) * vCol.a;
+    col = mix( mix( tint, vec3( 1.0 ), 0.3 ), vec3( 0.95, 0.99, 1.0 ), clamp( core * 0.4 + fil * 0.3, 0.0, 1.0 ) );   // soft pale cyan, white only in filaments
     occ = 0.8;   // rings stay solid enough to read on pale stone
   } else {
     // Soft air: thin wispy filaments whose centre lines wander across the stream, broken by scrolling fbm
@@ -78,16 +83,23 @@ void main() {
       fil += line * brk * ( 0.8 - 0.18 * fi );
     }
     float haze = exp( - pow( ( across - 0.5 ) / 0.26, 2.0 ) ) * smoothstep( 0.25, 0.8, fxFbm3( vec2( along * 0.45 - t * 1.1, 4.0 ) ) );
-    a = clamp( fil * 1.05 + haze * mix( 0.12, 0.6, billow ), 0.0, 1.0 ) * va;   // faint haze (a cyan veil reads as teal smoke on dark planks); billows glow
+    a = clamp( fil * mix( 1.05, 1.3, billow ) + haze * mix( 0.12, 0.3, billow ), 0.0, 1.0 ) * va;
+    a *= mix( 1.0, smoothstep( 0.0, 0.3, across ) * smoothstep( 1.0, 0.7, across ), billow );   // billow long edges feather to zero   // faint haze (a cyan veil reads as teal smoke on dark planks); billows glow
     // Cool translucent air lit from within: slightly deeper cyan in the haze (reads over ivory stone),
     // near-white only where filaments are dense.
-    col = mix( mix( tint, vec3( 1.0 ), 0.55 ), vec3( 0.97, 1.0, 1.0 ), clamp( fil * 0.7, 0.0, 1.0 ) );   // pale air, never a dark or saturated teal   // never darker than the wind tint
+    col = mix( mix( tint, vec3( 1.0 ), 0.55 ), vec3( 0.97, 1.0, 1.0 ), clamp( fil * 0.7, 0.0, 1.0 ) );
+    // Billows: golden light, not a pale veil (additive white over dark bark reads as a grey sheet).
+    col = mix( col, mix( vec3( 1.0, 0.72, 0.38 ), vec3( 1.0, 0.93, 0.8 ), clamp( fil * 0.8, 0.0, 1.0 ) ), billow );   // pale air, never a dark or saturated teal   // never darker than the wind tint
   }
   if ( a < 0.01 ) discard;
   gl_FragColor = vec4( col, a );
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
+  vec3 preFog = gl_FragColor.rgb;
   #include <fog_fragment>
+  #ifdef USE_FOG
+    if ( billow > 0.5 ) gl_FragColor.rgb = preFog * ( 1.0 - fogFactor );   // additive: fade into fog, never add grey fog colour
+  #endif
   gl_FragColor = vec4( gl_FragColor.rgb * a, a * occ );
 }`,
     transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true, ...BLEND,
@@ -196,7 +208,8 @@ void main() {
   float y = vUv.y, ang = vUv.x, t = uTime;
   // Rising spiralling mist: fbm scrolled upward and twisted around the axis (no hard helix).
   // Seamless around the axis: blend the noise sampled at ang and ang - 1 (identical at the uv seam).
-  vec2 q = vec2( ang * 6.0 + y * 2.2 - t * 0.35, y * 3.2 - t * 1.6 ), q2 = q - vec2( 6.0, 0.0 );
+  float sway = 0.45 * sin( y * 6.0 - t * 1.3 + ang * 6.2832 ) + 0.25 * sin( y * 13.0 + t * 0.9 );   // bends the streaks: no straight vertical lines
+  vec2 q = vec2( ang * 6.0 + y * 2.2 - t * 0.35 + sway, y * 4.5 - t * 1.6 ), q2 = q - vec2( 6.0, 0.0 );
   float m = mix( fxFbm( q ), fxFbm( q2 ), ang );
   float wisps = smoothstep( 0.45, 0.8, mix( fxFbm( q * 1.9 + 5.0 ), fxFbm( q2 * 1.9 + 5.0 ), ang ) );
   float facing = abs( dot( normalize( vN ), normalize( vV ) ) );
@@ -204,11 +217,11 @@ void main() {
   // (a real mist column has no edge). Wisps add streaks that also vanish toward the rim.
   // Seen from above (desktop gameplay angle) the side walls face away, so the rim fade is looser and there is a
   // denser core; the base fade starts the mist above the grille lip (no noisy mist over the bars).
-  float body = smoothstep( 0.02, 0.55, facing );
-  float a = ( 0.1 + 0.3 * smoothstep( 0.3, 0.85, m ) + 0.32 * wisps ) * body * uStrength;   // premultiplied/additive-leaning (front + back face add up)
+  float body = pow( smoothstep( 0.22, 0.85, facing ), 2.0 );   // hard fade toward the silhouette: no glass-tube edges
+  float a = ( 0.14 + 0.38 * smoothstep( 0.3, 0.85, m ) + 0.4 * wisps ) * body * uStrength;   // premultiplied/additive-leaning (front + back face add up)
   a *= smoothstep( 0.0, 0.3, y ) * ( 1.0 - smoothstep( 0.8, 1.0, y ) ) * smoothstep( 1.2, 4.0, vDist );   // near-camera fade: a close phone camera inside the column must not tint the screen   // still dense around the hero near the top           // born at the grille, dissolves on top
   vec3 col = mix( uTint * 0.9, vec3( 0.96, 1.0, 1.0 ), clamp( wisps * 0.8 + m * 0.2, 0.0, 1.0 ) );
-  if ( a < 0.01 ) discard;
+  if ( a < 0.003 ) discard;
   gl_FragColor = vec4( col, a );
   #include <tonemapping_fragment>
   #include <colorspace_fragment>

@@ -223,7 +223,7 @@ export class Builder {
       if (st.length < 2) return;
       const side = st.map((p, i) => { const a = st[Math.max(0, i - 1)], b = st[Math.min(st.length - 1, i + 1)], dx = b[0] - a[0], dz = b[2] - a[2], L = Math.hypot(dx, dz) || 1; return [-dz / L, dx / L]; });
       // profile: [offset across, height, normal across, normal up] pairs forming faces (outer body, coping, inner body)
-      const faces = {stoneShade: [[[.15, .02, 1, 0], [.15, .8, 1, 0]], [[-.15, .8, -1, 0], [-.15, .02, -1, 0]]],
+      const faces = {stoneWarm: [[[.15, .02, 1, 0], [.15, .8, 1, 0]], [[-.15, .8, -1, 0], [-.15, .02, -1, 0]]],
         stone: [[[.15, .8, 0, -1], [.22, .8, 0, -1]], [[.22, .8, 1, 0], [.22, .92, 1, 0]], [[.22, .92, 0, 1], [-.22, .92, 0, 1]], [[-.22, .92, -1, 0], [-.22, .8, -1, 0]], [[-.22, .8, 0, -1], [-.15, .8, 0, -1]]]};
       for (const [mat, list] of Object.entries(faces)) {
         const pos = [], nor = [], uv = [];
@@ -249,7 +249,7 @@ export class Builder {
       }
       // end caps
       for (const k of [0, st.length - 1]) { const d = k ? [st[k][0] - st[k - 1][0], st[k][2] - st[k - 1][2]] : [st[1][0] - st[0][0], st[1][2] - st[0][2]], L = Math.hypot(...d) || 1, yaw = Math.atan2(d[0] / L, d[1] / L);
-        this.add(new T.BoxGeometry(.3, .78, .04).rotateY(yaw).translate(st[k][0], st[k][1] + .41, st[k][2]), 'stoneShade'); this.add(new T.BoxGeometry(.44, .12, .04).rotateY(yaw).translate(st[k][0], st[k][1] + .86, st[k][2]), 'stone'); }
+        this.add(new T.BoxGeometry(.3, .78, .04).rotateY(yaw).translate(st[k][0], st[k][1] + .41, st[k][2]), 'stoneWarm'); this.add(new T.BoxGeometry(.44, .12, .04).rotateY(yaw).translate(st[k][0], st[k][1] + .86, st[k][2]), 'stone'); }
       return;
     }
     if (style === 'stone') {

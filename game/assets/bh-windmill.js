@@ -84,14 +84,14 @@ export default function (THREE, opts = {}) {
       // copper blade: curved sheet (a sliced cylinder) — reads as a turbine vane
       const blade = add(new THREE.CylinderGeometry(1.4, 1.4, span - .7, 8, 1, true, 0, Math.PI * .35), Object.assign(copper.clone(), {side: THREE.DoubleSide}), -.6, span / 2 + .3, -.9, 0, 0, 0, arm); blade.rotation.y = .2;
     } else {
-      // lattice sail frame + cloth
-      for (let k = 1; k <= 5; k++) box(1.15, .05, .05, timber, .5, k * span / 6 + .3, .02, arm);
-      box(.05, span - .6, .05, timber, 1.05, span / 2 + .3, .02, arm);
-      // canvas sail: billowed in both directions (a real belly), soft linen with stitched seams
-      const sail = new THREE.PlaneGeometry(1, span - .7, 3, 6);
-      const sp = sail.attributes.position; for (let v = 0; v < sp.count; v++) sp.setZ(v, Math.sin((sp.getY(v) / (span - .7) + .5) * Math.PI) * (.12 + .3 * Math.sin((sp.getX(v) + .5) * Math.PI)));
+      // lattice sail frame in FRONT of the cloth: bars + outer stile; the cloth is laced to the spar and stile (zero
+      // billow at both long edges) and bellies back between them (up to ~0.3 m, a third of its width)
+      for (let k = 1; k <= 5; k++) box(1.12, .06, .06, timber, .56, k * span / 6 + .3, .1, arm);
+      box(.07, span - .6, .07, timber, 1.07, span / 2 + .3, .08, arm);
+      const sail = new THREE.PlaneGeometry(1, span - .7, 6, 10);
+      const sp = sail.attributes.position; for (let v = 0; v < sp.count; v++) { const fx = sp.getX(v) + .5, fy = sp.getY(v) / (span - .7) + .5; sp.setZ(v, -Math.sin(fx * Math.PI) * (.1 + .22 * Math.sin(fy * Math.PI))); }
       sail.computeVertexNormals();
-      add(sail, (i % 2 && variant === 'sails') ? sailCoral : sailCloth, .55, span / 2 + .3, .06, 0, 0, 0, arm);
+      add(sail, (i % 2 && variant === 'sails') ? sailCoral : sailCloth, .55, span / 2 + .3, .04, 0, 0, 0, arm);
     }
   }
   if (variant === 'pipes') {

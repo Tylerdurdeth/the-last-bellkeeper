@@ -41,7 +41,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
   const base = new T.Color(WIND);
   // Emit one strip. sample(f, out) fills out (Vector3) for f in [from,to]. width in metres.
   // flat=true lays the strip on the horizontal plane (floor rings); otherwise it faces the camera.
-  function strip(n, sample, { width = .2, alpha = .9, from = 0, to = 1, taper = true, flat = false, color = null, flow = 1 } = {}) {
+  function strip(n, sample, { width = .2, alpha = .9, from = 0, to = 1, taper = true, flat = false, color = null, flow = 1, billow = false } = {}) {
     n = Math.max(2, Math.min(96, n | 0));
     if (vCount + n * 2 > capacity || iCount + (n - 1) * 6 > index.length || to <= from || alpha <= .01) return;
     for (let i = 0; i < n; i++) { sample(from + (to - from) * i / (n - 1), P); scratch[i * 3] = P.x; scratch[i * 3 + 1] = P.y; scratch[i * 3 + 2] = P.z; }
@@ -58,8 +58,9 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
       const v = vCount + i * 2;
       pos[v * 3] = P.x - side.x; pos[v * 3 + 1] = P.y - side.y; pos[v * 3 + 2] = P.z - side.z;
       pos[v * 3 + 3] = P.x + side.x; pos[v * 3 + 4] = P.y + side.y; pos[v * 3 + 5] = P.z + side.z;
-      uv[v * 2] = length * flow; uv[v * 2 + 1] = flat ? 2 : 0; uv[v * 2 + 2] = length * flow; uv[v * 2 + 3] = flat ? 3 : 1; // flat bands: uv.y 2..3
-      for (const k of [v, v + 1]) { col[k * 4] = c.r; col[k * 4 + 1] = c.g; col[k * 4 + 2] = c.b; col[k * 4 + 3] = alpha; }
+      const vb = billow ? 4 : flat ? 2 : 0; uv[v * 2] = length * flow; uv[v * 2 + 1] = vb; uv[v * 2 + 2] = length * flow; uv[v * 2 + 3] = vb + 1; // flat bands uv.y 2..3, billows 4..5 (both outside the shimmer pass's 0..1 band)
+      const va = billow ? alpha * Math.pow(Math.sin(Math.PI * f), .8) : alpha; // billows fade to nothing at both ends (no sheet edge)
+      for (const k of [v, v + 1]) { col[k * 4] = c.r; col[k * 4 + 1] = c.g; col[k * 4 + 2] = c.b; col[k * 4 + 3] = va; }
       if (i < n - 1) { index[iCount++] = v; index[iCount++] = v + 1; index[iCount++] = v + 2; index[iCount++] = v + 1; index[iCount++] = v + 3; index[iCount++] = v + 2; }
     }
     vCount += n * 2;
@@ -222,8 +223,8 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
       if (!s.active) continue;
       const ready = s.cool <= 0 ? 1 : .35, k = s.spawn * ready, pulse = .5 + .5 * Math.sin(t * 4 + s.x);
       ring(s.x, s.y + .03, s.z, s.radius, { width: .9, alpha: .9 * k, color: SHADE }); // soft dark underlay: reads on sunlit pale cobbles
-      ring(s.x, s.y + .04, s.z, s.radius, { width: .3, alpha: .95 * k });
-      ring(s.x, s.y + .05, s.z, s.radius * (.55 + .12 * pulse), { width: .18, alpha: .55 * k }, t * 1.3 * spin, t * 1.3 * spin + TAU * .72);
+      ring(s.x, s.y + .04, s.z, s.radius, { width: .42, alpha: .9 * k });
+      ring(s.x, s.y + .05, s.z, s.radius * (.55 + .12 * pulse), { width: .24, alpha: .3 * k }, t * 1.3 * spin, t * 1.3 * spin + TAU * .72);
       for (let i = 0; i < 6; i++) {
         // Each wisp is a short window sliding up its own spiral: born low, rising, thinning out on top.
         const cyc = (t * .42 * spin + i / 6 + s.x * .13) % 1, ph = i * TAU / 6 + t * 1.5 * spin + s.z;
@@ -234,7 +235,7 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
       if (Number.isFinite(s.ttl) && s.ttl < 1.5) ring(s.x, s.y + .06, s.z, s.radius * .9, { width: .09, alpha: .8 }, 0, TAU * s.ttl / 1.5);
     }
     if (flood) {
-      // A big warm gust rising through the tree: billowing soft air (alpha + 2 = the look's "billow" mode: broad glowing
+      // A big warm gust rising through the tree: billowing soft air (billow: true = the look's additive "billow" mode, off the shimmer pass: broad glowing
       // haze with filaments inside, never a ribbon), curling plumes out of every mill, wheel and square, and a lot of
       // carried motes and fluff. Envelope: swells in ~.6 s, full for most of the beat, dissolves over the last 1.5 s.
       flood.age += dt; const fa = flood.age, env = Math.min(1, fa / .6) * Math.min(1, (flood.duration - fa) / 1.5);
@@ -244,13 +245,13 @@ export function createWind({ THREE: T, scene, movement = null, sound = () => {},
         // Around the trunk (axis x=z=0): short, broad, curling billows at every height, so any camera sees some.
         for (let i = 0; i < 30; i++) {
           const cyc = (fa * .45 + i * .173) % 1, r = 13.5 + 4.5 * Math.sin(i * 2.3), y0 = -3 + (i % 6) * 4.2 + cyc * 3;
-          helix(0, y0, 0, y0 + 7, r, .55, i * TAU / 30 + fa * .5, { width: 3.2, alpha: 2 + .9 * env * Math.sin(Math.PI * cyc), color: warm, n: 30, from: Math.max(0, cyc * 1.5 - .5), to: Math.min(1, cyc * 1.5) });
+          helix(0, y0, 0, y0 + 7, r, .55, i * TAU / 30 + fa * .5, { width: 3.2, alpha: .9 * env * Math.sin(Math.PI * cyc), billow: true, color: warm, n: 30, from: Math.max(0, cyc * 1.5 - .5), to: Math.min(1, cyc * 1.5) });
         }
         // Out of each spot: a dense curling plume.
         flood.at.forEach((q, j) => {
           for (let i = 0; i < 9; i++) {
             const cyc = (fa * .6 + i / 9 + j * .31) % 1, r = 1 + .45 * i;
-            helix(q.x, q.y - .3, q.z, q.y + 4.5 + .6 * i, r, .9, i * TAU / 9 + fa * 1.4 + j, { width: 1.6, alpha: 2 + .9 * env * Math.sin(Math.PI * cyc), color: warm, n: 26, from: Math.max(0, cyc * 1.4 - .4), to: Math.min(1, cyc * 1.4) });
+            helix(q.x, q.y - .3, q.z, q.y + 4.5 + .6 * i, r, .9, i * TAU / 9 + fa * 1.4 + j, { width: 1.6, alpha: .9 * env * Math.sin(Math.PI * cyc), billow: true, color: warm, n: 26, from: Math.max(0, cyc * 1.4 - .4), to: Math.min(1, cyc * 1.4) });
           }
           if (FX?.swirl && Math.hypot(q.x - eye.x, q.y - eye.y, q.z - eye.z) < 50) FX.swirl('flood' + j, q.x, q.y, q.z, 3, dt * env, 50);
         });
