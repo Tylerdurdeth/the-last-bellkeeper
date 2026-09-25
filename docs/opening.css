@@ -64,3 +64,19 @@ body.gentle-opening #titleArt{animation:none;transform:none}
  #prologue .story-copy{padding-bottom:max(96px,calc(env(safe-area-inset-bottom) + 90px))}
 }
 body.in-prologue #stick{opacity:0}
+/* Round 2 legibility: the title's verb line and every eyebrow read at phone size, on a quiet backing over busy art. */
+#title .fine{font-size:11px!important;letter-spacing:.18em;color:#f0e3c2;opacity:1}
+#title .eyebrow,#prologue .eyebrow{font-size:11px;color:#f0d49a;letter-spacing:.26em;text-shadow:0 1px 2px #061418,0 0 12px #061418}
+@media(max-width:700px){
+ #title .eyebrow,#prologue .eyebrow{display:inline-block;padding:5px 9px;background:#0b2023d9;border-radius:3px;font-size:10.5px;letter-spacing:.2em}
+ #title .fine{font-size:10.5px!important}
+}
+/* Prologue card 2 (the guardian at the doors, centre-left of the art): the story moves to the right, off the subject. */
+@media(min-width:701px) and (min-aspect-ratio:4/3){
+ #titleArt[data-chapter="1"]~#prologue{justify-content:flex-end;background:linear-gradient(270deg,#071a20d9,#071a2099 40%,transparent 80%)}
+ #titleArt[data-chapter="1"]~#prologue .story-copy{margin-left:0;margin-right:6vw;width:min(470px,40vw)}
+ #titleArt[data-chapter="1"]{background-position:36% 45%}
+}
+@media(max-width:700px) and (orientation:portrait){
+ #titleArt[data-chapter="1"]{background-size:auto 49%;background-position:50% 5vh}
+}

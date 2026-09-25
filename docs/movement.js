@@ -16,6 +16,19 @@ export function createMovement(THREE, {
   const radius = .23, stepHeight = .28, gravity = 19, jumpVelocity = 6.1;
   let yaw = 0, speed = 0, grounded = false, mode = 'idle', active = true;
   let coyote = 0, bufferedJump = 0, safeTime = 0, stickId = null;
+  let gapAssist = null;
+  // Scan ahead along the jump direction: ground, then a gap (no floor within 1 m below), then a landing at about the
+  // same height. Returns the horizontal speed needed to land ~0.5 m past the far lip, or null when it is not a gap jump.
+  function gapJump(dx, dz) {
+    const L = Math.hypot(dx, dz); if (L < .01) return null; dx /= L; dz /= L;
+    const air = 2 * jumpVelocity / gravity, y = position.y; let gapAt = null;
+    for (let s = .15; s <= 3.4; s += .1) {
+      const x = position.x + dx * s, z = position.z + dz * s, g = sampleGround(x, z, y + .5), floor = Number.isFinite(g) && g > y - 1;
+      if (gapAt === null) { if (!floor) { if (s > 1.6) return null; gapAt = s; } else if (Math.abs(g - y) > stepHeight || isBlocked(x, z, y)) return null; continue; }
+      if (floor) { if (Math.abs(g - y) > .35 || s - gapAt > 2.6) return null; const speed = Math.min(runSpeed, (s + .5) / air); return speed > L ? { dx, dz, speed, t: air + .15 } : null; }
+    }
+    return null;
+  }
   let stickX = 0, stickY = 0, runToggle = false, disposed = false, recovered = false;
   // Updraft columns (physics only; visuals belong to wind.js) and scripted knock-back hops.
   const columns = []; let columnSerial = 0, inColumn = null, hop = null, stun = 0, landed = false;
@@ -42,7 +55,7 @@ export function createMovement(THREE, {
     runButton?.setAttribute('aria-pressed', 'false');
   }
   function jump() { if (active && !disposed) bufferedJump = .14; }
-  function reset(next = start) {
+  function reset(next = start) { gapAssist = null;
     clearInput(); recovered = false; position.set(...(next?.isVector3 ? next.toArray() : next)); checkpoint.copy(position); velocity.set(0, 0, 0);
     inColumn = null; hop = null; stun = 0; // columns are world physics: they persist until they expire
     const g = groundAt(position.x, position.z, position.y + .5);
@@ -174,6 +187,15 @@ export function createMovement(THREE, {
       grounded = false; coyote = 0; bufferedJump = 0;
     } else if (bufferedJump > 0 && coyote > 0 && !actionSlow) {
       velocity.y = jumpVelocity; grounded = false; coyote = 0; bufferedJump = 0;
+      gapAssist = intent ? gapJump(tx, tz) : null;
+    }
+    // Gap-jump assist (playtest: walking jumps fell short of the 1.8 m gaps). A jump toward a short gap with a
+    // same-height landing beyond it carries enough speed to clear it, unless the player steers away mid-air.
+    if (gapAssist) {
+      gapAssist.t -= dt;
+      const along = velocity.x * gapAssist.dx + velocity.z * gapAssist.dz, steer = intent ? (tx * gapAssist.dx + tz * gapAssist.dz) / (Math.hypot(tx, tz) || 1) : 1;
+      if (grounded || gapAssist.t <= 0 || steer < .3) gapAssist = null;
+      else if (along < gapAssist.speed) { velocity.x += gapAssist.dx * (gapAssist.speed - along); velocity.z += gapAssist.dz * (gapAssist.speed - along); }
     }
     bufferedJump = Math.max(0, bufferedJump - dt);
     const previousY = position.y;

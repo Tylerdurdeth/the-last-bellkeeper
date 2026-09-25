@@ -34,7 +34,7 @@ let saveTimer=0,introTime=0,introActive=false,lastShot=-1,queued=null,uiTimer=0,
 let stickReleasedAt=-9,beat=null,villagers=null,map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
 // Camera spring arm, subject framing and chart tucking state (see frame()).
-let armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
+let viewShift=0,appliedShift=0,armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
 const loadedSave=readSave(),legacy=!loadedSave&&hasLegacySave();
 const CARD=7,CARDS=3*CARD,ENGINE=20;// prologue cards, then the 20 s in-engine intro
 function save(){if(!state.started||introActive||!quest||quest.finaleActive||!movement)return;const c=movement.checkpoint;writeSave({quest,checkpoint:[c.x,c.y,c.z],map});}
@@ -65,7 +65,7 @@ function endIntro(){if(!introActive)return;opening.end();titleMusic.fadeOut(2.8)
 // that is not built yet counts as missing floor, and a barrier that is up counts as blocking).
 function safeSpot(first){world.update(0,state.t,{wind:wind.state(),restored:quest.restoration,gentle:state.gentle,progress:quest.progress});
  for(const c of [first,...quest.safeAnchors()])if(c&&movement.isSafe(c))return Array.isArray(c)?c:[c.x,c.y,c.z];return start3;}
-function continueGame(){const d=readSave();if(!d)return;quest.restore(d.quest);try{map?.restore?.(d.map);}catch(e){console.warn(e);}movement.reset(safeSpot(d.checkpoint));animator.reset();start(true);snapCamera();state.complete=quest.progress.complete;caption(quest.progress.complete?'Bellhollow is breathing. Wander as long as you like.':'Bellhollow remembers where you left it.',4);}
+function continueGame(){const d=readSave();if(!d)return;quest.restore(d.quest);try{map?.restore?.(d.map);}catch(e){console.warn(e);}movement.reset(safeSpot(d.checkpoint));animator.reset();start(true);snapCamera();state.complete=quest.progress.complete;if(quest.progress.complete)caption('Bellhollow is breathing. Wander as long as you like.',4);}
 function pause(on){if(!state.started)return;state.paused=on;soundscape.setPaused(on);titleMusic.setPaused(on);$('#pausePanel').hidden=!on;$('#resume').textContent='Resume';$('#reset').hidden=false;$('#safeSpot').hidden=false;mapCanvas.hidden=on;$('#mapToggle').hidden=on;if(on){save();mapCanvas.classList.remove('expanded');$('#mapToggle').setAttribute('aria-expanded','false');chartUI();}}
 function beginAction(kind,target,callback){state.action=kind;state.actionTime=0;state.actionTarget=(target||movement.position).clone();state.actionCallback=callback;if(kind==='pull')sound('chime');}
 function staffTip(){if(!staff?.visible)return movement.position.clone().setY(movement.position.y+1.5);return staff.localToWorld(tmpB.set(0,1.15,0)).clone();}
@@ -76,11 +76,12 @@ function action(){if(!state.started||state.paused||state.action||introActive||qu
  beginAction(c.anim,c.target,()=>{quest.interact(c,{position:movement.position,yaw:movement.yaw,staffTip:staffTip()});updateUI();save();});}
 // Quest events: checkpoints, knock-backs, finale, teleport and completion.
 function questEvent(_progress,e={}){
+ try{storyBeats();}catch(err){console.warn(err);}
  if(e.knock){movement.knockback(e.knock);sound('knock');if(!state.gentle){hitStop=.11;kick=1;kickDir.set(Math.random()-.5,.6,Math.random()-.5).normalize();}}
  if(e.bells==='out')bellOutT=state.t;if(e.bells==='return'){bellRetT=state.t;bellOutT??=state.t-1.7;}
  if(e.mara==='lever')maraAct.leverT=0;if(e.mara==='gesture'){maraAct.gesture=1.6;handover();}
- if(['sails','pipes','ladders'].includes(e.restored)){const h=world.points[e.restored]?.mill;if(h){const port=camera.aspect<.85;startBeat(new T.Vector3(h.x,h.y,h.z),{dist:port?22:17,up:3,dur:2.6,kind:'mill'});}}
- if(e.look){startBeat(new T.Vector3(...e.look),{dist:9,up:5,dur:1.8,kind:'hint'});}
+ if(['sails','pipes','ladders'].includes(e.restored)){const h=world.points[e.restored]?.mill;if(h){const port=camera.aspect<.85,v=V3(h);startBeat(v.clone().setY(v.y-1.5),{dist:port?24:18,up:2.5,dur:3.2,kind:'mill',normal:rotorNormal(v)||new T.Vector3(.615,0,.788),hold:1.8,subject:v.clone().setY(v.y-3)});}}
+ if(e.look&&!(beat&&beat.kind==='hint')){const v=new T.Vector3(...e.look);startBeat(v,{dist:9,up:4,dur:2.6,kind:'hint',normal:tmpA.set(movement.position.x-v.x,0,movement.position.z-v.z).clone(),hold:1.8,subject:v});}
  if(e.vista==='mills'){const m=millHubs().filter((v,i)=>i<2);/* the western Sails and Pipes mills are the ones seen from the loft */if(m.length){const c=m.reduce((a,v)=>a.add(v),new T.Vector3()).multiplyScalar(1/m.length),p=movement.position;const from=new T.Vector3(p.x-c.x,0,p.z-c.z).normalize().multiplyScalar(6).add(p).setY(p.y+6);startBeat(c,{from,dur:3.4,kind:'vista'});}}if(e.mara==='wave')maraAct.waveUntil=state.t+(state.complete||e.complete?9:5);
  if(e.teleport){movement.reset(e.teleport);animator?.reset();snapCamera();if(world.points.terraceView)arrival=2.6;const ms=world.points.terraceView?.maraStand;if(ms&&mara){mara.position.set(ms.x,ms.y,ms.z);}}
  if(e.complete){state.complete=true;endingAt=state.t+7;later(1.6,'',0,()=>sound('chime'));}
@@ -119,9 +120,10 @@ function poseStaff(){
  staff.position.set(0,-.054,.026).sub(grip);
 }
 // Staff handover: step the hero onto a mark facing Mara, then a brief closer shot of her face.
-function handover(){if(!mara)return;const f=new T.Vector3(Math.sin(mara.rotation.y),0,Math.cos(mara.rotation.y)),mark=mara.position.clone().addScaledVector(f,1.15);
+function handover(){if(!mara)return;const f=new T.Vector3(Math.sin(mara.rotation.y),0,Math.cos(mara.rotation.y)),mark=mara.position.clone().addScaledVector(f,1.45);
  if(movement.isSafe(mark.toArray())){movement.reset(mark.toArray());movement.yaw=Math.atan2(mara.position.x-mark.x,mara.position.z-mark.z);}
- const head=mara.position.clone().setY(mara.position.y+1.35),side=new T.Vector3(f.z,0,-f.x);startBeat(head,{from:mara.position.clone().addScaledVector(f,2.6).addScaledVector(side,1.4).setY(mara.position.y+1.8),dur:2.2,kind:'handover'});}
+ // Frame both of them from the side: the look sits between their chests, the lens a little in front of the pair.
+ const mid=mara.position.clone().addScaledVector(f,.72).setY(mara.position.y+1.25),side=new T.Vector3(f.z,0,-f.x);startBeat(mid,{from:mid.clone().addScaledVector(side,4.2).addScaledVector(f,1.4).setY(mara.position.y+2.1),dur:2.4,kind:'handover',hold:1.2,subject:mara.position.clone()});}
 // Mara acts through bh-mara.js hooks: throws the bypass lever, keeps a hand on it, looks at the
 // apprentice when near, opens her hands as she gives the staff, waves at the finale and ending.
 function actMara(dt,p){const set=mara.userData.setPose,to=mara.userData.headToward;if(!set)return;
@@ -133,13 +135,13 @@ function actMara(dt,p){const set=mara.userData.setPose,to=mara.userData.headTowa
 // People and benches are solid: Mara, the villagers (moving a little) and their benches (boxes, cached).
 let benchBoxes=null;
 function npcBlocked(x,z,r,y){
- if(mara&&Math.abs(y-mara.position.y)<1.2&&Math.hypot(x-mara.position.x,z-mara.position.z)<r+.32)return true;
+ if(mara&&Math.abs(y-mara.position.y)<1.2&&Math.hypot(x-mara.position.x,z-mara.position.z)<r+.62)return true;   // the hero stops a step short of her (the high camera still reads both)
  if(villagers){for(const v of villagers.list)if(Math.abs(y-v.y)<1.2&&Math.hypot(x-v.x,z-v.z)<r+.28)return true;
   benchBoxes??=villagers.root.children.filter(o=>o.isMesh&&!villagers.list.some(v=>v.v===o)).map(o=>new T.Box3().setFromObject(o));
   for(const b of benchBoxes)if(y<b.max.y&&y+1.6>b.min.y&&x>b.min.x-r&&x<b.max.x+r&&z>b.min.z-r&&z<b.max.z+r)return true;}
  return false;}
 function findContext(){const p=movement.position;context=state.action||quest.finaleActive?context:quest.context(p,movement.yaw);
- $('#action').disabled=!context||!!state.action;$('#action').innerHTML=(context?.label||'Look around')+' <span>SPACE</span>';$('#action').dataset.kind=context?.kind||'';}
+ $('#action').disabled=!context||!!state.action;$('#action').innerHTML=(context?.label||'Look around')+' <span>SPACE</span>';$('#action').dataset.kind=context?.kind||'';$('#action').dataset.idle=String(!context);}
 // Camera-aligned Bellhollow chart: anchors, mills, the Hollow gate and the current objective.
 // Illustrated chart (game/bellhollow/map.js): update every HUD tick (fog of war reveals even while tucked), draw when visible.
 function drawMap(){
@@ -151,7 +153,7 @@ function drawMap(){
 // While the chart would cover the scene's subject it tucks into a corner button; the player can still open it.
 function chartUI(){const expanded=mapCanvas.classList.contains('expanded'),b=$('#mapToggle');document.body.classList.toggle('chart-tucked',chartTuck&&!chartOverride&&!expanded);document.body.classList.toggle('chart-shown',chartTuck&&chartOverride);b.textContent=chartTuck&&!expanded?(chartOverride?'Tuck chart':'Show chart'):expanded?'Close chart':'Enlarge chart';b.setAttribute('aria-expanded',String(expanded||chartTuck&&chartOverride));map?.setExpanded?.(mapCanvas.classList.contains('expanded'));}
 $('#mapToggle').onclick=()=>{if(chartTuck&&!mapCanvas.classList.contains('expanded'))chartOverride=!chartOverride;else mapCanvas.classList.toggle('expanded');chartUI();drawMap();};
-function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
+function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;if(appliedShift)camera.setViewOffset(innerWidth,innerHeight,0,appliedShift*innerHeight,innerWidth,innerHeight);camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
 // Drag empty scenery to look around; movement remains relative to the camera.
 canvas.addEventListener('pointerdown',e=>{if(!state.started||state.paused)return;cameraDrag={id:e.pointerId,x:e.clientX};canvas.setPointerCapture(e.pointerId);});
 canvas.addEventListener('pointermove',e=>{if(cameraDrag?.id!==e.pointerId)return;cameraYaw-=(e.clientX-cameraDrag.x)*.006;cameraDrag.x=e.clientX;lastCameraInput=performance.now()/1000;});
@@ -166,29 +168,91 @@ function floorUnder(x,z,y){const g=world?.ground(x,z,y);return typeof g==='numbe
 // metre below one (inside its slab). Otherwise the single top-most height is used.
 // The great trunk (bark shell, Hollow walls and ceiling) is solid for the lens too: world kit's trunkSolid, padded.
 const inTrunk=(x,z,h)=>!world?.stub&&[[0,0],[.35,0],[-.35,0],[0,.35],[0,-.35]].some(([a,b])=>trunkSolid(x+a,z+b,h));
-function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch),layered=!!world?.layers;for(let i=1;i<=20;i++){const d=length*i/20;if(d<=1.2)continue;const x=o.x+sx*c*d,z=o.z+sz*c*d,h=o.y+s*d,pad=.35+.03*i;
- if(inTrunk(x,z,h)){armHitId='trunk';return d;}if(d<=2)continue;
+// Tall architecture colliders (houses, stalls, tall walls, gate piers) near the arm: the lens never sits inside
+// or behind them. Small or low colliders (barrels, lamps, rails, kerbs, low walls) are ignored: the camera goes over them.
+const armCols=[];
+function colTop(c){const dy=typeof c.dy==='function'?c.dy():(c.dy||0);return c.type==='seg'?Math.max(c.ya,c.yb)+c.h+dy:c.y1+dy;}
+function colBig(c){if(c._big!==undefined)return c._big;let w,d,h;if(c.type==='seg'){w=Math.hypot(c.bx-c.ax,c.bz-c.az);d=2*c.t;h=c.h;}else if(c.type==='circle'){w=d=2*c.r;h=c.y1-c.y0;}else if(c.type==='box'){w=2*c.hw;d=2*c.hd;h=c.y1-c.y0;}else return c._big=false;
+ return c._big=h>=1.9&&Math.max(w,d)>=1.4;}
+let bigBoxes=null;const armBoxes=[],armRibbons=[],tallCols=[];
+// Branch walkways: the bark tube is wider and deeper than the walkable ribbon on top of it (bark never fades).
+function ribbonHit(r,x,z,h){if(r.enabled===false||typeof r.enabled==='function'&&!r.enabled())return false;const p=r.pts,hw=r.w/2+.6,dy=typeof r.dy==='function'?r.dy():(r.dy||0);for(let i=1;i<p.length;i++){const ax=p[i-1][0],az=p[i-1][2],dx=p[i][0]-ax,dz=p[i][2]-az,u=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz||1e-9)));if(Math.hypot(x-ax-u*dx,z-az-u*dz)>hw)continue;const y=p[i-1][1]+(p[i][1]-p[i-1][1])*u+dy;if(y>armLow&&h>y-1.9&&h<y+.4)return true;}return false;}
+function gatherArmCols(o,reach){armCols.length=0;armBoxes.length=0;
+ // Large-architecture boxes recorded by the world kit (static blocks): walls, houses, gate arches, stalls.
+ if(!bigBoxes&&world?.root){bigBoxes=[];for(const g of world.root.children)if(g.userData?.bigBoxes)bigBoxes.push(...g.userData.bigBoxes);}
+ // A box the hero stands inside (a mill with its own deck/balcony) says nothing about where the lens may go: skip it.
+ for(const b of bigBoxes||[])if(b[4]>armLow&&!(o.x>b[0]-.3&&o.x<b[3]+.3&&o.z>b[2]-.3&&o.z<b[5]+.3&&o.y>b[1]-.3&&o.y<b[4]+.3)&&Math.max(b[0]-o.x,o.x-b[3],0)<reach&&Math.max(b[2]-o.z,o.z-b[5],0)<reach)armBoxes.push(b);
+ armRibbons.length=0;for(const r of world?.ground_model?.surfaces||[])if(r.type==='ribbon'&&/branch/.test(r.id||'')&&r.bb&&o.x>r.bb[0]-reach&&o.x<r.bb[1]+reach&&o.z>r.bb[2]-reach&&o.z<r.bb[3]+reach)armRibbons.push(r);
+ const cs=world?.ground_model?.colliders;if(!cs)return;tallCols.length=0;for(const c of cs){if(c.type!=='seg'&&c.type!=='circle'&&c.type!=='box')continue;if(c.enabled===false||typeof c.enabled==='function'&&!c.enabled())continue;if(colTop(c)<=armLow)continue;const big=colBig(c);
+ const cx=c.type==='seg'?(c.ax+c.bx)/2:c.x,cz=c.type==='seg'?(c.az+c.bz)/2:c.z,cr=c.type==='seg'?Math.hypot(c.bx-c.ax,c.bz-c.az)/2+c.t:c.type==='circle'?c.r:Math.hypot(c.hw,c.hd);if(Math.hypot(cx-o.x,cz-o.z)<reach+cr)if(big)armCols.push(c);else if((c.type==='seg'?c.h:c.y1-c.y0)>=1.8)tallCols.push(c);}}
+function colHit(c,x,z,h,pad){const dy=typeof c.dy==='function'?c.dy():(c.dy||0);
+ if(c.type==='seg'){const dx=c.bx-c.ax,dz=c.bz-c.az,L2=dx*dx+dz*dz||1e-9,u=Math.max(0,Math.min(1,((x-c.ax)*dx+(z-c.az)*dz)/L2));if(Math.hypot(x-c.ax-u*dx,z-c.az-u*dz)>=pad+c.t)return false;const base=c.ya+(c.yb-c.ya)*u+dy;return h<base+c.h+pad&&h>base-pad;}
+ if(c.type==='circle'){if(Math.hypot(x-c.x,z-c.z)>=pad+c.r)return false;return h<c.y1+dy+pad&&h>c.y0+dy-pad;}
+ const lx=(x-c.x)*c.cos-(z-c.z)*c.sin,lz=(x-c.x)*c.sin+(z-c.z)*c.cos;if(Math.hypot(Math.max(Math.abs(lx)-c.hw,0),Math.max(Math.abs(lz)-c.hd,0))>=pad)return false;return h<c.y1+dy+pad&&h>c.y0+dy-pad;}
+// Anything the lens must not sit in or right behind: trunk, raised slabs, tall architecture, branch walkways.
+function solidAt(x,z,h,pad){if(inTrunk(x,z,h))return 'trunk';
+ if(world?.layers){for(const L of world.layers(x,z))if(L.h>armLow&&L.h>h-pad&&L.h<h+1.1)return L.id;}else{const g=viewGround(x,z);if(g>armLow&&h<g+pad)return 'ground';}
+ for(const k of armCols)if(colHit(k,x,z,h,Math.min(pad,.3)))return k.id||k.type;
+ for(const r of armRibbons)if(ribbonHit(r,x,z,h))return r.id;
+ const q=Math.min(pad,.3);for(const b of armBoxes)if(x>b[0]-q&&x<b[3]+q&&z>b[2]-q&&z<b[5]+q&&h>b[1]-q&&h<b[4]+q)return 'arch-box';return null;}
+function armHit(o,sx,sz,pitch,length){const c=Math.cos(pitch),s=Math.sin(pitch);for(let i=1;i<=20;i++){const d=length*i/20;if(d<=1.2)continue;const x=o.x+sx*c*d,z=o.z+sz*c*d,h=o.y+s*d,pad=.35+.03*i;
+ if(d<=2){if(inTrunk(x,z,h)){armHitId='trunk';return d;}continue;}
  // Low things (balustrades, barrels, kerbs: tops under ~1.5 m above the hero's feet) never shorten the arm: the camera goes over them.
- if(layered){for(const L of world.layers(x,z))if(L.h>armLow&&L.h>h-pad&&L.h<h+1.1){armHitId=L.id;return d;}}else{const g=viewGround(x,z);if(g>armLow&&h<g+pad)return d;}}return 0;}
+ const id=solidAt(x,z,h,pad);if(id){armHitId=id;return d;}
+ // Thin tall things (gate piers, posts) may fade between lens and hero, but the lens itself never sits in one.
+ if(d>length-1.2)for(const k of tallCols)if(colHit(k,x,z,h,.35)){armHitId=k.id||'post';return d;}}return 0;}
+// How much of the view right in front of a lens at yaw `yaw` is filled by large architecture / bark (0..1):
+// a 5x3 fan of rays across the frame, each probed out to 4 m.
+const fanF=new T.Vector3(),fanR=new T.Vector3(),fanU=new T.Vector3(),fanP=new T.Vector3(),fanD=new T.Vector3();
+function closeClutter(yaw,pitch,length){const sx=Math.sin(yaw),sz=Math.cos(yaw),c=Math.cos(pitch);fanP.set(armOrigin.x+sx*c*length,armOrigin.y+Math.sin(pitch)*length,armOrigin.z+sz*c*length);
+ fanF.copy(armOrigin).sub(fanP).normalize();fanR.set(-fanF.z,0,fanF.x).normalize();fanU.crossVectors(fanR,fanF);let n=0,hit=0;
+ for(const ax of [-.68,-.45,-.22,0,.22,.45,.68])for(const ay of [-.28,0,.28]){fanD.copy(fanF).addScaledVector(fanR,ax).addScaledVector(fanU,ay).normalize();n++;
+  for(const d of [.8,1.6,2.4,3.2,4,4.8,5.6,6.4,7.2]){const x=fanP.x+fanD.x*d,z=fanP.z+fanD.z*d,h=fanP.y+fanD.y*d;if(solidAt(x,z,h,.1)||tallCols.some(k=>colHit(k,x,z,h,.1))){hit+=1-d/10;break;}}}
+ // The hero hidden behind a tall thin thing (gate pier, post cluster) that fades rather than blocks: also worth a swing.
+ let hid=0;const L=fanP.distanceTo(armOrigin);for(let d=.8;d<L-1;d+=.4){const x=fanP.x+fanF.x*d,z=fanP.z+fanF.z*d,h=fanP.y+fanF.y*d;if(tallCols.some(k=>colHit(k,x,z,h,.05))){hid=.35;break;}}
+ // Bark (never fades) between the lens and the hero's head: the strongest reason to swing.
+ const ah=armHit(armOrigin,sx,sz,pitch,length);return hit/n+hid+(ah?.1+.35*(1-ah/length):0)+(barkCut(armOrigin,sx,sz,pitch,length)?.4:0);}
+// Zelda-style swing: when big architecture or bark crowds the lens, ease the yaw toward open space. Slow, eased, never
+// while the player turns the camera (Q/E, drag), holds the touch stick, or during beats/cinematics.
+let swingGoal=null,swingCheck=0,wantLength=0;
+function openSpaceSwing(dt,nowS,allowed){
+ if(!allowed||armPitch==null){swingGoal=null;return;}
+ if((swingCheck-=dt)<=0){swingCheck=.35;const len=wantLength||armLength,now=closeClutter(cameraYaw,armPitch,len);   // judged at the arm the camera wants, so a pulled-in arm counts as crowded
+  if(now>.15&&swingGoal===null){let best=now,goal=null;for(const d of [.25,-.25,.5,-.5,.8,-.8,1.1,-1.1,1.5,-1.5]){const v=closeClutter(cameraYaw+d,armPitch,len)+Math.abs(d)*.05;if(v<best-.08){best=v;goal=cameraYaw+d;}}swingGoal=goal;}
+  else if(now<.05)swingGoal=null;}
+ if(swingGoal!==null){const e=Math.atan2(Math.sin(swingGoal-cameraYaw),Math.cos(swingGoal-cameraYaw));if(Math.abs(e)<.02){swingGoal=null;return;}
+  // eased: fast in the middle of the turn, gentle at both ends; at most ~0.45 rad/s
+  const vmax=(armLength??11)<3.2?1.1:.45;cameraYaw+=Math.sign(e)*Math.min(Math.abs(e),dt*Math.min(vmax,.15+Math.abs(e)*.9*vmax/.45));}}   // pinned against a tower: turn out briskly
 let armLow=-Infinity,armHitId=null;
-function placeCamera(dt,sx,sz,pitch,length){// Test the arm from a point kept above the floor: framing may pan the look target below a descending deck.
+let barkMeshes=null;const barkRay=new T.Raycaster(),barkDir=new T.Vector3(),barkHead=new T.Vector3(),barkCam=new T.Vector3();
+function barkCut(o,sx,sz,pitch,length){if(!barkMeshes&&world?.root){barkMeshes=[];world.root.traverse(m=>{const k=m.isMesh&&!Array.isArray(m.material)&&m.material.userData?.bhKey;if((k==='bark'||k==='barkShade')&&!/trunk|hollow|backdrop|far/.test(m.name))barkMeshes.push(m);});}
+ if(!barkMeshes?.length)return 0;const c=Math.cos(pitch);barkDir.set(sx*c,Math.sin(pitch),sz*c);
+ // Aim from the hero's head (what must stay visible) to the lens; return the distance along the arm.
+ barkHead.set(o.x,Math.max(o.y,(movement?.position.y??o.y)+1.65),o.z);barkCam.copy(o).addScaledVector(barkDir,length);barkCam.sub(barkHead);const L=barkCam.length();barkCam.multiplyScalar(1/L);
+ barkRay.set(barkHead,barkCam);barkRay.near=.8;barkRay.far=L+.3;const h=barkRay.intersectObjects(barkMeshes,false);return h.length?h[0].distance*length/L:0;}
+function placeCamera(dt,sx,sz,pitch,length){wantLength=length;// Test the arm from a point kept above the floor: framing may pan the look target below a descending deck.
  armOrigin.copy(cameraTarget);armOrigin.y=Math.max(armOrigin.y,floorUnder(armOrigin.x,armOrigin.z,armOrigin.y)+.9);let p=pitch,l=length;
- // Raise first (the usual fix); under an overhang, also try lowering the arm beneath it.
- // Blocked: raise the arm a little first, then pull it in (never through walls), then try lower pitches.
- armLow=(movement?.position.y??armOrigin.y-1)+1.5;
- // Blocked: rise first (up to 60° at full length), then lower angles at full length, then shorten — but keep the
- // arm >= 5.5 m, then >= 4.5 m; only as a last resort shorter. Never through the trunk or a wall above head height.
- if(armHit(armOrigin,sx,sz,p,l)){let found=false;const MAXP=1.05;
+ armLow=(movement?.position.y??armOrigin.y-1)+1.5;gatherArmCols(armOrigin,length+1);
+ // Blocked: rise first (up to ~55° at full length), then pull in a little (>= 6.5 m), then lower angles at full
+ // length, then shorten — but keep the arm >= 5.5 m, then >= 4.5 m. Only where truly enclosed (overhangs, alleys) the pitch/length pair with the longest
+ // free arm, preferring gentle pitches: never the old 60°/2.5 m straight-down collapse.
+ if(armHit(armOrigin,sx,sz,p,l)){let found=false;const lifting=!!movement?.lifting,MAXP=lifting?.72:.96;   // riding an updraft: never tip toward top-down, pull in instead
   for(let q=pitch+.05;q<=MAXP+1e-6&&!found;q+=.05)if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;}
-  for(let q=pitch-.05;q>=.12&&!found;q-=.05)if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;}
-  for(const minL of [5.5,4.5])for(let q=pitch;q<=MAXP+1e-6&&!found;q+=.1){const hit=armHit(armOrigin,sx,sz,q,l);const l2=Math.max(minL,hit-.6);if(l2<l&&!armHit(armOrigin,sx,sz,q,l2)){p=q;l=l2;found=true;}}
-  if(!found){p=MAXP;const hit=armHit(armOrigin,sx,sz,p,l);if(hit)l=Math.max(2.5,hit-.6);}}
+  for(let q=pitch;q<=MAXP+1e-6&&!found;q+=.08){const hit=armHit(armOrigin,sx,sz,q,l);const l2=Math.max(6.5,hit-.6);if(l2<l&&!armHit(armOrigin,sx,sz,q,l2)){p=q;l=l2;found=true;}}
+  for(let q=pitch-.05;q>=.2&&!found;q-=.05)if(!armHit(armOrigin,sx,sz,q,l)){p=q;found=true;}
+  for(const minL of [5.5,4.5])for(let q=pitch;q<=MAXP+1e-6&&!found;q+=.08){const hit=armHit(armOrigin,sx,sz,q,l);const l2=Math.max(minL,hit-.6);if(l2<l&&!armHit(armOrigin,sx,sz,q,l2)){p=q;l=l2;found=true;}}
+  for(const minL of [5.5,4.5])for(let q=pitch-.08;q>=.12&&!found;q-=.08){const hit=armHit(armOrigin,sx,sz,q,l);const l2=Math.max(minL,hit-.6);if(l2<l&&!armHit(armOrigin,sx,sz,q,l2)){p=q;l=l2;found=true;}}
+  // Pressed against something tall (a stall, a house corner): climb steeper before giving up length.
+  for(const L of [l,7,5.5,4.5])for(let q=MAXP+.04;q<=(lifting?.8:1.12)+1e-6&&!found&&L<=l;q+=.04)if(!armHit(armOrigin,sx,sz,q,L)){p=q;l=L;found=true;}
+  if(!found){let best=-1;for(let q=.12;q<=MAXP+1e-6;q+=.08){const hit=armHit(armOrigin,sx,sz,q,l),free=Math.max(2.5,hit-.6)-Math.abs(q-pitch)*1.5;if(free>best){best=free;p=q;l=Math.max(2.5,hit-.6);}}}}
+ // Branch bark (never fades, curved tubes the height tests miss): one ray along the chosen arm; rise, else pull in.
+ let cut=barkCut(armOrigin,sx,sz,p,l);if(cut){for(let q=p+.12;q<=1.0&&cut;q+=.12){if(!armHit(armOrigin,sx,sz,q,l)&&!barkCut(armOrigin,sx,sz,q,l)){p=q;cut=0;}}if(cut)l=Math.max(3.5,Math.min(l,cut-.5));}
  armPitch??=p;armLength??=l;armPitch=T.MathUtils.damp(armPitch,p,p>armPitch?12:2.4,dt);armLength=T.MathUtils.damp(armLength,l,l<armLength?12:2,dt);
  const c=Math.cos(armPitch)*armLength;camera.position.set(cameraTarget.x+sx*c,cameraTarget.y+Math.sin(armPitch)*armLength,cameraTarget.z+sz*c);
  let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));camera.position.y=Math.max(camera.position.y,floor+1.1);
- // Lens touching the trunk: rise first; pull in only while the arm stays >= 4.5 m.
- for(let i=0;i<12&&inTrunk(camera.position.x,camera.position.z,camera.position.y);i++)camera.position.y+=.5;
- for(let i=0;i<8&&inTrunk(camera.position.x,camera.position.z,camera.position.y)&&camera.position.distanceTo(cameraTarget)>4.6;i++)camera.position.lerp(cameraTarget,.12);}
+ // Lens touching the trunk: rise a little first (at most 2 m, so the view never turns straight down), then pull in.
+ for(let i=0;i<4&&inTrunk(camera.position.x,camera.position.z,camera.position.y);i++)camera.position.y+=.5;
+ for(let i=0;i<10&&inTrunk(camera.position.x,camera.position.z,camera.position.y)&&camera.position.distanceTo(cameraTarget)>3;i++)camera.position.lerp(cameraTarget,.12);}
 function screenBox(box){let l=1e9,t=1e9,r=-1e9,b=-1e9;for(let i=0;i<8;i++){ndc.set(i&1?box.max.x:box.min.x,i&2?box.max.y:box.min.y,i&4?box.max.z:box.min.z).project(camera);if(ndc.z>1)return null;const x=(ndc.x+1)/2*innerWidth,y=(1-ndc.y)/2*innerHeight;l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}return {l,t,r,b};}
 // Play area left by the HUD: below the objective panel, above caption/buttons, left of an open chart.
 function hudSafe(){const s={l:12,t:12,r:innerWidth-12,b:innerHeight-12},top=$('#hud>div')?.getBoundingClientRect();if(top?.height)s.t=Math.max(s.t,top.bottom+10);
@@ -221,11 +285,34 @@ function millHubs(){const P=world.points;return ['sails','pipes','ladders'].map(
 // Push a scripted lens out of the trunk and above the ground (never inside/under geometry).
 function guardLens(v){for(let i=0;i<24&&(inTrunk(v.x,v.z,v.y)||v.y<viewGround(v.x,v.z)+1.4);i++){v.y+=.8;}return v;}
 // Start a camera beat framing `look` from `dist` away on the hero's side (or from `from`), `dur` seconds.
-function startBeat(look,{dur=2.6,dist=16,up=5,from=null,kind=''}={}){if(!look||introActive)return;const p=movement.position;
- const pos=from?from.clone():new T.Vector3(p.x-look.x,0,p.z-look.z).normalize().multiplyScalar(dist).add(look).setY(look.y+up);
- guardLens(pos);beat={t:0,dur:state.gentle?dur+.6:dur,pos,look:look.clone(),kind};}
-function skipBeat(){if(beat&&beat.t<beat.dur-.6)beat.t=beat.dur-.6;}
-addEventListener('keydown',e=>{if(beat&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyA'].includes(e.code))skipBeat();},{capture:true});
+// Start a camera beat framing `look` from `dist` away on the hero's side (or from `from`), `dur` seconds.
+// Story beats (normal/side given): search a few angles around the preferred view for a clear line to the subject,
+// fade small props in front of it (look focus), and hold at least `hold` seconds before any skip.
+function beatClear(look,pos){armLow=look.y-2;gatherArmCols(look,look.distanceTo(pos)+2);const d=tmpB.copy(pos).sub(look),L=d.length();d.multiplyScalar(1/L);
+ for(let t=1.6;t<L;t+=.5)if(solidAt(look.x+d.x*t,look.z+d.z*t,look.y+d.y*t,.2))return false;return !barkBetween(look,pos);}
+function barkBetween(a,b){barkCut(a,0,1,0,0);if(!barkMeshes?.length)return false;tmpA.copy(b).sub(a);const L=tmpA.length();barkRay.set(a,tmpA.multiplyScalar(1/L));barkRay.near=1;barkRay.far=L;return barkRay.intersectObjects(barkMeshes,false).length>0;}
+function startBeat(look,{dur=2.6,dist=16,up=5,from=null,kind='',normal=null,hold=.8,subject=null}={}){if(!look||introActive)return;const p=movement.position;
+ let pos=from?from.clone():new T.Vector3(p.x-look.x,0,p.z-look.z).normalize().multiplyScalar(dist).add(look).setY(look.y+up);
+ if(normal){// face the mechanism (the side of `normal` nearer the hero), then try angles/heights around it
+  const n=new T.Vector3(normal.x,0,normal.z).normalize();if(n.dot(tmpA.set(p.x-look.x,0,p.z-look.z))<0)n.negate();const base=Math.atan2(n.x,n.z);let best=null;
+  search:for(const da of [0,.3,-.3,.6,-.6,.9,-.9])for(const u of [up,up+2.5,up-1.5]){const c=new T.Vector3(look.x+Math.sin(base+da)*dist,look.y+u,look.z+Math.cos(base+da)*dist);guardLens(c);if(beatClear(look,c)){best=c;break search;}}
+  if(best)pos=best;else pos=new T.Vector3(look.x+n.x*dist,look.y+up,look.z+n.z*dist);}
+ guardLens(pos);beat={t:0,dur:state.gentle?dur+.6:dur,pos,look:look.clone(),kind,hold:Math.min(hold,dur-.6),subject:subject?subject.clone():null};}
+function skipBeat(){if(beat&&beat.t>=beat.hold&&beat.t<beat.dur-.6)beat.t=beat.dur-.6;}
+// A held arrow (key repeat) is steering, not a skip: only a fresh press skips, and never before the beat's hold.
+addEventListener('keydown',e=>{if(beat&&!e.repeat&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyA'].includes(e.code))skipBeat();},{capture:true});
+// Mechanism framing helpers: a windmill's sail disc faces along its rotor's spin axis (local +z).
+function rotorNormal(hub){let best=null,bd=4;world.root.traverse(o=>{if(/^bh-rotor/.test(o.name)){const w=o.getWorldPosition(new T.Vector3()),d=w.distanceTo(hub);if(d<bd){bd=d;best=o;}}});return best?best.getWorldDirection(new T.Vector3()):null;}
+const V3=v=>v?new T.Vector3(v.x,v.y,v.z):null;
+// Story payoffs (progress flips false -> true): frame the mechanism, not the hero.
+let lastProgress=null;
+function storyBeats(){const P=world.points,pr=quest.progress,was=lastProgress;lastProgress={...pr};if(!was)return;const port=camera.aspect<.85,on=k=>pr[k]&&!was[k];
+ if(on('bell')&&P.morningBellObject){const b=V3(P.morningBellObject);startBeat(b,{dist:port?9:7.5,up:1.2,dur:2.8,kind:'bell',normal:tmpA.set(movement.position.x-b.x,0,movement.position.z-b.z).clone(),hold:1.4,subject:b.clone().setY(b.y-1.2)});}
+ if(on('sailsBridge')&&P.sails?.bridgeFrom){const a=V3(P.sails.bridgeFrom),c=V3(P.sails.bridgeTo),m=a.clone().add(c).multiplyScalar(.5),d=c.clone().sub(a);startBeat(m,{dist:port?15:12,up:4,dur:3,kind:'bridge',normal:new T.Vector3(-d.z,0,d.x),hold:1.6,subject:m.clone().setY(m.y-.8)});}
+ if(on('sailsCap')&&P.sails?.mill){const h=V3(P.sails.mill);startBeat(h,{dist:port?20:15,up:1.5,dur:3,kind:'cap',normal:rotorNormal(h)||new T.Vector3(.615,0,.788),hold:1.6,subject:h.clone().setY(h.y-2)});}
+ // The final ring with Mara: bell and Mara together.
+ if(on('complete')&&mara&&P.morningBellObject){const b=V3(P.morningBellObject),m=mara.position.clone().setY(mara.position.y+1.3),mid=b.clone().add(m).multiplyScalar(.5);startBeat(mid,{dist:port?10:8,up:1.6,dur:3.4,kind:'bell',normal:tmpA.set(-(movement.position.z-mid.z),0,movement.position.x-mid.x).clone(),hold:1.6,subject:mara.position.clone()});}   // from the side: the hero is not in front of the lens
+ if(on('fragSail')&&P.fragment2){const f=V3(P.fragment2);startBeat(f,{dist:9,up:4,dur:2.6,kind:'hint',normal:tmpA.set(movement.position.x-f.x,0,movement.position.z-f.z).clone(),hold:1.8,subject:f});}}
 $('#stick').addEventListener('pointerdown',()=>skipBeat(),{capture:true});
 function introCamera(sh){const tv=world.points.terraceView,P=world.points;if(!tv||!sh||sh.index>=4)return null;const e=sh.e-sh.shot.at,flat=(a,b)=>tmpB.set(b.x-a.x,0,b.z-a.z).normalize();
  if(sh.index===0)return {pos:new T.Vector3().lerpVectors(tv.pos,tv.target,.02*e),look:new T.Vector3(tv.target.x,tv.target.y+e*.1,tv.target.z)};
@@ -257,11 +344,13 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
   if(mara)actMara(dt,p);
   if(pairedBells?.userData.phrase){const ph=pairedBells.userData.phrase,a=bellOutT===null?null:ph(state.t-bellOutT,{gentle:state.gentle}),b=bellRetT===null?null:ph(state.t-bellRetT+1.7,{gentle:state.gentle});pairedBells.userData.setSwing?.({out:a?.out??0,ret:b?.ret??0});}
   if(state.started){findContext();if((uiTimer-=dt)<=0){uiTimer=.2;updateUI();drawMap();}for(const foot of animator.footfalls)sound('step');if(wasGrounded&&!movement.grounded&&movement.verticalVelocity>0&&!movement.lifting)sound('jump');if(!wasGrounded&&movement.grounded)sound('land');}wasGrounded=movement.grounded;
-  $('#skipIntro').hidden=!(introActive||quest.finaleActive);$('#skipIntro').textContent=quest.finaleActive?'Skip':'Skip · or move to begin';document.body.classList.toggle('cinematic',introActive||quest.finaleActive);
+  $('#skipIntro').hidden=!(introActive||quest.finaleActive);$('#skipIntro').textContent=quest.finaleActive?'Skip':'Skip · or move to begin';document.body.classList.toggle('cinematic',introActive||quest.finaleActive);document.body.classList.toggle('finale-cine',!!quest.finaleActive);
   if(state.complete&&endingAt&&state.t>=endingAt){endingAt=0;$('#ending').hidden=false;{const q=quest.telemetry();$('#endingDetail').textContent=q.keepsake?'The little keeper’s bell rang the whole return phrase. 3/3 fragments.':`${q.fragments}/3 bell fragments found.`;}}
   if(state.t>captionEnd)$('#caption').style.opacity='0';
  }
  // ---- camera ----
+ {const nowS=performance.now()/1000;if(movement.stickHeld)stickReleasedAt=nowS;
+  openSpaceSwing(dt,nowS,state.started&&!state.paused&&!introActive&&!quest.finaleActive&&!beat&&!(arrival>0)&&!cameraDrag&&!encounterSubject()&&nowS-lastCameraInput>((armLength??11)<4?.8:2.5)&&nowS-stickReleasedAt>1);}   // pinned against a tower: swing sooner
  const pos=movement.position,portrait=camera.aspect<.85;let sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw),pitch=Math.atan(.48),length=portrait?11.5:10.8;
  liftLead=T.MathUtils.damp(liftLead,movement.lifting?1:0,movement.lifting?3:1.5,dt);// rise with the hero and show the ledge above
  frameSubject(encounterSubject(),pos,dt);
@@ -271,10 +360,11 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  if(shot&&!state.gentle){const s=shot.shot,q=s.focus==='hero'?pos:world.points[s.focus]||pos;focus=tmpA.set(q.x,q.y+s.up,q.z);sx=Math.sin(cameraYaw+s.yaw+shot.e*.012);sz=Math.cos(cameraYaw+s.yaw+shot.e*.012);pitch=s.pitch;length=s.len;follow=1.6;}
  else if(introActive){focus=tmpA.set(pos.x,pos.y+1,pos.z);}
  const rise=world.points.finaleRise,ft=quest.finaleTime??-1,ease=v=>{v=Math.max(0,Math.min(1,v));return v*v*(3-2*v);};
- if(quest.finaleActive&&rise&&ft<4.5){const f=ease(Math.max(0,ft-.5)/4);focus=tmpA.set(pos.x,pos.y+1.4+f*2.5,pos.z);pitch=.42+f*.18;length=(portrait?11:9)+f*4;follow=2.2;}
+ // Finale A (0-2.3 s, the resonance): low and looking up the well as the wind gathers; then cut outside at the flood.
+ if(quest.finaleActive&&rise&&ft<2.3){const f=ease(ft/2.3);focus=tmpA.set(pos.x,pos.y+1.4+f*3,pos.z);pitch=.36-f*.26;length=(portrait?10.5:9);follow=2.2;}
  if(quest.finaleActive&&!rise){const f=quest.finaleShot,g=world.points.finale||world.points.guardian,e=f*f*(3-2*f);focus=tmpA.set(g.x,g.y+e*14,g.z);pitch=.3+e*.25;length=12+e*16;follow=1.4;}
  cameraTarget.lerp(focus,1-Math.exp(-dt*follow));placeCamera(dt,sx,sz,pitch,length);
- if(quest.finaleActive&&rise&&ft>=4.5){
+ if(quest.finaleActive&&rise&&ft>=2.3){
   // Finale, shot B/C (after a cut): outside the trunk on the Hollow's open side, rising over the waking village
   // toward the mills, then turning to the far bell. Every frame is guarded against the trunk and the ground.
   // Swing round the south (terrace) side so no look ever crosses the trunk: Ladders mill + village, then the
@@ -284,7 +374,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
    crane={pos:new T.CatmullRomCurve3([az(40,32,top+12),az(0,38,top+16),az(-60,50,top+30),az(-135,50,top+26)]),
     looks:[hub('ladders')||az(28,20,top+10),west.length?west.reduce((a,v)=>a.add(v),new T.Vector3()).multiplyScalar(1/west.length):az(-100,38,top+8),new T.Vector3().copy(far)]};
    scriptCam.copy(crane.pos.getPoint(0));finaleLook.copy(crane.looks[0]);}
-  const e=ease((ft-4.5)/7.5);crane.pos.getPoint(e,finaleCam);guardLens(finaleCam);
+  const e=ease((ft-2.3)/9.7);crane.pos.getPoint(e,finaleCam);guardLens(finaleCam);
   const L=crane.looks;if(ft<7)tmpB.copy(L[0]);else if(ft<9.5)tmpB.lerpVectors(L[0],L[1],ease((ft-7)/2));else tmpB.lerpVectors(L[1],L[2],ease((ft-9.5)/2));
   const k=1-Math.exp(-dt*3);scriptCam.lerp(finaleCam,k);camera.position.copy(scriptCam);finaleLook.lerp(tmpB,k);camera.lookAt(finaleLook);
  }else{crane=null;finaleLook.copy(camera.position).lerp(cameraTarget,1);
@@ -292,6 +382,9 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
   if(arrival>0&&tv){// Back on the terrace: ease from the painted terrace view into the normal follow arm.
    arrival=Math.max(0,arrival-dt);const k=ease(1-arrival/2.6);camera.position.lerpVectors(tv.pos,tmpB.copy(camera.position),k);camera.lookAt(tmpA.lerpVectors(tv.target,cameraTarget,k));
   }else camera.lookAt(cameraTarget);}
+ // Portrait phones: the stick and action button cover the lower screen, so shift the frame to put the hero higher.
+ {const want=camera.aspect<.85&&state.started&&!introActive&&!quest.finaleActive&&!beat?.14:0;viewShift=T.MathUtils.damp(viewShift,want,3,dt);
+  if(Math.abs(viewShift-appliedShift)>.002||(!viewShift&&appliedShift)){appliedShift=viewShift<.003?0:viewShift;if(appliedShift)camera.setViewOffset(innerWidth,innerHeight,0,appliedShift*innerHeight,innerWidth,innerHeight);else camera.clearViewOffset();}}
  // Short camera beats (mill payoffs, loft vista, Mara's handover): ease out of the arm, hold, ease back. Any input skips.
  if(beat&&!introActive&&!quest.finaleActive){beat.t+=dt;const inT=state.gentle?.9:.6,e=ease(Math.min(beat.t/inT,(beat.dur-beat.t)/inT,1));
   if(beat.t>=beat.dur)beat=null;else{tmpB.copy(camera.position);camera.position.lerpVectors(tmpB,beat.pos,e);camera.lookAt(tmpA.lerpVectors(cameraTarget,beat.look,e));}}
@@ -303,7 +396,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  if(state.started&&(hudTimer-=dt)<=0){hudTimer=.15;safe=hudSafe();updateChart(pos);const hy=tmpA.set(pos.x,pos.y+1.2,pos.z).project(camera).y;document.body.classList.toggle('caption-high',hy<-.3);}
  wind.flush();
  const area=quest.area(pos);
- if(look){try{look.setFocus?.({hero:hero.position,heroObject:hero,extra:mara?[mara.position]:[]});look.update(dt,{area:LOOK_AREAS[area]||'terrace-dawn',restored:quest.restoration.village||0,t:state.t,gentle:state.gentle});look.render();}catch(e){console.warn('look failed; plain renderer from now on',e);look=null;renderer.render(scene,camera);}}else renderer.render(scene,camera);
+ if(look){try{look.setFocus?.({hero:hero.position,heroObject:hero,extra:[...(beat?.subject?[beat.subject]:[]),...(mara?[mara.position]:[])]});look.update(dt,{area:LOOK_AREAS[area]||'terrace-dawn',restored:quest.restoration.village||0,t:state.t,gentle:state.gentle});look.render();}catch(e){console.warn('look failed; plain renderer from now on',e);look=null;renderer.render(scene,camera);}}else renderer.render(scene,camera);
  window.__READY__=true;
  const qt=quest.telemetry();
  window.__GAME__={pos:[pos.x,pos.z],y:pos.y,fps,speed:movement.speed,mode:movement.mode,grounded:movement.grounded,lifting:movement.lifting,knocked:movement.knocked,score:state.complete?1:0,draws:renderer.info.render.calls,tris:renderer.info.render.triangles,charged:wind.charged,chargeKind:wind.charge?.kind??null,paused:state.paused,started:state.started,introActive,introTime,introPhase:shot?SHOTS[shot.index].focus:null,context:context?.kind||null,contextId:context?.id||null,contextLabel:context?.label||null,objective:quest.objective(),area,quest:qt,wind:wind.telemetry(),restoration:{...quest.restoration},finaleTime:quest.finaleTime,finaleActive:quest.finaleActive,recoveredCount,freed:movement.freed,blocked:!!world.blocked(pos.x,pos.z,.23,pos.y),travel,checkpoint:movement.checkpoint.toArray(),cameraYaw,stubWorld:!!world.stub,look:!!look,version:2};
@@ -338,7 +431,7 @@ try{
  window.__CAMERA_PROBE__=()=>{const p=movement.position,ray=new T.Raycaster(),blockers=[],vis=o=>{for(let n=o;n;n=n.parent){if(!n.visible||n===hero)return false;}return true;};let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));
   for(const h of [1.55,1.0]){const target=new T.Vector3(p.x,p.y+h,p.z),dir=target.clone().sub(camera.position),dist=dir.length();ray.set(camera.position,dir.normalize());ray.far=dist-.3;for(const hit of ray.intersectObject(scene,true)){const o=hit.object,m=Array.isArray(o.material)?o.material[0]:o.material;if(!o.isMesh||!vis(o)||m?.transparent&&m.opacity<.5||m?.isMeshBasicMaterial&&!m.depthWrite||m?.isShaderMaterial)continue;blockers.push({name:o.name||o.parent?.name||'mesh',h,at:+hit.distance.toFixed(2),of:+dist.toFixed(2)});}}
   const head=new T.Vector3(p.x,p.y+1.55,p.z).project(camera);heroBox.min.set(p.x-.35,p.y,p.z-.35);heroBox.max.set(p.x+.35,p.y+1.75,p.z+.35);const g=quest.subject();
-  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe,insideTrunk:inTrunk(camera.position.x,camera.position.z,camera.position.y),insideSolid:!!world.blocked?.(camera.position.x,camera.position.z,.25,camera.position.y-.75),hitBy:(armHitId=null,armHit(armOrigin,Math.sin(cameraYaw),Math.cos(cameraYaw),Math.atan(.48),10.8)&&armHitId)};};
+  return {cam:camera.position.toArray().map(v=>+v.toFixed(2)),clear:floor===-Infinity?99:+(camera.position.y-floor).toFixed(2),pitch:+armPitch.toFixed(3),arm:+armLength.toFixed(2),frameDist:+frameDist.toFixed(2),head:[+((head.x+1)/2*innerWidth).toFixed(1),+((1-head.y)/2*innerHeight).toFixed(1)],headInView:Math.abs(head.x)<.97&&Math.abs(head.y)<.97&&head.z<1,unobstructed:!blockers.length,blockers:blockers.slice(0,4),hero:screenBox(heroBox),guardian:g?screenBox(g):null,subject:g?'guardian':null,chartTucked:document.body.classList.contains('chart-tucked'),safe,insideTrunk:inTrunk(camera.position.x,camera.position.z,camera.position.y),insideSolid:(()=>{const v=camera.position;for(const c of world.ground_model?.colliders||[])if((c.enabled===undefined||c.enabled===true||typeof c.enabled==='function'&&c.enabled())&&['seg','circle','box'].includes(c.type)&&colHit(c,v.x,v.z,v.y,.1))return c.id||c.type;return inTrunk(v.x,v.z,v.y)?'trunk':false;})(),seen:window.__LOOK__?.focusProbe?.()||null,clutter:+closeClutter(cameraYaw,armPitch,armLength).toFixed(2),swing:swingGoal,yaw:+cameraYaw.toFixed(2),bigBoxes:bigBoxes?.length??0,hitBy:(armHitId=null,armHit(armOrigin,Math.sin(cameraYaw),Math.cos(cameraYaw),Math.atan(.48),10.8)&&armHitId)};};
  // Lazy-load the prologue illustrations once the game is ready (not counted against start-up).
  (window.requestIdleCallback||setTimeout)(()=>{for(const n of [1,2,3]){const i=new Image();i.src=new URL(`./textures/v2/card${n}.webp`,import.meta.url).href;}});
  // After ready (never blocking it): villagers, then the chart bake from the live scene.

@@ -23,7 +23,7 @@ export default function (THREE, opts = {}) {
   const metal = Object.assign(new T.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .42, metalness: .35 }), { name: 'metal' });
   const shiny = Object.assign(new T.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .22, metalness: .75, emissive: 0x3a1c08, emissiveIntensity: .35 }), { name: 'metal' });
   const C = h => new T.Color(h);
-  const SKIN = C(0xE3AC86), SKIN_SH = C(0xC98C69), BLUSH = C(0xE58F7A), LINE = C(0xB5785C), LIP = C(0xB8665A), HAIR = C(0xDCDDD8), HAIR_SH = C(0xA3ABA8),
+  const SKIN = C(0xE3AC86), SKIN_SH = C(0xC98C69), BLUSH = C(0xE58F7A), LINE = C(0xB5785C), LIP = C(0xD08070), HAIR = C(0xE4DBC8), HAIR_SH = C(0xB2A99C),
     BLOUSE = C(0xF2E6C9), BLOUSE_SH = C(0xD8C7A4), APRON = C(0xC49A4C), APRON_SH = C(0x9C7536), STITCH = C(0x7A5A2A), SKIRT = C(0x5E4130), SKIRT_SH = C(0x46301F),
     BOOT = C(0x6E4830), BOOT_SH = C(0x4B3021), LEATHER = C(0x7A4E33), CORAL = C(0xD96956), CORAL_SH = C(0xB14E3F), COPPER = C(0xB8733F), VERD = C(0x3E9C8C),
     WHITE = C(0xF6EFE2), IRIS = C(0x5C4028), IRIS_L = C(0x7F6A3A), INK = C(0x2A1E1C);
@@ -125,13 +125,15 @@ export default function (THREE, opts = {}) {
 
   // ================= head =================
   const head = group('head', 0, .035, 0, neck);
+  head.scale.setScalar(1.1);   // a touch larger so her face reads at the 11 m gameplay camera
   {
     // Continuous head surface: sculpted in metres from a dense sphere; features only on the front.
     const g = new T.SphereGeometry(1, 56, 44), p = g.attributes.position, cols = new Float32Array(p.count * 3), c = new T.Color();
     const G = (dx, dy, sx, sy) => Math.exp(-((dx / sx) ** 2) - ((dy / sy) ** 2));
     const nasolabial = (x, y) => { const s = Math.sign(x) || 1, ax = Math.abs(x); const t = Math.max(0, Math.min(1, (y + .03) / -.034)); const cx = .021 + t * .014, cy = -.03 - t * .034; return Math.hypot(ax - cx, y - cy) + (t <= 0 || t >= 1 ? .004 : 0); };
+    const ox = new Float32Array(p.count), oy = new Float32Array(p.count), oz = new Float32Array(p.count);
     for (let i = 0; i < p.count; i++) {
-      const ux = p.getX(i), uy = p.getY(i), uz = p.getZ(i);
+      const ux = p.getX(i), uy = p.getY(i), uz = p.getZ(i); ox[i] = ux; oy[i] = uy; oz[i] = uz;
       let x = ux * .088, y = uy * .112, z = uz * .096;
       const front = smooth(.05, .5, uz), ax = Math.abs(x);
       x *= 1 + .1 * G(0, y + .055, 1, .035) * smooth(-.1, .3, -uz * 0 + 1);                 // full cheeks / jowls
@@ -147,25 +149,30 @@ export default function (THREE, opts = {}) {
       // Paint: base skin, warm blush, lips on a smiling curve, nasolabial and crow's-feet lines, brow furrows.
       c.copy(SKIN);
       c.lerp(SKIN_SH, smooth(.1, -.6, uz) * .3);                                               // side shading only (no dark jaw: it read as stubble)
-      c.lerp(SKIN_SH, front * .3 * G(x, y + .1, .03, .012));                                   // a soft chin shadow
       c.lerp(BLUSH, front * .9 * G(ax - .045, y + .014, .022, .016));
       const smileY = -.054 + 13 * x * x;
       if (front > .5 && ax < .033) c.lerp(LIP, smooth(.007, .002, y - smileY + .002 > 0 ? (y - smileY) * .5 : smileY - y - .003) * .85);   // fuller lower lip under the smile line
-      if (front > .5 && ax < .037) c.lerp(INK, smooth(.0024, .0008, Math.abs(y - smileY)) * .75 * smooth(.04, .022, ax));
-      if (front > .4) c.lerp(LINE, smooth(.0028, .001, nasolabial(x, y)) * .35);
+      if (front > .5 && ax < .037) c.lerp(LIP.clone().lerp(INK, .45), smooth(.0022, .0008, Math.abs(y - smileY)) * .8 * smooth(.036, .02, ax));
+      if (front > .4) c.lerp(LINE, smooth(.0024, .001, nasolabial(x, y)) * .12);
       for (const k of [-1, 0, 1]) if (front > .3) { const cx = .063, cy = .016 + k * .006, d = Math.abs((ax - cx) * Math.sin(-k * .45) + (y - cy) * Math.cos(-k * .45)); if (Math.abs(ax - cx - .006) < .008) c.lerp(LINE, smooth(.0022, .0008, d) * .5); }
       for (const ly of [.058, .07]) if (front > .5 && ax < .045) c.lerp(LINE, smooth(.0022, .0008, Math.abs(y - ly - .004 * Math.cos(x * 40))) * .3);
       cols[i * 3] = c.r; cols[i * 3 + 1] = c.g; cols[i * 3 + 2] = c.b;
     }
     g.setAttribute('color', new T.BufferAttribute(cols, 3)); g.computeVertexNormals();
-    mesh(g, head, 0, .11, 0);
+    // Keep the cel light coherent over the face (after hero-study-a): front normals lean to the smooth head ellipsoid, fully
+    // below the eyes, so the sculpted upper lip, smile and chin never drop into the shadow band (read as stubble/moustache).
+    { const n = g.attributes.normal, v = new T.Vector3(), e = new T.Vector3();
+      for (let i = 0; i < p.count; i++) { const uy = oy[i], uz = oz[i], ux = ox[i], front = smooth(-.15, .45, uz), low = smooth(.3, -.1, uy);
+        e.set(ux * .45, uy * .25 + .12, 1).normalize(); const nose = Math.exp(-((ux / .16) ** 2) - (((uy + .12) / .2) ** 2)) * smooth(.6, .9, uz);   // keep some nose form
+        v.fromBufferAttribute(n, i).lerp(e, front * (.6 + .35 * low) * (1 - .6 * nose)).normalize(); n.setXYZ(i, v.x, v.y, v.z); } }
+    mesh(g, head, 0, .11, 0).receiveShadow = false;
     root.userData.faceSurface = true;
   }
   const HY = .11; // head centre inside the head pivot
   { // a clear gentle smile: dark mouth line on the surface with upturned corners, soft lower lip
     const pts = []; for (let i = 0; i <= 12; i++) { const x = -.031 + i * .062 / 12; pts.push([x, HY - .054 + 13 * x * x, .102 - 16 * x * x]); }
-    tube(head, pts, .0021, .0021, C(0x6E3A30), paint, 5, 16);
-    for (const k of [-1, 1]) ell(head, C(0xC98C69), k * .036, HY - .04, .093, .003, .004, .002);   // smile dimples
+    tube(head, pts, .0013, .0013, C(0x8A4A3C), paint, 5, 16);
+    
   }
   for (const s of [-1, 1]) { ell(head, SKIN, s * .088, HY + .005, -.004, .017, .03, .014); ell(head, SKIN_SH, s * .092, HY + .004, .002, .007, .016, .005); }  // ears
   // Eyes (own pivot for blinks): sclera, iris, pupil, catchlight; smiling upper lids; brows.
@@ -180,15 +187,15 @@ export default function (THREE, opts = {}) {
     const lid = ell(eyes, (v, o) => o.copy(SKIN).lerp(SKIN_SH, .2), ex, .0125, ez + .0005, .0205, .0056, .008, paint, 14, 8); lid.rotation.z = -s * .1;
     tube(eyes, [[ex - s * .019, .002, ez + .002], [ex, .0105, ez + .007], [ex + s * .021, .003, ez + .001]], .0018, .0011, INK);
     tube(eyes, [[ex - s * .013, -.0065, ez + .003], [ex, -.009, ez + .004], [ex + s * .014, -.006, ez + .002]], .0009, .0007, LINE);
-    tube(head, [[s * .014, HY + .05, .095], [s * .034, HY + .063, .095], [s * .057, HY + .055, .088]], .0066, .0035, C(0x6E6158));   // brows, raised and kind
+    tube(head, [[s * .015, HY + .05, .095], [s * .034, HY + .062, .095], [s * .055, HY + .055, .088]], .0036, .002, C(0xB4AFA6));   // brows: fine, silver-grey, raised and kind
   }
   // Hair: silver cap swept back from the brow in waves, side waves over the ears, a bun with a copper pin.
   {
     const g = new T.SphereGeometry(1, 36, 22, 0, Math.PI * 2, 0, Math.PI * .56), p = g.attributes.position;
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), front = Math.max(0, z) ** 1.5, az = Math.atan2(x, z), wv = 1 + .035 * Math.sin(az * 16 + y * 4) * (1 - y * .6); p.setXYZ(i, x * .096 * wv, y * .122 + .006 + front * .062 * (1 - y), (z * .103 - .004) * wv); }
-    g.computeVertexNormals(); mesh(colorize(g, (v, o) => o.copy(HAIR).lerp(HAIR_SH, .5 + .5 * Math.sin(Math.atan2(v.x, v.z) * 16 + v.y * 40)).lerp(C(0xF2F2EE), smooth(.06, .12, v.y) * .5)), head, 0, HY + .012, 0);
+    g.computeVertexNormals(); mesh(colorize(g, (v, o) => o.copy(HAIR).lerp(HAIR_SH, .5 + .5 * Math.sin(Math.atan2(v.x, v.z) * 16 + v.y * 40)).lerp(C(0xF1E8D6), smooth(.06, .12, v.y) * .5)), head, 0, HY + .012, 0);
     for (let i = 0; i < 9; i++) { const a = -1 + i * .25, x = Math.sin(a) * .09, z = Math.cos(a) * .09;
-      tube(head, [[x * .88, HY + .072, z * .9], [x * 1.04, HY + .105, z * .58], [x * .7, HY + .126, z * .1 - .02], [0, HY + .12, -.05]], .009, .005, i % 2 ? C(0xEDEDE8) : HAIR_SH, paint, 6, 10); }
+      tube(head, [[x * .88, HY + .072, z * .9], [x * 1.04, HY + .105, z * .58], [x * .7, HY + .126, z * .1 - .02], [0, HY + .12, -.05]], .009, .005, i % 2 ? C(0xF0E6D4) : HAIR_SH, paint, 6, 10); }
     for (const s of [-1, 1]) tube(head, [[s * .07, HY + .07, .07], [s * .082, HY + .03, .075], [s * .078, HY - .005, .07]], .0022, .0012, HAIR, paint, 5, 8);   // loose strands at the temples
     for (const s of [-1, 1]) tube(head, [[s * .075, HY + .065, .05], [s * .092, HY + .045, .012], [s * .09, HY + .055, -.035], [s * .06, HY + .095, -.07]], .012, .008, HAIR, paint, 6, 10);
     lathe(head, [[.001, -.024], [.05, -.014], [.06, .014], [.046, .042], [.001, .052]], (v, o) => o.copy(HAIR).lerp(HAIR_SH, Math.max(0, Math.sin(Math.atan2(v.x, v.z) * 5 + v.y * 80) * .5)), 0, HY + .122, -.05, 1, 18);
@@ -230,24 +237,30 @@ export default function (THREE, opts = {}) {
     }
   }
   // ================= acting =================
-  const clamp = (v, a) => Math.max(-a, Math.min(a, v));
+  const clamp = (v, a) => Math.max(-a, Math.min(a, v)), pull0 = l => Math.max(0, l * 2 - 1);
   function setPose({ yaw = 0, pitch = 0, lean = 0, lever = 0, wave = 0, gesture = 0, t = 0, idle = 1 } = {}) {
     const J = joints; yaw = clamp(yaw, 1.2); pitch = clamp(pitch, .5);
     // Idle life: breathing, slow weight shift between feet, an occasional glance around, blinks.
     const breath = Math.sin(t * 1.55) * idle, shift = Math.sin(t * .42) * idle, g = t % 7.3, glance = idle * (g > 5.6 && g < 6.9 ? Math.sin((g - 5.6) / 1.3 * Math.PI) : 0) * (Math.floor(t / 7.3) % 2 ? 1 : -1);
     const bl = t % 4.1, blink = bl > 3.92 ? Math.sin((bl - 3.92) / .18 * Math.PI) : 0;
+    // Ambient acting on the free (left) arm, an 11 s cycle so she never stands frozen: a hand settles on the hip, later
+    // an open-palm "talking" gesture; both yield to lever/wave/gesture. Env: soft in/out.
+    const cyc = t % 11, env = (a, b) => idle * Math.max(0, Math.min(1, (cyc - a) / .7, (b - cyc) / .7));
+    const free = Math.max(0, 1 - 2 * Math.max(wave, gesture, pull0(lever))), hip = (+(opts.hipTest ?? 1)) * env(.5, 4.6) * free, talk = env(6.2, 8.8) * free * (1 - Math.min(1, lever * 3)), tk = Math.sin(t * 3.1);
+    // The whole body turns a little toward what she looks at (base 25%, chest 30%, head the rest).
+    J.base.rotation.y = yaw * .25;
     J.base.rotation.z = .012 * shift; J.hips.position.x = .012 * shift; J.hips.rotation.z = -.02 * shift;
     J.chest.scale.set(1 + .008 * breath, 1 + .012 * breath, 1 + .012 * breath);
-    J.chest.rotation.set(.12 * lean + .015 * breath * (1 - lever), yaw * .35, .015 * shift);
-    J.head.rotation.set(-pitch + .05 * lean - .01 * breath, yaw * .65 + .45 * glance * (1 - Math.min(1, Math.abs(yaw) * 3)), .03 * Math.sin(t * .9) * idle);
+    J.chest.rotation.set(.12 * lean + .015 * breath * (1 - lever), yaw * .3 - .06 * talk, .015 * shift);
+    J.head.rotation.set(-pitch + .05 * lean - .01 * breath - .04 * talk * tk, yaw * .45 + .45 * glance * (1 - Math.min(1, Math.abs(yaw) * 3)), .03 * Math.sin(t * .9) * idle);
     J.eyes.scale.y = 1 - .9 * blink;
     const reach = Math.min(1, lever * 2), pull = Math.max(0, lever * 2 - 1), wv = Math.sin(t * 9) * .45 * wave;
     J.rightArm.rotation.set(-.08 - 2.3 * reach + 1.5 * pull - 2.6 * wave * (1 - reach) - .9 * gesture, 0, .14 + .25 * wave + .5 * gesture + .02 * breath);
     J.rightForearm.rotation.set(-.3 - .2 * reach + .5 * pull - .5 * wave - .6 * gesture, 0, wv);
     J.rightHand.rotation.set(-.2 * reach, 0, wv * .5 + .3 * gesture);
-    J.leftArm.rotation.set(-.08 - .9 * gesture + .3 * pull, 0, -.14 - .5 * gesture - .02 * breath);
-    J.leftForearm.rotation.set(-.3 - .6 * gesture, 0, 0);
-    J.leftHand.rotation.set(0, 0, -.3 * gesture);
+    J.leftArm.rotation.set(-.08 - .9 * gesture + .3 * pull + .12 * hip - .55 * talk, 0, -.14 - .5 * gesture - .02 * breath - .55 * hip - .12 * talk);
+    J.leftForearm.rotation.set(-.3 - .6 * gesture - .35 * hip - (.75 + .12 * tk) * talk, 0, 1.75 * hip + .1 * talk * tk);
+    J.leftHand.rotation.set(.3 * hip, 0, -.3 * gesture - .35 * talk);
     J.chest.rotation.x += .18 * pull;
     root.updateMatrixWorld(true);
   }

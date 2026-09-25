@@ -55,7 +55,10 @@ uniform vec3 bkKeyColor; uniform vec4 bkBands; uniform vec3 bkShadowTint; unifor
 uniform vec4 bkHeight; uniform vec3 bkLowTint; uniform float bkAmbSteps; uniform vec3 bkRimColor; uniform vec3 bkSunDir;
 uniform vec3 bkFogSun; uniform vec3 bkFogHeight; uniform float bkGlow; uniform vec2 bkFogShape;
 uniform vec4 bkFocusA[ 4 ]; uniform vec4 bkFocusB[ 4 ]; uniform int bkFocusCount; uniform vec3 bkMist; uniform float bkTime, bkFlicker, bkDetail; uniform vec4 bkInterior; uniform vec3 bkAerial, bkAerialColor;
-varying vec3 vBkWorldPos;`;
+varying vec3 vBkWorldPos;
+#ifndef BK_NOFADE
+varying float vBkBig;
+#endif`;
   const HEMI = `
 vec3 bkHemi( const in HemisphereLight h, const in vec3 n ) {
   float w = 0.5 * dot( n, h.direction ) + 0.5;
@@ -113,11 +116,16 @@ vec3 bkHemi( const in HemisphereLight h, const in vec3 n ) {
   const FADE = `
 float bkFadeAmt = 0.0;
 #ifndef BK_NOFADE
+// Large architecture (world kit tags it per vertex: bkBig = 1) never fades; the camera arm keeps clear of it instead.
 {
-  // Stable ordered dither (4×4 Bayer on 2-px cells): reads as an intentional see-through, not noise.
-  vec2 bkBp = mod( floor( gl_FragCoord.xy * 0.5 ), 4.0 );
-  vec4 bkR = bkBp.y < 0.5 ? vec4( 0.0, 8.0, 2.0, 10.0 ) : bkBp.y < 1.5 ? vec4( 12.0, 4.0, 14.0, 6.0 ) : bkBp.y < 2.5 ? vec4( 3.0, 11.0, 1.0, 9.0 ) : vec4( 15.0, 7.0, 13.0, 5.0 );
-  float bkIgn = ( ( bkBp.x < 0.5 ? bkR.x : bkBp.x < 1.5 ? bkR.y : bkBp.x < 2.5 ? bkR.z : bkR.w ) + 0.5 ) / 16.0;
+  // Right at the lens (< ~1.5 m), small props and cloth are simply not drawn (feathered over 0.6 m): nothing smears
+  // across the frame. Large architecture never reaches here (the camera arm keeps its distance); floors stay.
+  float bkNearFlat = smoothstep( 0.45, 0.6, abs( normalize( cross( dFdx( vBkWorldPos ), dFdy( vBkWorldPos ) ) ).y ) );
+  float bkNear = ( 1.0 - smoothstep( 0.9, 1.5, vViewPosition.z ) ) * ( 1.0 - bkNearFlat ) * step( vBkBig, 0.75 );
+  if ( bkNear > 0.5 ) discard;   // crisp: no dither pattern
+}
+if ( vBkBig < 0.25 ) {
+  // The fade is a clean cut-out (full or nothing) with a crisp edge, never a stipple or dither pattern.
   // Floors, platforms, inlays, steps and low roofs never fade: flat surfaces fade only if > 1 m above the feet.
   vec3 bkFN = normalize( cross( dFdx( vBkWorldPos ), dFdy( vBkWorldPos ) ) );
   float bkFlatS = smoothstep( 0.45, 0.6, abs( bkFN.y ) );
@@ -125,12 +133,12 @@ float bkFadeAmt = 0.0;
     if ( i >= bkFocusCount ) break;
     vec4 A = bkFocusA[ i ], B = bkFocusB[ i ];
     vec2 d = ( gl_FragCoord.xy - A.xy ) / vec2( A.w * B.y, A.w );
-    float inside = 1.0 - smoothstep( 0.8, 1.05, length( d ) );   // solid hole over the hero box; dithered rim only outside it
-    float nearer = smoothstep( 1.0, 1.6, A.z - vViewPosition.z );
+    float inside = 1.0 - smoothstep( 0.94, 1.02, length( d ) );   // clean hole over the subject; ~4% feathered rim
+    float nearer = smoothstep( 1.1, 1.3, A.z - vViewPosition.z );
     float allowed = max( 1.0 - bkFlatS, smoothstep( B.x + 1.0, B.x + 1.3, vBkWorldPos.y ) );
-    float f = inside * nearer * allowed * B.z;
+    float f = smoothstep( 0.35, 0.65, inside * nearer * allowed ) * B.z;
     bkFadeAmt = max( bkFadeAmt, f );
-    if ( f > bkIgn ) discard;
+    if ( f > 0.5 ) discard;   // crisp cut-out edge: no stipple or diamond pattern
   }
 }
 #endif`;
@@ -257,7 +265,7 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
     const noFade = info.noFade || info.role === 'character' || info.role === 'mist';
     const defs = `#define BK_ROLE ${ROLES[info.role] ?? 0}\n#define BK_SPEC ${spec}\n${info.soft ? '#define BK_SOFT\n' : ''}${noFade ? '#define BK_NOFADE\n' : ''}`;
     let v = shader.vertexShader, f = shader.fragmentShader;
-    v = v.replace('#include <common>', '#include <common>\nvarying vec3 vBkWorldPos;');
+    v = v.replace('#include <common>', '#include <common>\nvarying vec3 vBkWorldPos;\n#ifndef BK_NOFADE\nattribute float bkBig;\nvarying float vBkBig;\n#endif');
     v = v.replace('#include <project_vertex>', `#include <project_vertex>
       vec4 bkW = vec4( transformed, 1.0 );
       #ifdef USE_BATCHING
@@ -266,7 +274,10 @@ float bkFbm( vec2 p ) { float s = 0.0, a = 0.5; for ( int i = 0; i < 4; i ++ ) {
       #ifdef USE_INSTANCING
         bkW = instanceMatrix * bkW;
       #endif
-      vBkWorldPos = ( modelMatrix * bkW ).xyz;`);
+      vBkWorldPos = ( modelMatrix * bkW ).xyz;
+      #ifndef BK_NOFADE
+        vBkBig = bkBig;
+      #endif`);
     f = defs + f;
     f = f.replace('#include <common>', '#include <common>' + FRAG_PARS);
     f = f.replace('#include <lights_pars_begin>', '#include <lights_pars_begin>' + HEMI);

@@ -76,7 +76,16 @@ void main() {
     float u = 0.5 + da / uBackArc;
     float v = ( h - uBackRange.x ) / ( uBackRange.y - uBackRange.x );
     if ( u > 0.0 && u < 1.0 && v < 1.0 ) {
-      vec3 b = texture2D( uBack, vec2( u, clamp( v, 0.003, 0.997 ) ) ).rgb * uBackTint;
+      // Only the inner 86% of the painting is used: its framing foreground trees at both ends stay out.
+      float uu = 0.07 + u * 0.86;
+      vec3 b = texture2D( uBack, vec2( uu, clamp( v, 0.003, 0.997 ) ) ).rgb * uBackTint;
+      // Below the painting's bottom edge: never smear its last row into vertical stripes. Use a heavily
+      // blurred (mip-biased) sample of the valley floor that sinks into the haze, like distant mist.
+      if ( v < 0.08 ) {
+        vec3 floorC = texture2D( uBack, vec2( uu, 0.03 ), 6.0 ).rgb * uBackTint;
+        floorC = mix( floorC, uHaze, smoothstep( 0.0, 0.35, - v ) * 0.85 );
+        b = mix( b, floorC, smoothstep( 0.08, -0.06, v ) );   // soft hand-over, no seam line at the painting's edge
+      }
       b = mix( b, uHaze, uHazeAmt );
       float a = 1.0 - smoothstep( uBackSkyFade.x, uBackSkyFade.y, v );   // painted sky → our sky
       a *= smoothstep( 0.0, 0.07, u ) * ( 1.0 - smoothstep( 0.93, 1.0, u ) );

@@ -9,7 +9,7 @@ export class Builder {
     this.rails = []; // {id, pts:[[x,y,z]...], style, kind:'edge'|'fence'}
   }
   block(name) {
-    if (!this.blocks.has(name)) this.blocks.set(name, new Bins(this.T, name));
+    if (!this.blocks.has(name)) { const b = new Bins(this.T, name); b.boxes = []; this.blocks.set(name, b); }   // static: records big-architecture boxes for the camera arm
     this.cur = this.blocks.get(name); return this.cur;
   }
   add(geo, mat, m) { this.cur.add(geo, mat, m); }
@@ -217,14 +217,39 @@ export class Builder {
       return;
     }
     if (style === 'parapet') {
-      // calm solid stone parapet with a coping: one big form instead of many thin posts
-      for (let i = 1; i < base.length; i++) {
-        const a = base[i - 1], b = base[i], L = Math.hypot(b[0] - a[0], b[2] - a[2]); if (L < .02) continue;
-        const ext = .06, dx = (b[0] - a[0]) / L, dz = (b[2] - a[2]) / L;
-        const A = [a[0] - dx * ext, a[1], a[2] - dz * ext], Bp = [b[0] + dx * ext, b[1], b[2] + dz * ext];
-        this.add(beam(T, [A[0], A[1] + .4, A[2]], [Bp[0], Bp[1] + .4, Bp[2]], .3, .8), 'stoneShade');
-        this.add(beam(T, [A[0], A[1] + .86, A[2]], [Bp[0], Bp[1] + .86, Bp[2]], .44, .12), 'stone');
+      // calm solid stone parapet with a coping, swept as ONE continuous strip with smooth (per-station averaged)
+      // side normals: curved runs shade as a smooth gradient, not block-by-block bands.
+      const st = base.filter((p, i) => i === 0 || Math.hypot(p[0] - base[i - 1][0], p[2] - base[i - 1][2]) > .02);
+      if (st.length < 2) return;
+      const side = st.map((p, i) => { const a = st[Math.max(0, i - 1)], b = st[Math.min(st.length - 1, i + 1)], dx = b[0] - a[0], dz = b[2] - a[2], L = Math.hypot(dx, dz) || 1; return [-dz / L, dx / L]; });
+      // profile: [offset across, height, normal across, normal up] pairs forming faces (outer body, coping, inner body)
+      const faces = {stoneWarm: [[[.15, .02, 1, 0], [.15, .8, 1, 0]], [[-.15, .8, -1, 0], [-.15, .02, -1, 0]]],
+        stone: [[[.15, .8, 0, -1], [.22, .8, 0, -1]], [[.22, .8, 1, 0], [.22, .92, 1, 0]], [[.22, .92, 0, 1], [-.22, .92, 0, 1]], [[-.22, .92, -1, 0], [-.22, .8, -1, 0]], [[-.22, .8, 0, -1], [-.15, .8, 0, -1]]]};
+      for (const [mat, list] of Object.entries(faces)) {
+        const pos = [], nor = [], uv = [];
+        let along = 0;
+        for (let i = 1; i < st.length; i++) {
+          const segL = Math.hypot(st[i][0] - st[i - 1][0], st[i][2] - st[i - 1][2]);
+          for (const [p0, p1] of list) {
+            const V = (k, q) => [st[k][0] + side[k][0] * q[0], st[k][1] + q[1], st[k][2] + side[k][1] * q[0]];
+            const N = (k, q) => [side[k][0] * q[2], q[3], side[k][1] * q[2]];
+            const quad = [[i - 1, p0], [i, p0], [i, p1], [i - 1, p1]], tri = [0, 1, 2, 0, 2, 3];
+            for (const t of tri) { const [k, q] = quad[t]; pos.push(...V(k, q)); nor.push(...N(k, q)); uv.push(k === i ? along + segL : along, q[1] + q[0]); }
+          }
+          along += segL;
+        }
+        // flip triangles whose winding disagrees with their normal
+        for (let t = 0; t < pos.length; t += 9) {
+          const ax = pos[t + 3] - pos[t], ay = pos[t + 4] - pos[t + 1], az = pos[t + 5] - pos[t + 2], bx = pos[t + 6] - pos[t], by = pos[t + 7] - pos[t + 1], bz = pos[t + 8] - pos[t + 2];
+          const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
+          if (cx * nor[t] + cy * nor[t + 1] + cz * nor[t + 2] < 0) for (let j = 0; j < 3; j++) { [pos[t + 3 + j], pos[t + 6 + j]] = [pos[t + 6 + j], pos[t + 3 + j]]; [nor[t + 3 + j], nor[t + 6 + j]] = [nor[t + 6 + j], nor[t + 3 + j]]; }
+        }
+        const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
+        this.cur.add(g, mat, null, 0);
       }
+      // end caps
+      for (const k of [0, st.length - 1]) { const d = k ? [st[k][0] - st[k - 1][0], st[k][2] - st[k - 1][2]] : [st[1][0] - st[0][0], st[1][2] - st[0][2]], L = Math.hypot(...d) || 1, yaw = Math.atan2(d[0] / L, d[1] / L);
+        this.add(new T.BoxGeometry(.3, .78, .04).rotateY(yaw).translate(st[k][0], st[k][1] + .41, st[k][2]), 'stoneWarm'); this.add(new T.BoxGeometry(.44, .12, .04).rotateY(yaw).translate(st[k][0], st[k][1] + .86, st[k][2]), 'stone'); }
       return;
     }
     if (style === 'stone') {

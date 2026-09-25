@@ -34,9 +34,13 @@ void main() {
   float dust = 0.85 + 0.3 * fxNoise( vec2( vUv.x * 8.0 + vSeed * 5.0, vUv.y * 20.0 - uTime * 0.3 ) );
   float a = across * along * breath * dust * vA * uAmount * vNear;
   if ( a < 0.002 ) discard;
-  gl_FragColor = vec4( uColor * a, 1.0 );
+  gl_FragColor = vec4( uColor * a, 0.0 );
 }`,
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false,
+    // Pure additive on colour, alpha channel untouched. (AdditiveBlending also added 1.0 to the target's alpha, which
+    // look.js's post pass reads as a material marker: under each shaft card terrain (a=.5) lost its "no crease ink"
+    // flag, so floor-piece junctions inked as long black straight lines beside the beams, e.g. the guardian well.)
+    blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
   });
   material.userData.look = false; material.name = 'fx-shafts';
   const mesh = new THREE.Mesh(geo, material); mesh.frustumCulled = false; mesh.name = 'fx-shafts'; mesh.renderOrder = 8;
