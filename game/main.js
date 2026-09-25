@@ -8,6 +8,7 @@ import {createAdventureMotion} from './adventure-motion.js';
 import {readSave,writeSave,hasLegacySave,clearSave} from './adventure-save.js';
 import {createOpening} from './opening.js';
 import {createTitleMusic} from './title-music.js';
+import {createBossAudio} from './boss-music.js';
 import {createWind} from './bellhollow/wind.js';
 import {createQuest} from './bellhollow/quest.js';
 import {MODULES} from './bellhollow/manifest.js';
@@ -34,13 +35,14 @@ let saveTimer=0,introTime=0,introActive=false,lastShot=-1,queued=null,uiTimer=0,
 let stickReleasedAt=-9,beat=null,villagers=null,map=null,crane=null,pairedBells=null,bellOutT=null,bellRetT=null,recoveredCount=0,introCut=-1,hitStop=0,kick=0,arrival=0,maraAct={lever:0,leverT:-1,gesture:0,wave:0,waveUntil:0};const kickDir=new T.Vector3(),finaleLook=new T.Vector3(),finaleCam=new T.Vector3(),scriptCam=new T.Vector3();
 let captionsEnabled=localStorage.getItem('bellkeeper-captions')!=='0';
 // Camera spring arm, subject framing and chart tucking state (see frame()).
-let viewShift=0,appliedShift=0,armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
+let skipGuardianBox=false,encK=0,viewShift=0,appliedShift=0,armPitch=null,armLength=null,frameDist=0,lastCameraInput=-9,chartTuck=false,chartOverride=false,hudTimer=0,safe=null;const frameOffset=new T.Vector3(),armOrigin=new T.Vector3(),heroBox=new T.Box3(),ndc=new T.Vector3(),tmpA=new T.Vector3(),tmpB=new T.Vector3();
 const loadedSave=readSave(),legacy=!loadedSave&&hasLegacySave();
 const CARD=7,CARDS=3*CARD,ENGINE=20;// prologue cards, then the 20 s in-engine intro
 function save(){if(!state.started||introActive||!quest||quest.finaleActive||!movement)return;const c=movement.checkpoint;writeSave({quest,checkpoint:[c.x,c.y,c.z],map});}
 function later(delay,text,duration=5,then){queued={at:state.t+delay,text,duration,then};}
 function caption(text,duration=4){$('#caption').textContent=text;$('#caption').style.opacity=captionsEnabled&&text?'1':'0';captionEnd=state.t+Math.max(duration,Math.min(9,text.length/19));}
 const soundscape=createSoundscape();soundscape.setMuted(state.muted);titleMusic.setMuted(state.muted);
+const bossAudio=createBossAudio(soundscape,{listener:()=>camera});
 function titleSoundLabel(){$('#titleSound').setAttribute('aria-pressed',String(musicUnlocked&&!state.muted));$('#titleSound span').textContent=musicUnlocked?(state.muted?'Music off · enable':'Music on · mute'):'Enable title music';}
 async function unlockTitleMusic(){if(state.muted||musicUnlocked||state.started&&!introActive)return;try{await titleMusic.start();musicUnlocked=true;titleSoundLabel();}catch{titleSoundLabel();}}
 $('#titleSound').onclick=()=>{if(musicUnlocked)state.muted=!state.muted;else state.muted=false;localStorage.setItem('bellkeeper-muted',state.muted?'1':'0');soundscape.setMuted(state.muted);titleMusic.setMuted(state.muted);unlockTitleMusic();titleSoundLabel();updateUI();};
@@ -180,7 +182,8 @@ function ribbonHit(r,x,z,h){if(r.enabled===false||typeof r.enabled==='function'&
 function gatherArmCols(o,reach){armCols.length=0;armBoxes.length=0;
  // Large-architecture boxes recorded by the world kit (static blocks): walls, houses, gate arches, stalls.
  if(!bigBoxes&&world?.root){bigBoxes=[];for(const g of world.root.children)if(g.userData?.bigBoxes)bigBoxes.push(...g.userData.bigBoxes);}
- // A box the hero stands inside (a mill with its own deck/balcony) says nothing about where the lens may go: skip it.
+ {const g=skipGuardianBox?null:encounterSubject();if(g&&!g.isEmpty?.())armBoxes.push([g.min.x+.3,g.min.y,g.min.z+.3,g.max.x-.3,g.max.y+.4,g.max.z-.3]);}   // the guardian's body: the lens goes over or around it, never behind it
+// A box the hero stands inside (a mill with its own deck/balcony) says nothing about where the lens may go: skip it.
  for(const b of bigBoxes||[])if(b[4]>armLow&&!(o.x>b[0]-.3&&o.x<b[3]+.3&&o.z>b[2]-.3&&o.z<b[5]+.3&&o.y>b[1]-.3&&o.y<b[4]+.3)&&Math.max(b[0]-o.x,o.x-b[3],0)<reach&&Math.max(b[2]-o.z,o.z-b[5],0)<reach)armBoxes.push(b);
  armRibbons.length=0;for(const r of world?.ground_model?.surfaces||[])if(r.type==='ribbon'&&/branch/.test(r.id||'')&&r.bb&&o.x>r.bb[0]-reach&&o.x<r.bb[1]+reach&&o.z>r.bb[2]-reach&&o.z<r.bb[3]+reach)armRibbons.push(r);
  const cs=world?.ground_model?.colliders;if(!cs)return;tallCols.length=0;for(const c of cs){if(c.type!=='seg'&&c.type!=='circle'&&c.type!=='box')continue;if(c.enabled===false||typeof c.enabled==='function'&&!c.enabled())continue;if(colTop(c)<=armLow)continue;const big=colBig(c);
@@ -210,6 +213,8 @@ function closeClutter(yaw,pitch,length){const sx=Math.sin(yaw),sz=Math.cos(yaw),
   for(const d of [.8,1.6,2.4,3.2,4,4.8,5.6,6.4,7.2]){const x=fanP.x+fanD.x*d,z=fanP.z+fanD.z*d,h=fanP.y+fanD.y*d;if(solidAt(x,z,h,.1)||tallCols.some(k=>colHit(k,x,z,h,.1))){hit+=1-d/10;break;}}}
  // The hero hidden behind a tall thin thing (gate pier, post cluster) that fades rather than blocks: also worth a swing.
  let hid=0;const L=fanP.distanceTo(armOrigin);for(let d=.8;d<L-1;d+=.4){const x=fanP.x+fanF.x*d,z=fanP.z+fanF.z*d,h=fanP.y+fanF.y*d;if(tallCols.some(k=>colHit(k,x,z,h,.05))){hid=.35;break;}}
+ // Never-fading bark/roots/Hollow walls filling the near view (3 short rays; Hollow fight only, where they crowd the lens).
+ if(encK>.5&&barkMeshes?.length){for(const ax of [-.35,0,.35]){fanD.copy(fanF).addScaledVector(fanR,ax).normalize();barkRay.set(fanP,fanD);barkRay.near=.2;barkRay.far=3.2;if(barkRay.intersectObjects(barkMeshes,false).length)hit+=2.5;}}
  // Bark (never fades) between the lens and the hero's head: the strongest reason to swing.
  const ah=armHit(armOrigin,sx,sz,pitch,length);return hit/n+hid+(ah?.1+.35*(1-ah/length):0)+(barkCut(armOrigin,sx,sz,pitch,length)?.4:0);}
 // Zelda-style swing: when big architecture or bark crowds the lens, ease the yaw toward open space. Slow, eased, never
@@ -224,12 +229,17 @@ function openSpaceSwing(dt,nowS,allowed){
   // eased: fast in the middle of the turn, gentle at both ends; at most ~0.45 rad/s
   const vmax=(armLength??11)<3.2?1.1:.45;cameraYaw+=Math.sign(e)*Math.min(Math.abs(e),dt*Math.min(vmax,.15+Math.abs(e)*.9*vmax/.45));}}   // pinned against a tower: turn out briskly
 let armLow=-Infinity,armHitId=null;
+const feel=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].map(v=>new T.Vector3(...v)),feelRay=new T.Raycaster();
+function lensTouches(list){feelRay.near=0;feelRay.far=.7;for(const d of feel){feelRay.set(camera.position,d);if(feelRay.intersectObjects(list,true).some(h=>h.object.isMesh&&h.object.visible&&!h.object.userData.lookHull))return true;}
+ // inside a closed mesh the feelers see only back faces: also test the ray back toward the hero's head
+ tmpB.set(movement.position.x,movement.position.y+1.5,movement.position.z).sub(camera.position);const L=tmpB.length();feelRay.set(camera.position,tmpB.multiplyScalar(1/L));feelRay.far=Math.max(.1,L-.6);
+ return feelRay.intersectObjects(list,true).some(h=>h.object.isMesh&&h.object.visible&&!h.object.userData.lookHull);}
 let barkMeshes=null;const barkRay=new T.Raycaster(),barkDir=new T.Vector3(),barkHead=new T.Vector3(),barkCam=new T.Vector3();
-function barkCut(o,sx,sz,pitch,length){if(!barkMeshes&&world?.root){barkMeshes=[];world.root.traverse(m=>{const k=m.isMesh&&!Array.isArray(m.material)&&m.material.userData?.bhKey;if((k==='bark'||k==='barkShade')&&!/trunk|hollow|backdrop|far/.test(m.name))barkMeshes.push(m);});}
- if(!barkMeshes?.length)return 0;const c=Math.cos(pitch);barkDir.set(sx*c,Math.sin(pitch),sz*c);
+function barkCut(o,sx,sz,pitch,length){if(!barkMeshes&&world?.root){barkMeshes=[];world.root.traverse(m=>{const k=m.isMesh&&!Array.isArray(m.material)&&m.material.userData?.bhKey;if((k==='bark'||k==='barkShade')&&!/trunk|hollow|backdrop|far/.test(m.name)||/^bh-(hollow|trunk-galleries)/.test(m.name)&&/^(bark|barkShade|heartwood|heartwoodLight|stoneDeep|pavingDeep|stone|stoneShade|stoneCool|plaster|paving|deck|deckOld|deckDark|timber|timberDark)$/.test(k))barkMeshes.push(m);/* + the Hollow's walls, roots and ring ledges (never fade) */});}
+ if(!barkMeshes?.length)return 0;const gObj=encK>.3?quest?.guardian?.object:null;const c=Math.cos(pitch);barkDir.set(sx*c,Math.sin(pitch),sz*c);
  // Aim from the hero's head (what must stay visible) to the lens; return the distance along the arm.
  barkHead.set(o.x,Math.max(o.y,(movement?.position.y??o.y)+1.65),o.z);barkCam.copy(o).addScaledVector(barkDir,length);barkCam.sub(barkHead);const L=barkCam.length();barkCam.multiplyScalar(1/L);
- barkRay.set(barkHead,barkCam);barkRay.near=.8;barkRay.far=L+.3;const h=barkRay.intersectObjects(barkMeshes,false);return h.length?h[0].distance*length/L:0;}
+ barkRay.set(barkHead,barkCam);barkRay.near=.8;barkRay.far=L+.3;const h=barkRay.intersectObjects(barkMeshes,false);if(gObj){const g=barkRay.intersectObject(gObj,true).filter(x=>x.object.isMesh&&x.object.visible&&!x.object.userData.lookHull);if(g.length&&(!h.length||g[0].distance<h[0].distance))h.unshift(g[0]);}return h.length?h[0].distance*length/L:0;}   /* the guardian's body counts too: it never hides the hero */
 function placeCamera(dt,sx,sz,pitch,length){wantLength=length;// Test the arm from a point kept above the floor: framing may pan the look target below a descending deck.
  armOrigin.copy(cameraTarget);armOrigin.y=Math.max(armOrigin.y,floorUnder(armOrigin.x,armOrigin.z,armOrigin.y)+.9);let p=pitch,l=length;
  armLow=(movement?.position.y??armOrigin.y-1)+1.5;gatherArmCols(armOrigin,length+1);
@@ -246,10 +256,18 @@ function placeCamera(dt,sx,sz,pitch,length){wantLength=length;// Test the arm fr
   for(const L of [l,7,5.5,4.5])for(let q=MAXP+.04;q<=(lifting?.8:1.12)+1e-6&&!found&&L<=l;q+=.04)if(!armHit(armOrigin,sx,sz,q,L)){p=q;l=L;found=true;}
   if(!found){let best=-1;for(let q=.12;q<=MAXP+1e-6;q+=.08){const hit=armHit(armOrigin,sx,sz,q,l),free=Math.max(2.5,hit-.6)-Math.abs(q-pitch)*1.5;if(free>best){best=free;p=q;l=Math.max(2.5,hit-.6);}}}}
  // Branch bark (never fades, curved tubes the height tests miss): one ray along the chosen arm; rise, else pull in.
- let cut=barkCut(armOrigin,sx,sz,p,l);if(cut){for(let q=p+.12;q<=1.0&&cut;q+=.12){if(!armHit(armOrigin,sx,sz,q,l)&&!barkCut(armOrigin,sx,sz,q,l)){p=q;cut=0;}}if(cut)l=Math.max(3.5,Math.min(l,cut-.5));}
+ let cut=barkCut(armOrigin,sx,sz,p,l);if(cut){for(let q=p+.12;q<=(encK>.5?1.25:1.0)&&cut;q+=.12){if(!armHit(armOrigin,sx,sz,q,l)&&!barkCut(armOrigin,sx,sz,q,l)){p=q;cut=0;}}
+  for(let q=p-.12;q>=.3&&cut;q-=.12){if(!armHit(armOrigin,sx,sz,q,l)&&!barkCut(armOrigin,sx,sz,q,l)){p=q;cut=0;}}
+  for(const L of [l*.75,l*.55])if(cut&&L>=6){for(const q of [p,pitch]){if(cut&&!armHit(armOrigin,sx,sz,q,L)&&!barkCut(armOrigin,sx,sz,q,L)){p=q;l=L;cut=0;}}}if(cut)l=Math.max(3.5,Math.min(l,cut-.5));}
+ // Right beside the guardian (catching its breath) its body would squeeze the arm: then let the lens pass it instead.
+ if(!skipGuardianBox&&l<6&&encounterSubject()){skipGuardianBox=true;try{return placeCamera(dt,sx,sz,pitch,length);}finally{skipGuardianBox=false;}}
  armPitch??=p;armLength??=l;armPitch=T.MathUtils.damp(armPitch,p,p>armPitch?12:2.4,dt);armLength=T.MathUtils.damp(armLength,l,l<armLength?12:2,dt);
  const c=Math.cos(armPitch)*armLength;camera.position.set(cameraTarget.x+sx*c,cameraTarget.y+Math.sin(armPitch)*armLength,cameraTarget.z+sz*c);
  let floor=-Infinity;for(const [a,b] of [[0,0],[.6,0],[-.6,0],[0,.6],[0,-.6]])floor=Math.max(floor,floorUnder(camera.position.x+a,camera.position.z+b,camera.position.y));camera.position.y=Math.max(camera.position.y,floor+1.1);
+ // In the fight: the lens must not touch the well's walls, roots, posts or the guardian. Six short feeler rays; if one
+ // touches, slide the lens in toward the look target (and a little up) until it is clear.
+ if(encK>.3&&barkMeshes?.length){const gObj=quest?.guardian?.object,list=gObj?[...barkMeshes,gObj]:barkMeshes;
+  for(let i=0;i<8&&lensTouches(list);i++){camera.position.lerp(cameraTarget,.18);camera.position.y+=.15;}}
  // Lens touching the trunk: rise a little first (at most 2 m, so the view never turns straight down), then pull in.
  for(let i=0;i<4&&inTrunk(camera.position.x,camera.position.z,camera.position.y);i++)camera.position.y+=.5;
  for(let i=0;i<10&&inTrunk(camera.position.x,camera.position.z,camera.position.y)&&camera.position.distanceTo(cameraTarget)>3;i++)camera.position.lerp(cameraTarget,.12);}
@@ -263,13 +281,23 @@ function encounterSubject(){return state.started&&!introActive?quest?.subject()|
 // (not in gentle motion, not right after manual Q/E/drag) turn gently only when they cannot fit.
 function frameSubject(subject,pos,dt){
  if(!subject){frameOffset.multiplyScalar(Math.exp(-dt*1.2));frameDist=T.MathUtils.damp(frameDist,0,1.2,dt);return;}
- heroBox.min.set(pos.x-.35,pos.y,pos.z-.35);heroBox.max.set(pos.x+.35,pos.y+1.75,pos.z+.35);const a=screenBox(heroBox),b=screenBox(subject),s=safe||hudSafe();if(!a||!b)return;
- const l=Math.min(a.l,b.l),r=Math.max(a.r,b.r),t=Math.min(a.t,b.t),bottom=Math.max(a.b,b.b),ppm=innerHeight/(2*Math.tan(T.MathUtils.degToRad(camera.fov/2))*(armLength||11)),k=Math.min(1,dt*2.5),sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw);
- const ex=(l+r-s.l-s.r)/2/ppm,ey=(t+bottom-s.t-s.b-16)/2/ppm;frameOffset.x+=sz*ex*k;frameOffset.z-=sx*ex*k;frameOffset.y-=ey*k/Math.max(.4,Math.cos(armPitch||.45));frameOffset.y=T.MathUtils.clamp(frameOffset.y,-1.2,1.2);if(frameOffset.length()>4.5)frameOffset.setLength(4.5);
- const wide=(r-l)/(s.r-s.l),fit=Math.max(wide,(bottom-t)/(s.b-s.t-16))/.82;frameDist=T.MathUtils.clamp(frameDist+(fit-1)*(armLength||11)*Math.min(1,dt*1.5),0,9);
+ heroBox.min.set(pos.x-.35,pos.y,pos.z-.35);heroBox.max.set(pos.x+.35,pos.y+1.75,pos.z+.35);const a=screenBox(heroBox),b=screenBox(subject),s=safe||hudSafe();
+ if(!a||!b){frameOffset.multiplyScalar(Math.exp(-dt*4));frameDist=T.MathUtils.damp(frameDist,0,4,dt);return;}   /* guardian behind the lens (or hero lost): fall back to the hero */
+ const l=Math.min(a.l,b.l),r=Math.max(a.r,b.r),t=Math.min(a.t,b.t),bottom=Math.max(a.b,b.b),ppm=innerHeight/(2*Math.tan(T.MathUtils.degToRad(camera.fov/2))*(armLength||11)),k=Math.min(1,dt*2.5),sx=Math.sin(cameraYaw),sz=Math.cos(cameraYaw),port=camera.aspect<.85;
+ // Pan toward the pair's centre, but never so far that the hero leaves the play area (hero first, guardian best effort).
+ const m=port?28:40,cx=(l+r-s.l-s.r)/2,cy=(t+bottom-s.t-s.b-16)/2,hx=T.MathUtils.clamp(cx,a.r-(s.r-m),Math.max(a.r-(s.r-m),a.l-(s.l+m))),hy=T.MathUtils.clamp(cy,a.b-(s.b-m),Math.max(a.b-(s.b-m),a.t-(s.t+m)));
+ const out=a.l<s.l||a.r>s.r||a.t<s.t||a.b>s.b,kk=out?Math.min(1,dt*6):k;   // hero slipping out: correct fast
+ const ex=hx/ppm,ey=hy/ppm;frameOffset.x+=sz*ex*kk;frameOffset.z-=sx*ex*kk;frameOffset.y-=ey*kk/Math.max(.4,Math.cos(armPitch||.45));frameOffset.y=T.MathUtils.clamp(frameOffset.y,-1.2,1.2);if(frameOffset.length()>4.5)frameOffset.setLength(4.5);
+ const wide=(r-l)/(s.r-s.l),fit=Math.max(wide,(bottom-t)/(s.b-s.t-16))/.82;frameDist=T.MathUtils.clamp(frameDist+(fit-1)*(armLength||11)*Math.min(1,dt*1.5),0,port?5:8);
+ // The guardian's body between lens and hero (screen overlap and nearer): turn so the hero stands between lens and guardian.
+ const c=subject.getCenter(tmpA),hidden=a.r>b.l&&a.l<b.r&&a.b>b.t&&a.t<b.b&&camera.position.distanceTo(c)<camera.position.distanceTo(pos);
  // Never auto-turn while the touch stick is held (screen-relative steering would swim); ease back in over ~1 s after release.
  const nowS=performance.now()/1000;if(movement?.stickHeld)stickReleasedAt=nowS;const yawK=Math.max(0,Math.min(1,(nowS-stickReleasedAt-1)/1));
- if(!state.gentle&&yawK>0&&wide>.9&&frameDist>3&&nowS-lastCameraInput>2.5){const c=subject.getCenter(tmpA),want=Math.atan2(pos.x-c.x,pos.z-c.z);cameraYaw+=T.MathUtils.clamp(Math.atan2(Math.sin(want-cameraYaw),Math.cos(want-cameraYaw)),-.35*dt*yawK,.35*dt*yawK);}
+ // The well: the lens sits inside it, on the guardian's side of the hero but ~55 deg round the ring, looking out at the hero
+ // against the wall with the guardian beside them (never behind the guardian, never out in the trunk wall or under a ledge).
+ if(!state.gentle&&yawK>0&&nowS-lastCameraInput>2.5){const inward=Math.atan2(c.x-pos.x,c.z-pos.z),d=a1=>Math.atan2(Math.sin(a1-cameraYaw),Math.cos(a1-cameraYaw));
+  const near=Math.hypot(c.x-pos.x,c.z-pos.z)<4.5,off=hidden||near?Math.PI-.5:.95,w1=inward+off,w2=inward-off,want=Math.abs(d(w1))<Math.abs(d(w2))?w1:w2,err=d(want);   /* close to the guardian (catching its breath): swing behind the hero so the body is beyond, not between */
+  if(Math.abs(err)>.2||hidden){const rate=(hidden?.8:.5)*dt*yawK*Math.min(1,Math.abs(err)*1.5+.2);cameraYaw+=T.MathUtils.clamp(err,-rate,rate);}}
 }
 function updateChart(pos){
  // The chart stays tucked unless the player opens it; the intro and encounters tuck it again.
@@ -367,6 +395,9 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  frameSubject(encounterSubject(),pos,dt);
  const ahead=.8;let focus=tmpA.set(pos.x-sx*ahead,pos.y+1+liftLead*1.3,pos.z-sz*ahead).add(frameOffset),follow=7;
  pitch-=liftLead*.07;length+=liftLead*2.6+frameDist;
+ // Guardian fight (a deep well): look down from over the well, not across it, so ring walls and posts stay out of the
+ // lens and the hero, the guardian and the breath lanes read from above. Eased so no snap when the fight starts/ends.
+ encK=T.MathUtils.damp(encK,encounterSubject()?1:0,1.5,dt);if(encK>.01){pitch=T.MathUtils.lerp(pitch,Math.max(pitch,portrait?.7:.6),encK);}
  const shot=introShot();
  if(shot&&!state.gentle){const s=shot.shot,q=s.focus==='hero'?pos:world.points[s.focus]||pos;focus=tmpA.set(q.x,q.y+s.up,q.z);sx=Math.sin(cameraYaw+s.yaw+shot.e*.012);sz=Math.cos(cameraYaw+s.yaw+shot.e*.012);pitch=s.pitch;length=s.len;follow=1.6;}
  else if(introActive){focus=tmpA.set(pos.x,pos.y+1,pos.z);}
@@ -375,6 +406,7 @@ function frame(now){requestAnimationFrame(frame);const elapsed=(now-last)/1000;l
  if(quest.finaleActive&&rise&&ft<2.3){const f=ease(ft/2.3);focus=tmpA.set(pos.x,pos.y+1.4+f*3,pos.z);pitch=.36-f*.26;length=(portrait?10.5:9);follow=2.2;}
  if(quest.finaleActive&&!rise){const f=quest.finaleShot,g=world.points.finale||world.points.guardian,e=f*f*(3-2*f);focus=tmpA.set(g.x,g.y+e*14,g.z);pitch=.3+e*.25;length=12+e*16;follow=1.4;}
  cameraTarget.lerp(focus,1-Math.exp(-dt*follow));placeCamera(dt,sx,sz,pitch,length);
+ if(armLength&&armLength<length*.6){frameOffset.multiplyScalar(Math.exp(-dt*3));frameDist=T.MathUtils.damp(frameDist,0,3,dt);}   /* pulled in hard: stop panning away from the hero */
  if(quest.finaleActive&&rise&&ft>=2.3){
   // Finale, shot B/C (after a cut): outside the trunk on the Hollow's open side, rising over the waking village
   // toward the mills, then turning to the far bell. Every frame is guarded against the trunk and the ground.
@@ -431,7 +463,7 @@ try{
  animator=createAdventureMotion(character,movement);hero.position.copy(movement.position);
  wind=createWind({THREE:T,scene,movement,sound,fx:()=>look?.fx?.wind});
  look=loaded[5];
- quest=createQuest({THREE:T,scene,world,wind,movement,caption,sound,onChange:questEvent,...(createGuardian?{createGuardian:o=>createGuardian({...o,look})}:{})});if(look){for(const [o,role,opts] of [[hero,'character'],[mara,'character'],[quest.guardian?.object,'outline',{dynamic:true,occluder:false}],[pairedBells,'outline',{dynamic:true}]])try{if(o)look.applyTo(o,role,opts);}catch(e){console.warn(e);}
+ quest=createQuest({THREE:T,scene,world,wind,movement,caption,sound,onChange:questEvent,...(createGuardian?{createGuardian:o=>createGuardian({...o,look,audio:bossAudio})}:{})});if(look){for(const [o,role,opts] of [[hero,'character'],[mara,'character'],[quest.guardian?.object,'outline',{dynamic:true,occluder:false}],[pairedBells,'outline',{dynamic:true}]])try{if(o)look.applyTo(o,role,opts);}catch(e){console.warn(e);}
   try{look.setAreaParams?.('hollow',{height:new T.Vector4(P.arena.y,P.hollowGate.y,.55,.62)});}catch(e){console.warn(e);}
   // Aim the valley backdrop so the far bell sits where the finale camera turns (sky azimuth: from -z toward +x).
   if(P.farBell)try{look.setBackdrop?.(new URL('./textures/v2/valley.webp',import.meta.url).href,{azimuthDeg:T.MathUtils.radToDeg(Math.atan2(P.farBell.x,-P.farBell.z))});}catch(e){console.warn(e);}}

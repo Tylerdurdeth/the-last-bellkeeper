@@ -2,7 +2,7 @@
 // No context or audible source is created until start() is called from a gesture.
 export function createSoundscape({context: suppliedContext, random = Math.random} = {}) {
   let context=null, master, ambience, wet, wind, brook, breeze, started=false, muted=false, paused=false, disposed=false,volumeLevel=.65;
-  let birdClock=7, musicClock=3,musicStep=0,charged=false, restored=false, location={x:0,z:0}, lastStep=-1;
+  let duckLevel=0,birdClock=7, musicClock=3,musicStep=0,charged=false, restored=false, location={x:0,z:0}, lastStep=-1;
   const continuous=[], voices=new Set(), buffers=new Map();
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   function gain(value){const g=context.createGain();g.gain.value=value;return g;}
@@ -81,7 +81,7 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     // An original sparse glass-and-copper motif leaves room for discovery cues.
     // The windworks answers in a lower register; the homecoming resolves the pair.
     musicClock-=clamp(dt,0,.1);if(musicClock<=0){musicClock=5.5;const phrase=[0,7,4,11,9,4,2,7],base=location.z<-44?164.81:220,note=base*2**(phrase[musicStep%phrase.length]/12);musicStep++;
-      if(!muted){modal(t+.05,note,.013,3.5,-.35,[1,2,3,4,5]);if(musicStep%4===0)modal(t+1.4,note*.75,.008,4,.35,[1,2,3,4,5]);}}
+      if(!muted&&duckLevel<.3){modal(t+.05,note,.013,3.5,-.35,[1,2,3,4,5]);if(musicStep%4===0)modal(t+1.4,note*.75,.008,4,.35,[1,2,3,4,5]);}}
   }
   function cue(kind,{at}={}){
     if(!started||muted||paused||disposed)return;const t=Math.max(context.currentTime,at??context.currentTime);
@@ -122,5 +122,8 @@ export function createSoundscape({context: suppliedContext, random = Math.random
     else if(kind==='hazard')hiss(t,.5,.13,600,-.1,'bandpass',.09);
   }
   function dispose(){if(disposed)return;disposed=true;for(const source of voices){try{source.stop();}catch{}}voices.clear();for(const node of continuous){try{node.stop?.();}catch{}node.disconnect();}continuous.length=0;buffers.clear();if(context&&!suppliedContext)context.close().catch(()=>{});}
-  return {start,resume,setMuted,setPaused,setVolume,update,cue,dispose};
+  // Boss score/SFX share this context and master (mute, volume, pause) and duck the ambience beds + motif.
+  function duck(v,seconds=1.2,at){duckLevel=clamp(Number(v)||0,0,1);if(ambience)ambience.gain.setTargetAtTime(1-duckLevel*.7,Math.max(context.currentTime,at||0),seconds/3);}
+  function bus(){return started&&!disposed?{context,master,wet,noise,silent:()=>muted||paused}:null;}
+  return {start,resume,setMuted,setPaused,setVolume,update,cue,dispose,duck,bus};
 }

@@ -122,7 +122,7 @@ float bkFadeAmt = 0.0;
   // Right at the lens (< ~1.5 m), small props and cloth are simply not drawn (feathered over 0.6 m): nothing smears
   // across the frame. Large architecture never reaches here (the camera arm keeps its distance); floors stay.
   float bkNearFlat = smoothstep( 0.45, 0.6, abs( normalize( cross( dFdx( vBkWorldPos ), dFdy( vBkWorldPos ) ) ).y ) );
-  float bkNear = ( 1.0 - smoothstep( 0.9, 1.5, vViewPosition.z ) ) * ( 1.0 - bkNearFlat ) * step( vBkBig, 0.75 );
+  float bkNear = ( 1.0 - smoothstep( 1.6, 2.2, vViewPosition.z ) ) * ( 1.0 - bkNearFlat ) * step( vBkBig, 0.75 );
   if ( bkNear > 0.5 ) discard;   // crisp: no dither pattern
 }
 {

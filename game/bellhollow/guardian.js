@@ -70,7 +70,7 @@ export function resolveWell(world) {
   return { center: P(c), rings, top: null, toMid: vents.ring1 || null, pulse: vents.ring2 || null, pulse2: null, roots: pts.roots ? P(pts.roots) : { x: c.x, y: c.y, z: c.z - 5 }, derived };
 }
 
-export function createGuardian({ THREE: T, scene, world, wind, movement = null, sound = () => {}, caption = () => {}, onEvent = () => {}, look = null } = {}) {
+export function createGuardian({ THREE: T, scene, world, wind, movement = null, sound = () => {}, caption = () => {}, onEvent = () => {}, look = null, audio = null } = {}) {
   const W = resolveWell(world), C = W.center;
   const LV = W.top ? [...W.rings, W.top] : W.rings;                 // levels: low, mid, high (+ top perch)
   const beatsOf = ph => ph === 2 && W.top ? BEATS_TOP : BEATS[ph];
@@ -173,6 +173,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     if (hero) heroV.set(hero.x, hero.y, hero.z);
     const near = hero && rad(hero) < LV[LV.length - 1].outer + 4 && hero.y < LV[LV.length - 1].y + 8 && hero.y > C.y - 3;
     active = o.active !== false && phase < 3 && !!near;
+    audio?.update?.(dt, { fight: phase < 3 && (active || !!rage), phase, rage: !!rage, x: actor.position.x, y: actor.position.y + 2.7, z: actor.position.z });
     if (phase >= 3) { doneT += dt; actTend(dt, t); bands.flush(t); return; }
     if (!active) { clock = 0; cycle = -1; lanes = {}; actIdle(dt, t, 'idle'); bands.flush(t); return; }
     if (!warned) { warned = true; }
@@ -213,7 +214,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
       drawInhale(f, t);
       if (!rage.slammed && f > .98) { rage.slammed = true; }
     } else if (rage.t < w + travel) {
-      if (!rage.boom) { rage.boom = true; sound('guardian-slam'); wind?.burst?.({ x: C.x, y: R.y, z: C.z }, { radius: 3.5, duration: .7, rays: 14 }); }
+      if (!rage.boom) { rage.boom = true; sound('guardian-slam'); audio?.event?.('wall'); wind?.burst?.({ x: C.x, y: R.y, z: C.z }, { radius: 3.5, duration: .7, rays: 14 }); }
       const fr = rageFront();
       applyActor(dt, t, { crouch: 1, bloom: .6, spread: .5, thrust: .6, slump: 0, lean: .5, swell: .4, fold: 0, rotorGlow: .8, rage: .7 }, 30, face, { x: -.5, y: 0 });
       bands.sector({ cx: C.x, cz: C.z, y: R.y, a0: 0, a1: TAU, lo: Math.max(rage.lo, fr - .45), hi: Math.min(rage.hi, fr + .45), fill: 1, firing: true, alpha: 1, t, ground: gr });
@@ -231,9 +232,9 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   function enterBeat(B, hero) {
     B = { ...B };
     const k = B.b.k;
-    if (k === 'inhale') { current = planLane(B.b.lane, hero); lanes[B.b.lane] = current; sound('guardian-inhale'); }
+    if (k === 'inhale') { current = planLane(B.b.lane, hero); lanes[B.b.lane] = current; sound('guardian-inhale'); audio?.event?.('inhale', { d: B.b.d * (1 - B.f), lane: current?.kind }); }
     if (k === 'exhale') {
-      stats.exhales++; sound('guardian-exhale');
+      stats.exhales++; sound('guardian-exhale'); if (current?.kind !== 'up') audio?.event?.('exhale');
       if (current?.kind === 'up') firePulse(current);
     }
     if (k === 'recoil' && current && current.kind !== 'up' && current.kind !== 'pillar') spawnBreath(current, B);
@@ -257,7 +258,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
   }
   function firePulse(lane) {
     const v = lane?.vent || W.pulse; if (!v) return;
-    stats.pulses++;
+    stats.pulses++; audio?.event?.('pulse');
     const duration = 4.4;
     wind?.openVent?.(v, { duration });
     onEvent({ updraft: { id: v.id, x: v.x, y: v.y, z: v.z, top: v.top, duration, pulse: true } });
@@ -437,7 +438,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     hitThis.add(beatInfo.i); stats.hits++; hold = HOLD_AFTER_KNOCK; // the next volley waits while the hero recovers
     const k = ringOf(hero), s = LV[k].safe, to = [s.x, (ground(s.x, s.z, LV[k].y) ?? LV[k].y), s.z];
     const dx = Math.cos(a), dz = Math.sin(a);
-    sound('hazard');
+    sound('hazard'); audio?.event?.('hit');
     wind?.burst?.({ x: hero.x, y: hero.y, z: hero.z }, { radius: 2.2, duration: .6 });
     onEvent({ knock: { to, x: dx, z: dz, power: 1 }, knockback: { x: dx, z: dz, dy: 1.6, to } });
   }
@@ -488,7 +489,7 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     if (phase !== k) return;
     fed++;
     if (fed < BREATHS_PER_VANE[k]) { // part turn: the vane creaks round, the volley goes on
-      world.setRestored?.('vane' + (k + 1), fed / BREATHS_PER_VANE[k]); sound('restore');
+      world.setRestored?.('vane' + (k + 1), fed / BREATHS_PER_VANE[k]); sound('restore'); audio?.event?.('vane', { full: false });
       const v = vaneOf(k); onEvent({ vane: { index: k + 1, at: [v.x, v.y, v.z], fed, of: BREATHS_PER_VANE[k] } }); return;
     }
     fed = 0; powerVane(k);
@@ -497,11 +498,11 @@ export function createGuardian({ THREE: T, scene, world, wind, movement = null, 
     if (phase !== k) return;
     phase = k + 1; clock = 0; cycle = -1; lanes = {}; current = null; lastStage = ''; loiter = false; pendingBreath = null;
     wind?.removeSource?.('guardianBreath'); breath = null;
-    world.setRestored?.('vane' + (k + 1), 1); sound('restore');
+    world.setRestored?.('vane' + (k + 1), 1); sound('restore'); audio?.event?.('vane', { full: true }); if (phase < 3) { audio?.event?.('phase', { phase }); audio?.event?.('rage', { d: RAGE.windup }); }
     const v = vaneOf(k), safe = (k === 2 && W.top ? W.top : W.rings[k]).safe;
     // Between phases: a short rage beat (rise, flare, slam) with a floor shockwave to jump over.
     if (phase < 3) { const R = W.rings[k], e = extent(k, ang(v)); rage = { t: 0, ring: k, lo: k === 0 ? 1.4 : Math.max(R.inner, e.lo), hi: k === 0 ? R.outer : Math.min(R.outer, e.hi + .3), hit: false }; }
-    if (phase === 3) { doneT = 0; sound('guardian-fold'); }
+    if (phase === 3) { doneT = 0; sound('guardian-fold'); audio?.event?.('calm'); }
     onEvent({ vane: { index: k + 1, at: [v.x, v.y, v.z] }, phase, checkpoint: [safe.x, safe.y, safe.z], ...(phase === 3 ? { done: true } : {}) });
     if (phase === 1) ventTimer = .6;
   }
