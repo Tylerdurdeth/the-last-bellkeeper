@@ -731,8 +731,11 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   for (const [a, k] of [[TOP.a0 + 3, 1], [TOP.a1 - 3, 2]]) B.add(taperTube(T, [at(a, TOP.r0 + .7, TOP.y - .35), at(a + 1, (TOP.r0 + H.gallery.r0) / 2 + .3, TOP.y - .9), at(a + 2, H.gallery.r0 + .1, galY(a + 2) - .2), at(a + 3, H.gallery.r1 - .2, galY(a + 3) - 1.2)], .34, .22, 10, 6, .15, 40 + k), 'heartwood');
   { const lp = at(TOP.a1 - 4, TOP.r1 - .45, TOP.y); B.add(new T.CylinderGeometry(.07, .09, 1.4, 6).translate(lp[0], TOP.y + .7, lp[2]), 'verdigris'); gm.addCircle({id: 'perch-lamp', x: lp[0], z: lp[2], r: .12, y0: TOP.y, y1: TOP.y + 1.5}); life.lantern('hollow', lp[0], TOP.y + 1.4 + .24 * 1.1, lp[2], 1.1, {mount: 'base'}); }
   const vanes = {};
-  for (const [ring, az, r, y] of [['low', 140, 3.0, H.low.y], ['mid', 220, 5.9, H.mid.y], ['high', 300, 8.3, H.high.y]]) {
-    const p = at(az, r, y); vanes[ring] = returnVane('vane-' + ring, p, az);
+  // ring vanes stand on stone corbels bracketed off the ring's open inner lip (vane over the drop), never on the
+  // walkway; the player turns them from the path side (stand is outward of the plinth)
+  for (const [ring, az, r, y] of [['low', 140, 3.0, H.low.y], ['mid', 220, MIDW.r0 - .25, H.mid.y], ['high', 300, H.high.r0 - .25, H.high.y]]) {
+    const p = at(az, r, y); vanes[ring] = returnVane('vane-' + ring, p, az, ring === 'low' ? -1 : 1);
+    if (ring !== 'low') { B.add(new T.CylinderGeometry(.5, .12, 1.1, 8).translate(p[0], y - .55, p[2]), 'stoneShade'); const q = at(az, r + .55, y); B.add(new T.BoxGeometry(.5, .5, .5).translate(q[0], y - .25, q[2]), 'stoneShade'); }   // corbel + tie-in under the lip
   }
   // top perch vane (the guardian's third vane when it fights from the perch); stand beside it on the perch
   vanes.top = returnVane('vane-top', at(209.5, 7.5, TOP.y), 209.5); vanes.top.stand = V(at(205.5, 8.2, TOP.y));
@@ -1288,7 +1291,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     life.hangers.push({kind: 'chain', note: id, pts: [[P0[0], P0[1] + top - .08, P0[2]], [Q0[0], Q0[1] + top - .08, Q0[2]]]});
     barriers.push(rec);
   }
-  function returnVane(id, p, az) {
+  function returnVane(id, p, az, standSide = -1) {
     const pivot = new T.Group(); pivot.position.set(p[0], p[1], p[2]); root.add(pivot);
     B.add(new T.CylinderGeometry(.35, .45, .5, 8).translate(p[0], p[1] + .25, p[2]), 'stoneShade');
     B.add(new T.CylinderGeometry(.08, .08, 2.1, 6).translate(p[0], p[1] + 1.3, p[2]), 'copper');
@@ -1299,7 +1302,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     bins.bake(rot);
     gm.addCircle({id, x: p[0], z: p[2], r: .45, y0: p[1], y1: p[1] + 2.2});
     const out = polar(az, 1);
-    const rec = {id, x: p[0], y: p[1], z: p[2], rotor: rot, target: V([p[0], p[1] + 2.1, p[2]]), stand: V([p[0] - out[0] * 1.3, p[1], p[2] - out[1] * 1.3])};
+    const rec = {id, x: p[0], y: p[1], z: p[2], rotor: rot, target: V([p[0], p[1] + 2.1, p[2]]), stand: V([p[0] + standSide * out[0] * 1.3, p[1], p[2] + standSide * out[1] * 1.3])};
     movers.push({obj: rot, kind: 'vane', area: 'hollow', speed: 1.6, key: id});
     return rec;
   }
