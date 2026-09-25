@@ -378,6 +378,19 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const branch = (id, ctrl, w, opts = {}) => B.deckRibbon(id, ctrl, w, {mat: 'deckOld', side: 'timberDark', th: .4, log: {r0: 1.25, r1: .8, seed: id.length, extend: opts.extend ?? 0}, ...opts});
   const railBoth = (id, pts, w, o = {}) => B.railRibbon(id, pts, w, {style: 'rope', ...o});
   const polarCtrl = (list) => list.map(([az, r, y]) => at(az, r, y));
+  // A branch walkway that arrives at a round deck ends just inside its rim (never runs into the platform): the branch's
+  // own sampled centreline is cut where it crosses r - .45 (deck corners still overlap the disc), so its deck, rope
+  // rails, end posts and lanterns stop at the edge. The rest of the walkway keeps its exact sampled points.
+  const endAtRim = (ctrl, c, r) => {
+    const curve = new T.CatmullRomCurve3(ctrl.map((p) => new T.Vector3(...p)), false, 'centripetal');
+    const pts = curve.getSpacedPoints(Math.max(2, Math.ceil(curve.getLength()))).map((v) => [v.x, v.y, v.z]);
+    const d = (p) => Math.hypot(p[0] - c[0], p[2] - c[1]), R = r - .45, n0 = pts.length;
+    while (pts.length > 2 && d(pts.at(-2)) < R) pts.pop();
+    const A = pts.at(-2), Bq = pts.at(-1);
+    if (d(Bq) < R) { let lo = 0, hi = 1; for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (d([A[0] + (Bq[0] - A[0]) * m, 0, A[2] + (Bq[2] - A[2]) * m]) > R) lo = m; else hi = m; }
+      pts[pts.length - 1] = [A[0] + (Bq[0] - A[0]) * lo, A[1] + (Bq[1] - A[1]) * lo, A[2] + (Bq[2] - A[2]) * lo]; }
+    pts.fullCount = n0; return pts;
+  };
   const lanternAlong = (pts, area, every = 7, side = 1, w = 3) => {
     for (let i = 2; i < pts.length - 1; i += every) {
       const a = pts[i - 1], b = pts[i + 1], tx = b[0] - a[0], tz = b[2] - a[2], L = Math.hypot(tx, tz) || 1;
@@ -406,8 +419,9 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   // ---------------- Mill of Sails (west-north-west) : push the hanging bridge ----------------
   B.block('sails');
   const sailsA = branch('sails-branch-a', polarCtrl([[SAILS_START, 22.2, 5], [-111.5, 25, 5.7], [-113, 27.9, 6.2]]), 3, {extend: 2});
-  const sailsB = branch('sails-branch-b', polarCtrl([[-114.2, 33.2, 6.2], [-115, 35.4, 7], [-115.8, 36.9, 7.5]]), 3);
   const sailsMillC = polar(-116.6, 40.4), sailsMillY = 7.5;
+  const sailsBCtrl = polarCtrl([[-114.2, 33.2, 6.2], [-115, 35.4, 7], [-115.8, 36.9, 7.5]]), sailsBPts = endAtRim(sailsBCtrl, sailsMillC, 4.3);
+  const sailsB = branch('sails-branch-b', sailsBCtrl, 3, {sampled: sailsBPts}), sailsBMid = Math.floor(sailsBPts.fullCount / 2);   // mid index of the untrimmed walkway (frag-2 bridge)
   disc('sails-mill-deck', sailsMillC, 4.3, sailsMillY);
   {
     const cum = [0]; for (let i = 1; i < sailsA.length; i++) cum.push(cum[i - 1] + Math.hypot(sailsA[i][0] - sailsA[i - 1][0], sailsA[i][2] - sailsA[i - 1][2]));
@@ -417,7 +431,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   }
   {
     const cum = [0]; for (let i = 1; i < sailsB.length; i++) cum.push(cum[i - 1] + Math.hypot(sailsB[i][0] - sailsB[i - 1][0], sailsB[i][2] - sailsB[i - 1][2]));
-    const kk = Math.floor(sailsB.length / 2), side = ribbonSide(sailsB, kk, [polar(-104, 39.6)[0], 0, polar(-104, 39.6)[1]]), win = [[cum[kk] - 1.1, cum[kk] + 1.1]];
+    const kk = sailsBMid, side = ribbonSide(sailsB, kk, [polar(-104, 39.6)[0], 0, polar(-104, 39.6)[1]]), win = [[cum[kk] - 1.1, cum[kk] + 1.1]];
     railBoth('sails-b', sailsB, 3, side > 0 ? {skipRight: win} : {skipLeft: win});
   }
   lanternAlong(sailsA, 'sails', 3); lanternAlong(sailsB, 'sails', 3, -1);
@@ -427,8 +441,8 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
   const sailBridge = hangingBridge('sailBridge', sgA, sgB, 2.6, 'sails');
   // Optional fragment #2: a hanging planter platform south of branch B, reached only by pushing
   // its little swing sail (sail id 'frag2'): the plank span swings in from the platform side.
-  const frag2C = polar(-104, 39.6), f2y = (() => { const k = Math.floor(sailsB.length / 2); return sailsB[k][1]; })();
-  const f2k = Math.floor(sailsB.length / 2), f2p = sailsB[f2k];
+  const frag2C = polar(-104, 39.6), f2y = (() => { const k = sailsBMid; return sailsB[k][1]; })();
+  const f2k = sailsBMid, f2p = sailsB[f2k];
   const f2side = ribbonSide(sailsB, f2k, [frag2C[0], 0, frag2C[1]]);
   const f2a = (() => { const a = sailsB[Math.max(0, f2k - 1)], b = sailsB[Math.min(sailsB.length - 1, f2k + 1)], tx = b[0] - a[0], tz = b[2] - a[2], L = Math.hypot(tx, tz); return [f2p[0] - tz / L * 1.5 * f2side, f2p[1], f2p[2] + tx / L * 1.5 * f2side]; })();
   disc('fragment2-ledge', frag2C, 1.9, f2y, {th: .5});
@@ -463,7 +477,8 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
 
   // ---------------- Mill of Pipes (west) : chain two wheels, gust across the gap ----------------
   B.block('pipes');
-  const pipesBr = branch('pipes-branch', polarCtrl([[PIPES_START, 22.2, 5], [-98, 26, 5.8], [-95.5, 29.5, 6.9], [-94.2, 31.4, 7.5], [-93.8, 32.4, 7.5]]), 3, {extend: 2});
+  const pipesCtrl = polarCtrl([[PIPES_START, 22.2, 5], [-98, 26, 5.8], [-95.5, 29.5, 6.9], [-94.2, 31.4, 7.5], [-93.8, 32.4, 7.5]]);
+  const pipesBr = branch('pipes-branch', pipesCtrl, 3, {extend: 2, sampled: endAtRim(pipesCtrl, polar(-93, 35.2), 4.2)});
   railBoth('pipes', pipesBr, 3); lanternAlong(pipesBr, 'pipes', 3);
   // Branch end platform P1 (wheel A), a 1.8 m running-jump gap, then the mill island (wheel B
   // and the Mill of Pipes). A's outlet puffs across the gap beside B; B's outlet beside the mill.
@@ -1386,7 +1401,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
     for (const {pivot, side} of hollowDoors) { const base = pivot.userData.base ??= pivot.rotation.y; pivot.rotation.y = base + (side ? -1 : 1) * vis.hollowGate * 1.5; }
     // hanging bridge swings; drawbridge lowers
     sailBridge.pivot.rotation.y = sailBridge.yaw + (1 - vis.sailBridge) * 1.15 + Math.sin(t * .9) * .02 * (1 - vis.sailBridge);
-    frag2Bridge.pivot.rotation.y = frag2Bridge.yaw - (1 - vis.frag2) * 1.25 + Math.sin(t * 1.1) * .03 * (1 - vis.frag2);
+    frag2Bridge.pivot.rotation.y = frag2Bridge.yaw + (1 - vis.frag2) * 1.25 + Math.sin(t * 1.1) * .03 * (1 - vis.frag2);   // swings away along branch B, never over the mill deck
     sailBridge.poseSail(); frag2Bridge.poseSail();
     valveLever.rotation.y = (vis.pipesValve - .5) * 1.8;
     const flowA = Math.min(1, wheelSpin.pipesA ?? 0);
