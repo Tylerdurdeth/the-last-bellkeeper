@@ -477,8 +477,7 @@ export function buildBellhollow({THREE: T, scene, loadAsset} = {}) {
 
   // ---------------- Mill of Pipes (west) : chain two wheels, gust across the gap ----------------
   B.block('pipes');
-  const pipesCtrl = polarCtrl([[PIPES_START, 22.2, 5], [-98, 26, 5.8], [-95.5, 29.5, 6.9], [-94.2, 31.4, 7.5], [-93.8, 32.4, 7.5]]);
-  const pipesBr = branch('pipes-branch', pipesCtrl, 3, {extend: 2, sampled: endAtRim(pipesCtrl, polar(-93, 35.2), 4.2)});
+  const pipesBr = branch('pipes-branch', polarCtrl([[PIPES_START, 22.2, 5], [-98, 26, 5.8], [-95.5, 29.5, 6.9], [-94.2, 31.4, 7.5], [-93.8, 32.4, 7.5]]), 3, {extend: 2});
   railBoth('pipes', pipesBr, 3); lanternAlong(pipesBr, 'pipes', 3);
   // Branch end platform P1 (wheel A), a 1.8 m running-jump gap, then the mill island (wheel B
   // and the Mill of Pipes). A's outlet puffs across the gap beside B; B's outlet beside the mill.
