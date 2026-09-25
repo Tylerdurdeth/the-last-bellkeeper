@@ -1,0 +1,4 @@
+# C3 independent critic — wind FX, environment r2, characters r2 (25 Sep 2026, saved by lead)
+Verdicts: Wind COMMIT WITH FIXES (updraft mist ragged at grille + distortion jitter: take column off DISTORT_LAYER, base fade 0.3; wisps over dark planks look like dirty smoke; loft column faint from above; no visible wind in finale flood). Environment r2 COMMIT WITH FIXES (well walls, triangle, outer trunk good; carving tube lip reads as noodle frame — drop it; relief inward). Characters r2 COMMIT (small: seller green strip, elder cane grip, Mara hair slightly cream).
+Worst remaining: carving lip; hard god-ray shaft planes (core.js 43, world.js ~826); black ink seams on guardian well floor; updraft mist at grille; crude finale sails/ivy; hero inside red push-sail; camera cuts/hero off-screen on phone Hollow/guardian hides hero; route bot fails laddersGust1 jump.
+Phone route PASS (309 s, 0 errors); desktop route died at laddersGust1 ("Kept falling").

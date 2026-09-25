@@ -1,0 +1,4 @@
+# C4 independent critic — env r3–4, wind r2, guardian lanes (25 Sep 2026, saved by lead)
+BLOCKER found: wind-fx.js line 224 had `updrafts.set(id,u)` swallowed into a comment → new updraft mesh every frame, never removed (3778 draws on phone, icy stacked columns, stale columns, desktop route fail at ladders1). Lead fixed at 08:53 UTC.
+Verdicts: env r3 COMMIT WITH FIXES (shafts good; carving recess doesn't read, stretched floor, see-through quad, floating intake ring). env r4 COMMIT WITH FIXES (sail flicker fixed; sails read as cardboard/planks, no billow, open hub; ivy = glass shards with blue shadow halos; alcove inset reads as door). wind r2 fix-then-reshoot (wisps good; finale flood too faint, reads as rain). guardian lanes COMMIT.
+Worst remaining: updraft leak (fixed); camera inside walls/ivy/under terraces, cut-out through sail, stipple; ivy; sails; carving recess; trunk seams; faint flood; hero clips bridge post on phone.

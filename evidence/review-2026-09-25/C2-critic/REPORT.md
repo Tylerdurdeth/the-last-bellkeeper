@@ -1,0 +1,6 @@
+# C2 independent critic — characters + environment (25 Sep 2026, saved by lead)
+
+Verdicts: A1 Mara COMMIT WITH FIXES (beard gone; brows too dark/thick, hair shadow blue-grey; hero too close at handover). A2 villagers COMMIT WITH FIXES, keep ON (market reads alive; off = dead plaza): poses snap (setPose/threshold), faces dark in shade; baker basket floats + behind lamp post; elder vest vertex-colour smear, too tall, flap; girl behind lamp post, pinwheel sideways; seller vest smear, near-black trousers. A3 hero coat COMMIT. B environment COMMIT WITH FIXES: bark walls, backdrop trees, frag-2 support, landing roots good; carvings read as dark stuck-on boxes (worse than before); well walls flat streaky brown with seam; landing post/slab bark scale mismatch + a flat bark triangle into sky near Hollow entrance; outer trunk still tiled.
+
+Remaining worst: 1 stipple dither over Mara/hero/sail/lamps; 2 camera framing (foreground lanterns, trunk corner); 3 villager pose snapping; 4 carvings/well walls; 5 vest smears; 6 villagers behind lamps; 7 final ring frame lacks Mara; 8 villagers-off route failed at perch grille (check landing supports don't block).
+Evidence: route-desktop-v1/, route-desktop-v0/, route-phone-v1/, chars/, env/, crops/.
